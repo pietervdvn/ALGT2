@@ -1,0 +1,85 @@
+
+ MetaFunctions
+***************
+
+# This file implements the syntax of metafunctions
+# As this file is part of the bootstrap for language definitions, only the syntax part can be used. Adding a metafunction section will cause a hang of ALGT
+# This is because, in order to read metafunctions, this language should be fully parsed - if this language would contain metafunctions, it could not be fully evaluated
+
+# Pietervdvn
+
+ Syntax
+========
+
+# The contents of comments, such as what you are reading right now
+commentContents	::= LineChar commentContents	 # Body of the comment
+	 | "\n"	 # Closing of the comment
+
+# A comment
+comment	::= "#" $commentContents
+
+# A newline, possibly with a single comment
+nl	::= comment
+	 | "\n"
+
+# Multiple nls, possibly with comments
+nls	::= nl nls
+	 | nl
+
+
+
+
+# The symbol between two types in the signature
+typeSep		::= "*"
+		| "×"	
+
+lastTypeSep	::= "->" | "→" 
+
+
+types		::= ident typeSep types | ident
+
+# The type signature
+signature	::= Identifier ":" types lastTypeSep ident
+		|   Identifier ":" ident
+
+
+
+
+
+
+
+
+# An identifier, eventually from another namespace
+ident		~~= Identifier "." Identifier	# Absolute identifier, in another namespace
+		| Identifier			# Local identifier
+
+arguments	::= expression "," arguments | expression
+funcCall	::= ident "(" arguments ")"
+
+ascription	::= expressionTerm ":" ident
+
+# The metaExpressions/patterns that can be used (note: the comments are in a special format: example, name, behaviour in patterns, behaviour in arguments)
+# If a function can not match any expression, an error is generated
+expressionTerm	::= funcCall	# "f(a, 5)", "Function call", "Evaluates the function, matches if the argument equals the result. Can only use variables which are declared left of this pattern. If the function fails (gives an error), the pattern fails too and the next clause is tried", "Evaluate this function"
+		| Identifier	#  "x",	"Variable","Captures the argument as the name. If multiple are used in the same pattern, the captured arguments should be the same or the match fails."
+		| "_"		# "_", "Wildcard", "Captures the argument and ignores it", "_Not defined_"
+		| Number	# "42", "Number", "Argument should be exactly this number", "This number"
+		| String 	# "Token", "Literal", "Argument should be exactly this string", "This string"
+		| "(" expression ")"	# "(x y z)", "Parens", "Groups a pattern", "Groups an expression"
+
+# A full expression, eventually a sequence
+expression	::=  ascription	# "a:type", "Ascription", "Check that the argument is an element of `type`", "Checks that an expression is of a type. Bit useless to use within expressions"
+		| expressionTerm expression
+		| expressionTerm
+
+# A single clause in a metafunction
+funcClause	::= Identifier "(" arguments ")" "=" expression nl
+funcClauses	::= funcClause funcClauses | funcClause
+
+# A full function, including leading docstring
+function	::= nls signature nl funcClauses
+
+# Full function section definition
+functions	::= function functions | function
+
+

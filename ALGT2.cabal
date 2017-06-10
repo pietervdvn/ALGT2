@@ -15,24 +15,27 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     Lib, Utils.Test
   other-modules:
         Paths_ALGT2
-        LanguageDef.LanguageAspect
         LanguageDef.LanguageDef
         LanguageDef.LocationInfo
-        LanguageDef.Syntax
         LanguageDef.Syntax.MetaSyntax
         LanguageDef.Syntax.ParseTree
         LanguageDef.Syntax.Pt2Syntax
         LanguageDef.Syntax.Syntax
+        LanguageDef.Syntax.Combiner
         Paths_ALGT2
         Utils.All
         Utils.ToString
         Utils.Utils
         Utils.Version
+        Assets
+        LanguageDef.Syntax.All
+        Utils.CreateAssets
 
-  build-depends:       base >= 4.7 && < 5, containers, microlens, microlens-th, random, parsec
+  ghc-options:         -fno-warn-tabs
+  build-depends:       base >= 4.7 && < 5, containers, microlens, microlens-th, random, parsec, directory, bytestring, Glob, QuickCheck, doctest
   default-language:    Haskell2010
 
 executable ALGT2-exe

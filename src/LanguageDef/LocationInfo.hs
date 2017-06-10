@@ -1,6 +1,8 @@
 {-# LANGUAGE RankNTypes, TemplateHaskell #-}
 module LanguageDef.LocationInfo where
 
+{-Small helper data structure, containg start and end position of parsetrees -}
+
 import Utils.All
 
 
@@ -15,10 +17,30 @@ data LocationInfo	= LocationInfo
 	deriving (Show, Ord, Eq)
 makeLenses ''LocationInfo
 
+
+data MetaInfo	=  MetaInfo
+	{ _miLoc	:: LocationInfo
+	, _miDoc	:: Doc}
+	deriving (Show, Ord, Eq)
+makeLenses ''MetaInfo
+
+
+instance ToString MetaInfo where
+	toParsable meta
+		= if null $ get miDoc meta then "" else meta & get miDoc & lines |> ("# "++) & intercalate "\n"	-- block comments
+	toCoParsable meta
+		= if null $ get miDoc meta then "" else meta & get miDoc & lines & concat & ("\t # "++)
+
+
+
+
 atLocation	:: LocationInfo -> Either String a -> Either String a
 atLocation
 	= inMsg . toParsable
 
+unknownLocation	:: LocationInfo
+unknownLocation 
+	= LocationInfo 0 0 0 0 ""
 
 
 locationSpec	:: LocationInfo -> String

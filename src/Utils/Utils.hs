@@ -199,9 +199,9 @@ ammendMsg f (Left e)
 ammendMsg _ a	= a
 
 
-assert :: Monad m => (String -> m ()) -> Bool -> String -> m ()
-assert c False msg	= c msg
-assert c True _ 	= pass
+assert :: Bool -> String -> Either String ()
+assert False msg	= Left msg
+assert True _ 		= pass
 
 ----------------------- Tuple Tools ------------------
 
@@ -319,6 +319,14 @@ checkNoDuplicates	:: (Eq a) => [a] -> ([a] -> String) -> Either String ()
 checkNoDuplicates as msg
 	= do	let dups	= dubbles as
 		unless (null dups) $ Left $ msg dups 
+
+
+flattenWith		:: (Ord k, Ord k0, Ord k1) => Map k0 (Map k1 v) -> (k0 -> k1 -> k) -> Map k v
+flattenWith dict f
+	= let	newList = (dict |> Map.toList & Map.toList)
+				>>= (\(k0, dict) -> dict |> (\(k1, v) -> (f k0 k1, v)))
+		in
+		newList & Map.fromList
 
 
 checkNoCommon		:: (Ord k) => Map k v -> Map k v -> ([(k, (v, v))] -> String) -> Either String ()
@@ -464,3 +472,10 @@ safeIndex msg i as
  | i < length as
 		= as !! i	-- When grepping on !!; this safe-index... Don't panic :p; Safe !!
  | otherwise	= error $ "Safe index: index to large: "++show i++"("++show (length as)++" available elements) , msg: "++msg
+
+
+showIdent	:: (Maybe Name, Name) -> String
+showIdent (Nothing, nm)
+		= nm
+showIdent (Just ns, nm)
+		= ns ++ "." ++ nm

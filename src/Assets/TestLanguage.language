@@ -1,0 +1,18 @@
+
+ Testing Language
+*****************
+
+# Blabla
+
+Syntax
+======
+
+# xyz
+a	::= "b" # def
+
+
+Functions
+=========
+
+f	: a -> a
+f(a)	= a
