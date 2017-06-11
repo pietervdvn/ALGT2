@@ -66,7 +66,7 @@ _check (synts, ns) ac (Annot rule choices)
  | otherwise
 	= do	synt		<- checkExists ns synts ("No namespace "++ns)
 		choices'	<- checkExistsSugg id rule (synt & get syntax) ("Syntactic form "++show rule++" not found within "++ns)
-					|> fst ||>> fst ||>> removeWS -- Remove injected WS builtin
+					||>> fst ||>> removeWS -- Remove injected WS builtin
 		let ac'	= S.insert (ns, rule) ac
 		let recCheck	= zip choices choices'	|> uncurry (_checkBNF (synts, ns, ac'))
 		let choiceIndicator	= (recCheck |> either (const "✘ ") (const "✓ ")) ++ repeat "  "

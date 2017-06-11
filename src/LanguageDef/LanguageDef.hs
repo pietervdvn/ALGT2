@@ -36,13 +36,6 @@ data LanguageDef = LanguageDef
 
 makeLenses ''LanguageDef
 
--- TODO REMOVE
-t	= check' (asSyntaxes functionSyntax) functions & either error id
-t' rule str cmb
-	= parse "t'" (asSyntaxes functionSyntax) rule str
-		& either error id
-		& interpret cmb
-		& either error id
 
 
 -- Parses the entire file
@@ -51,6 +44,7 @@ parseFullFile fp contents
 	= do	let syntaxes	= metaSyntaxes
 		pt	<- parse fp (syntaxes, "main") "langDef" contents
 		((title, meta), (syntax, _))	<- interpret (parseLangDef _fullFileCombiner) pt
+		syntax |> asSyntaxes' |> check & fromMaybe pass
 		return $ LanguageDef title meta syntax
 
 
@@ -68,10 +62,14 @@ _fullFileCombiner
 			, f |> (\f -> (Nothing, f))
 			, s <+> f] 
 
-metaSyntaxes	:: Map String Syntax
+-- >>> check metaSyntaxes
+-- Right ()
+metaSyntaxes	:: Map Name Syntax
 metaSyntaxes
-	= let	syntax	= mainSyntax [("Syntax", "syntax"), ("Functions", "functions")] in
-		M.fromList [("helper", helperSyntax), ("main", syntax), ("syntax", bnfSyntax), ("functions", functionSyntax)]
+	= let	syntax	= mainSyntax [("Syntax", "syntax"), ("Functions", "functions")]
+		syntaxes	= M.fromList [("helper", helperSyntax), ("main", syntax), ("syntax", bnfSyntax), ("functions", functionSyntax)]
+		in
+		syntaxes 
 
 
 		
@@ -139,7 +137,7 @@ mainSyntax subRules
 	++ ["modules    ::= "++subRules |> _titledModCall |> fst & allOptional & intercalate "\n\t|"]
 	++ [ "langDef      ::= title modules"
 	]
-	)  & unlines & asSyntax' "Language Def syntax construction"
+	)  & unlines & asSyntaxUnchecked "Language Def syntax construction" & either error id
 
 
 

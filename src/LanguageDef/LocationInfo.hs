@@ -40,21 +40,21 @@ atLocation
 
 unknownLocation	:: LocationInfo
 unknownLocation 
-	= LocationInfo 0 0 0 0 ""
+	= LocationInfo (-1) (-1) (-1) (-1) ""
 
 
 locationSpec	:: LocationInfo -> String
 locationSpec (LocationInfo sl el sc ec file)
  | any (== (-1)) [sl, el, sc, ec]
-	= "(unspecified location)"
+	= "unspecified location"
  | sl == el && sc == ec
-	= "(line "++show sl++", "++show sc++")"
+	= "line "++show sl++", "++show sc
  | sl == el
-	= "(line "++show sl++", column "++show sc++" - "++show ec++")"
+	= "line "++show sl++", column "++show sc++" - "++show ec
  | otherwise
-	= "(lines "++show sl++" - "++show el++")"
+	= "lines "++show sl++" - "++show el
 
 
 instance ToString LocationInfo where
-	toParsable li	= "In "++(show $ get miFile li)++" "++locationSpec li
-
+	toParsable li	= "In "++(show $ get miFile li)++" "++inParens (locationSpec li)
+	toCoParsable li	= " at " ++ locationSpec li ++", "++ show (get miFile li)

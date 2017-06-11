@@ -121,6 +121,10 @@ allCombinations (a:as)
 		return (head:tails)
 
 
+fixLoop		:: Eq a => a -> (a -> a) -> a
+fixLoop a f
+	= let	a'	= f a in
+		if a' == a then a else fixLoop a' f
 
 
 ------------------- Maybe, Either and other Monad helpers ------------------------------------
@@ -478,4 +482,8 @@ showIdent	:: (Maybe Name, Name) -> String
 showIdent (Nothing, nm)
 		= nm
 showIdent (Just ns, nm)
+		= ns ++ "." ++ nm
+
+showIdent'	:: (Name, Name) -> String
+showIdent' (ns, nm)
 		= ns ++ "." ++ nm

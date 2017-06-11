@@ -95,8 +95,7 @@ _parseRule	:: (Syntaxes, Name) -> Name -> Parser ParseTree'
 _parseRule s@(syntaxes, ns) nm
 	= do	(Syntax syntax _)	<- checkExists ns syntaxes ("No namespace "++ns++" found") & either fail return
 		choices	<- checkExists nm syntax ("Syntactic form "++nm++" not found in the syntax")
-				& either fail return
-				|> fst ||>> fst
+				& either fail return ||>> fst
 		choice (mapi choices |> _parseChoice s nm)
 
 _parseChoice	:: (Syntaxes, Name) -> Name -> (Int, BNF) -> Parser ParseTree'
@@ -148,7 +147,7 @@ endToken	:: (Int, Int) -> Parser LocationInfo
 endToken (lStart, cStart)
 	= do	(lEnd, cEnd)	<- location
 		file	<- getState |> get pmiFile
-		return $ LocationInfo lStart cStart lEnd cEnd file
+		return $ LocationInfo lStart lEnd cStart cEnd file
 
 location	:: Parser (Int, Int)
 location = do	st	<- getState

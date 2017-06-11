@@ -9,6 +9,8 @@ Syntax
 
 # xyz
 a	::= "b" # def
+x	::= y "a"
+y	::= x "b"
 
 
 Functions
