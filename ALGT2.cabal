@@ -25,6 +25,7 @@ library
         LanguageDef.Syntax.Pt2Syntax
         LanguageDef.Syntax.Syntax
         LanguageDef.Syntax.Combiner
+        LanguageDef.ModuleManagament
         Paths_ALGT2
         Utils.All
         Utils.ToString

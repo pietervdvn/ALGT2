@@ -7,9 +7,10 @@ The data structure representing a parsetree and related
 
 import Utils.All
 
-import LanguageDef.Syntax.Syntax hiding (Literal, Seq, string)
+import qualified LanguageDef.Syntax.BNF as BNF
+import LanguageDef.Syntax.BNF (Parser, BNF, ParserMetaInfo (ParserMetaInfo), pmiColumn, pmiLine, pmiFile, biParse)
+import LanguageDef.Syntax.Syntax
 import LanguageDef.LocationInfo
-import qualified LanguageDef.Syntax.Syntax as BNF
 
 import qualified Data.Map as M
 import Data.Map (Map)
@@ -72,13 +73,9 @@ removeHidden pt
 --------------------- PARSER STUFF --------------------------------------
 
 
-parse	:: FilePath -> (Syntaxes, Name) -> Name -> String -> Either String ParseTree'
+parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Either String ParseTree'
 parse fileName syntax syntacticForm string
 	= _parse fileName (_parseRule syntax syntacticForm <* eof) string
-
-parseMany	:: FilePath -> (Syntaxes, Name) -> Name -> String -> Either String [ParseTree']
-parseMany fileName syntax syntacticForm string
-	= _parse fileName (many $ _parseRule syntax syntacticForm) string
 
 _parse	:: FilePath -> Parser a -> String -> Either String a
 _parse fileName parser input
@@ -91,14 +88,14 @@ _runParser fileName parser string
 		& first show
 
 
-_parseRule	:: (Syntaxes, Name) -> Name -> Parser ParseTree'
-_parseRule s@(syntaxes, ns) nm
-	= do	(Syntax syntax _)	<- checkExists ns syntaxes ("No namespace "++ns++" found") & either fail return
+_parseRule	:: (Syntaxes, [Name]) -> Name -> Parser ParseTree'
+_parseRule (syntaxes, ns) nm
+	= do	(Syntax syntax _)	<- checkExists ns syntaxes ("No namespace "++intercalate "." ns++" found while attempting to parse "++show nm) & either fail return
 		choices	<- checkExists nm syntax ("Syntactic form "++nm++" not found in the syntax")
 				& either fail return ||>> fst
-		choice (mapi choices |> _parseChoice s nm)
+		choice (mapi choices |> _parseChoice syntaxes nm)
 
-_parseChoice	:: (Syntaxes, Name) -> Name -> (Int, BNF) -> Parser ParseTree'
+_parseChoice	:: Syntaxes -> Name -> (Int, BNF) -> Parser ParseTree'
 _parseChoice syntaxes nm (i, choice)
 	= try $
 	  do	start	<- location
@@ -108,7 +105,7 @@ _parseChoice syntaxes nm (i, choice)
 		
 
 
-_parseBNF	:: (Syntaxes, Name) -> BNF -> Parser ParseTree'
+_parseBNF	:: Syntaxes -> BNF -> Parser ParseTree'
 _parseBNF syntax (BNF.Literal str)
 		= do	start	<- location
 			string str
@@ -125,8 +122,8 @@ _parseBNF syntax (BNF.BuiltIn hidden builtin)
 				Left str -> Literal str info () hidden
 				Right i  -> Int i info ()
 
-_parseBNF (syntaxes, defNs) (BNF.RuleCall ns name)
-		= _parseRule (syntaxes, fromMaybe defNs ns) name
+_parseBNF syntaxes (BNF.RuleCall (ns, nm))
+		= _parseRule (syntaxes, ns) nm
 
 _parseBNF syntax (BNF.Group bnf)
 		= do	start	<- location

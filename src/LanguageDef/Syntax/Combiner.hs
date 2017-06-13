@@ -5,9 +5,10 @@ module LanguageDef.Syntax.Combiner where
 import Utils.All
 
 
-import LanguageDef.Syntax.Syntax hiding (Literal, Seq, string)
+import LanguageDef.Syntax.Syntax
 import LanguageDef.LocationInfo
-import qualified LanguageDef.Syntax.Syntax as BNF
+import LanguageDef.Syntax.BNF hiding (Literal, Seq, string)
+import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.ParseTree
 
 import qualified Data.Map as M
@@ -36,7 +37,7 @@ data Combiner a	= LiteralC Doc (String -> Either String a)
 
 
 
-instance Check' (Syntaxes, Name) (Combiner a) where
+instance Check' (Syntaxes, [Name]) (Combiner a) where
 	check' syntaxes combiner
 		= _check syntaxes S.empty combiner
 
@@ -51,7 +52,7 @@ This check checks combiners against the syntax, so that:
 This does the call check; not that the given rule should be in the current namespace
 To prevent loops, already checked is a blacklist
 -}
-_check	:: (Syntaxes, Name) -> Set (Name, Name) -> Combiner a -> Either String ()
+_check	:: (Syntaxes, [Name]) -> Set FQName -> Combiner a -> Either String ()
 _check synts ac (MapC c _)
 	= _check synts ac c
 _check synts _ (Value a)
@@ -64,17 +65,17 @@ _check (synts, ns) ac (Annot rule choices)
  | (ns, rule) `S.member` ac
 	= Right ()	-- Already checked
  | otherwise
-	= do	synt		<- checkExists ns synts ("No namespace "++ns)
-		choices'	<- checkExistsSugg id rule (synt & get syntax) ("Syntactic form "++show rule++" not found within "++ns)
+	= do	synt		<- checkExists ns synts ("No namespace "++ intercalate "." ns)
+		choices'	<- checkExistsSugg id rule (synt & get syntax) ("Syntactic form "++show rule++" not found within "++intercalate "." ns)
 					||>> fst ||>> removeWS -- Remove injected WS builtin
 		let ac'	= S.insert (ns, rule) ac
-		let recCheck	= zip choices choices'	|> uncurry (_checkBNF (synts, ns, ac'))
+		let recCheck	= zip choices choices'	|> uncurry (_checkBNF (synts, ac'))
 		let choiceIndicator	= (recCheck |> either (const "✘ ") (const "✓ ")) ++ repeat "  "
 		let sameLength	= assert (length choices == length choices') $ unlines
 			[ "Only "++show (length choices)++" choices provided in combiner for "++rule
 			, "Choices that should be accounted for are:\n"++indent (choices' |> toParsable & zipWith (++) choiceIndicator & unlines)
 			]
-		inMsg ("While checking the combiner for "++ns++"."++rule) $ 
+		inMsg ("While checking the combiner for "++showFQ (ns, rule)) $ 
 			allRight_ (sameLength:recCheck)
 		pass
 
@@ -82,7 +83,7 @@ _check (_, ns) _ cmbr
 	= Left $ "Could not check a combiner without top-level annotation element: "++show cmbr
 
 
-_checkBNF	:: (Syntaxes, Name, Set (Name, Name)) -> Combiner a -> BNF -> Either String ()
+_checkBNF	:: (Syntaxes, Set FQName) -> Combiner a -> BNF -> Either String ()
 _checkBNF synts (MapC c _) bnf
 	= _checkBNF synts c bnf
 _checkBNF synts (Value a) _
@@ -96,8 +97,8 @@ _checkBNF synts cmb (BNF.Seq [bnf])
 _checkBNF synts (SeqC cmbb cmbc _) (BNF.Seq (bnf:bnfs))
 	= do	_checkBNF synts cmbb bnf
 		_checkBNF synts cmbc (BNF.Seq bnfs)
-_checkBNF (synts, ns, ac) annot@(Annot{}) (RuleCall ns' nm)
-	= _check (synts, fromMaybe ns ns') ac annot
+_checkBNF (synts, ac) annot@(Annot{}) (RuleCall (ns, _))
+	= _check (synts, ns) ac annot
 _checkBNF synts annot@(Annot nm _) bnf
 	= Left $ "Could not match "++show (toParsable bnf)++" against the combiner expecting a "++nm
 _checkBNF synts (LiteralC _ _) (Group _)

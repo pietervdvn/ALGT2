@@ -4,8 +4,8 @@ import Utils.All
 
 import LanguageDef.Syntax.MetaSyntax (bnfSyntax)
 import LanguageDef.Syntax.ParseTree
-import LanguageDef.Syntax.Syntax (Syntax)
-import LanguageDef.Syntax.Syntax as BNF
+import LanguageDef.Syntax.Syntax (Syntax, createSyntax)
+import LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.Combiner
 import LanguageDef.LocationInfo
 
@@ -41,20 +41,22 @@ builtinValue	:: Combiner BNF
 builtinValue	= choices "builtins"
 			(knownBuiltins |> BNF.BuiltIn False |> Value)
 
-bnfTerm	:: Combiner BNF
-bnfTerm	= choices "bnfTerm"
+bnfTerm	:: [Name] -> Combiner BNF
+bnfTerm ns
+	= choices "bnfTerm"
 		[ capture |> unescape |> BNF.Literal
-		, cmb (\ns nm -> BNF.RuleCall (Just ns) nm) (capture {-identifier-}) (cmb seq (lit ".") (capture {-identifier-}))
-		, capture |> BNF.RuleCall Nothing
+		, cmb (\ns nm -> BNF.RuleCall (ns, nm)) (capture {-identifier-} |> (:[])) (cmb seq (lit ".") (capture {-identifier-}))
+		, capture |> (\nm -> BNF.RuleCall (ns, nm))
 		, builtinValue
-		, cmb seq (lit "$") (bnfTerm |> BNF.Group) 
+		, cmb seq (lit "$") (bnfTerm ns |> BNF.Group) 
 		]
 
 
-bnfSeq	:: Combiner BNF
-bnfSeq	= choices "bnfSeq"
-		[ cmb (\h t -> BNF.Seq [h, t]) bnfTerm bnfSeq
-		, bnfTerm ]
+bnfSeq	:: [Name] -> Combiner BNF
+bnfSeq ns
+	= choices "bnfSeq"
+		[ cmb (\h t -> BNF.Seq [h, t]) (bnfTerm ns) (bnfSeq ns)
+		, bnfTerm ns ]
 
 barC	:: Combiner (Maybe String)
 barC	= choices "bar"
@@ -63,12 +65,12 @@ barC	= choices "bar"
 		]
 
 
-bnfChoices	:: Combiner [(BNF, MetaInfo)]
-bnfChoices 	
+bnfChoices	:: [Name] -> Combiner [(BNF, MetaInfo)]
+bnfChoices ns	
 	= choices "bnfChoices"
 		[ cmb (\bnfTerm (comment, tail) -> (bnfTerm, comment):tail)
-			bnfSeq (cmb (,) (barC |> fromMaybe "" & withLocation MetaInfo) bnfChoices)
-		, cmb (,) bnfSeq (nl |> fromMaybe "" & withLocation MetaInfo) |> (:[])
+			(bnfSeq ns) (cmb (,) (barC |> fromMaybe "" & withLocation MetaInfo) (bnfChoices ns))
+		, cmb (,) (bnfSeq ns) (nl |> fromMaybe "" & withLocation MetaInfo) |> (:[])
 		]
 
 
@@ -77,26 +79,28 @@ assign	= choices "assign"
 		[lit "::=" |> const (injectWS . normalize)
 		, lit "~~=" |> const id]
 
-bnfDecl	:: Combiner (Name, ([(BNF, MetaInfo)], MetaInfo))
-bnfDecl	= choices "bnfDecl"
+bnfDecl	:: [Name] -> Combiner (Name, ([(BNF, MetaInfo)], MetaInfo))
+bnfDecl ns
+	= choices "bnfDecl"
 		[ cmb (,) (nls |> concat & withLocation MetaInfo) 
 			(cmb (,) capture {-Identifier: name-}
 			(cmb (over (mapped . _1)) assign 
-				bnfChoices))
-		, (cmb (,) capture {-Identifier:Name-} (cmb (over (mapped . _1)) assign bnfChoices))
+				(bnfChoices ns)))
+		, (cmb (,) capture {-Identifier:Name-} (cmb (over (mapped . _1)) assign (bnfChoices ns)))
 			& withLocation (\li decl -> (MetaInfo li "", decl) )
 		] |> (\(mi, (nm, choices)) -> (nm, (choices, mi)))
 
 
-syntaxDecl	:: Combiner [(Name, ([(BNF, MetaInfo)], MetaInfo))]
-syntaxDecl = choices "syntax"
-		[ cmb (:) bnfDecl syntaxDecl
-		, bnfDecl |> (:[])
+syntaxDecl	:: [Name] -> Combiner [(Name, ([(BNF, MetaInfo)], MetaInfo))]
+syntaxDecl ns 
+	= choices "syntax"
+		[ cmb (:) (bnfDecl ns) (syntaxDecl ns)
+		, (bnfDecl ns) |> (:[])
 		]
 
 
-syntaxDecl'	:: Combiner Syntax
-syntaxDecl'
-	= syntaxDecl |> createSyntax
+syntaxDecl'	:: [Name] -> Combiner Syntax
+syntaxDecl' ns
+	= syntaxDecl ns |> createSyntax
 
 

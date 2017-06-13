@@ -95,7 +95,7 @@ allAssets origDir fps
 				|> allAssetLine origDir
 				& intercalate "\n\t\t\t, " 
 				& (\s -> "[" ++ s ++ "\n\t\t\t]")
-		funcN	= "allAssets = "
+		funcN	= "allAssets\t:: [(FilePath, String)]\nallAssets\t= "
 		in
 		funcN ++ body ++ "\n"
 

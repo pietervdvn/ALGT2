@@ -9,7 +9,8 @@ Defines the BNF of BNF, used to parse BNF
 import Utils.All
 
 import LanguageDef.Syntax.Syntax
-import LanguageDef.Syntax.ParseTree (ParseTree, parse, parseMany)
+import LanguageDef.Syntax.BNF
+import LanguageDef.Syntax.ParseTree (ParseTree, parse)
 import LanguageDef.LocationInfo
 
 import qualified Data.Map as M
@@ -46,7 +47,7 @@ bnfSyntax
 			(knownBuiltins |> (\bisf -> choice (get biDocs bisf++"; "++get biRegex bisf) [Literal $ get biName bisf] ))
 		, syntForm "bnfTerm" "A single term of BNF, thus either a literal, syntactic form call or builtin"
 			[ choice "Literal value" [bi string]
-			, choice "Syntactic form call in some namespace" [bi identifier, Literal ".", bi identifier ]
+			, choice "Syntactic form call in some namespace" [bi identifierUpper, Literal ".", bi identifier ]
 			, choice "Syntactic form call" [bi identifier]
 			, choice "Call of a builtin" [call "builtins"]
 			, choice "Grouping an entire parsetree to a single token" [Literal "$", call "bnfTerm"]
@@ -79,7 +80,7 @@ bnfSyntax
 bi	= BuiltIn False
 
 
-call	= RuleCall Nothing
+call nm	= RuleCall (["Syntax"], nm)
 
 choice	:: Doc -> [BNF] -> (BNF, Doc)
 choice doc bnfs

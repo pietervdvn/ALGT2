@@ -487,3 +487,11 @@ showIdent (Just ns, nm)
 showIdent'	:: (Name, Name) -> String
 showIdent' (ns, nm)
 		= ns ++ "." ++ nm
+
+
+perTwo		:: (a -> a -> a) -> [a] -> [a]
+perTwo f (a:b:rest)
+		= f a b:perTwo f rest
+perTwo _ [a]	= [a]
+perTwo _ []	= []
+

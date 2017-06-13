@@ -5,8 +5,9 @@ module Lib
 import Utils.Utils
 
 import LanguageDef.LanguageDef
+import LanguageDef.ModuleLoader
 
 import Utils.Version
 
 someFunc :: IO ()
-someFunc = putStrLn $ versionString
+someFunc = putStrLn versionString

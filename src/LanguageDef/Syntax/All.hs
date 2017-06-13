@@ -1,8 +1,14 @@
-module LanguageDef.Syntax.All (module S, Syntax.Syntax, removeTail, syntax, syntaxChoices, asSyntaxes,  asSyntax, asSyntax', mergeSyntax, mergeSyntax', unescape, asSyntaxUnchecked, asSyntaxUnchecked', asSyntaxes') where
+module LanguageDef.Syntax.All (module S
+		, BNF.unescape, BNF.removeTail, BNF.BNF, BNF.FQName
+		, asSyntaxUnchecked, asSyntaxUnchecked', asSyntax, asSyntax'
+		) where
 
 import Utils.All
 
-import LanguageDef.Syntax.Syntax as Syntax
+import Data.Map as M
+
+import LanguageDef.Syntax.BNF as BNF
+import LanguageDef.Syntax.Syntax as S
 import LanguageDef.Syntax.ParseTree as S
 import LanguageDef.Syntax.MetaSyntax as S
 import LanguageDef.Syntax.Pt2Syntax as S
@@ -10,14 +16,15 @@ import LanguageDef.Syntax.Combiner as S
 
 
 {- | Converts a BNF into a syntax
->>> toParsable bnfSyntax == asSyntax "bnf" (toParsable bnfSyntax) & either error toParsable 
+>>> toParsable bnfSyntax == asSyntax "Syntax" (toParsable bnfSyntax) & either error toParsable 
 True
 -}
 asSyntaxUnchecked	:: Name -> String -> Either String Syntax
 asSyntaxUnchecked syntaxName syntaxString
-	= do	pt	<- parse ("Code: "++show syntaxName) (asSyntaxes bnfSyntax) "syntax" syntaxString
+	= inMsg ("While parsing the syntax with asSyntaxUnchecked") $
+	  do	pt	<- parse ("Code: "++show syntaxName) (M.singleton ["Syntax"] bnfSyntax, ["Syntax"]) "syntax" syntaxString
 		let pt'	= removeHidden pt
-		syntax	<- interpret syntaxDecl' pt'
+		syntax	<- interpret (syntaxDecl' [syntaxName]) pt'
 		return syntax
 
 asSyntaxUnchecked' nm str
@@ -26,7 +33,7 @@ asSyntaxUnchecked' nm str
 asSyntax	:: Name -> String -> Either String Syntax
 asSyntax nm str
 	= do 	syntax	<- asSyntaxUnchecked nm str
-		check (asSyntaxes' syntax)
+		check (asSyntaxes' [nm] syntax)
 		return syntax
 
 
