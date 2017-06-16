@@ -1,0 +1,15 @@
+
+ LoopingSupertypes 
+*******************
+
+# For testing
+
+ Syntax
+========
+
+bool	::= bool
+x	::= y
+y	::= z
+z	::= x
+
+

@@ -258,7 +258,7 @@ instance Normalizable Syntax where
 
 instance ToString Syntax where
 	toParsable (Syntax syntax order)
-		= order |> ((fst &&& (flip M.lookup syntax . fst)) &&& snd)
+		= order	|> ((fst &&& (flip M.lookup syntax . fst)) &&& snd)
 			|> unmerge3l
 			|> _showForm & unlines
 

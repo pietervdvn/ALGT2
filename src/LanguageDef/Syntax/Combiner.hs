@@ -29,7 +29,7 @@ data Combiner a	= LiteralC Doc (String -> Either String a)
 		| forall b . MapC (Combiner b) (b -> a)
 		| IntC (Int -> Either String a)
 		| Value a
-		| Annot Name [Combiner a]	-- Enter a certain rule, with one combiner for each choice
+		| Annot FQName [Combiner a]	-- Enter a certain rule, with one combiner for each choice
 		| forall b . WithLocation (Combiner b) (LocationInfo -> b -> a)
 		| Debug (ParseTree' -> String)			-- Crash and print the parsetree through an error message with the given msg
 
@@ -37,7 +37,7 @@ data Combiner a	= LiteralC Doc (String -> Either String a)
 
 
 
-instance Check' (Syntaxes, [Name]) (Combiner a) where
+instance Check' Syntaxes (Combiner a) where
 	check' syntaxes
 		= _check syntaxes S.empty
 
@@ -52,7 +52,7 @@ This check checks combiners against the syntax, so that:
 This does the call check; not that the given rule should be in the current namespace
 To prevent loops, already checked is a blacklist
 -}
-_check	:: (Syntaxes, [Name]) -> Set FQName -> Combiner a -> Either String ()
+_check	:: Syntaxes -> Set FQName -> Combiner a -> Either String ()
 _check synts ac (MapC c _)
 	= _check synts ac c
 _check synts _ (Value a)
@@ -61,25 +61,25 @@ _check synts ac (WithLocation cmb _)
 	= _check synts ac cmb
 _check synts _ (Debug _)
 	= Left "Debug value found"
-_check (synts, ns) ac (Annot rule choices)
+_check synts ac (Annot fqname@(ns, rule) choices)
  | (ns, rule) `S.member` ac
 	= Right ()	-- Already checked
  | otherwise
 	= do	synt		<- checkExists ns synts ("No namespace found: "++ (if null ns then "(empty namespace)" else show $ intercalate "." ns)++" (it should have contained: "++show rule)
 		choices'	<- checkExistsSugg id rule (synt & get syntax) ("Syntactic form "++show rule++" not found within "++intercalate "." ns)
 					||>> fst ||>> removeWS -- Remove injected WS builtin
-		let ac'	= S.insert (ns, rule) ac
+		let ac'	= S.insert fqname ac
 		let recCheck	= zip choices choices'	|> uncurry (_checkBNF (synts, ac'))
 		let choiceIndicator	= (recCheck |> either (const "✘ ") (const "✓ ")) ++ repeat "  "
 		let sameLength	= assert (length choices == length choices') $ unlines
-			[ "Only "++show (length choices)++" choices provided in combiner for "++rule
+			[ "Only "++show (length choices)++" choices provided in combiner for "++showFQ fqname
 			, "Choices that should be accounted for are:\n"++indent (choices' |> toParsable & zipWith (++) choiceIndicator & unlines)
 			]
-		inMsg ("While checking the combiner for "++showFQ (ns, rule)) $ 
+		inMsg ("While checking the combiner for "++showFQ fqname) $ 
 			allRight_ (sameLength:recCheck)
 		pass
 
-_check (_, ns) _ cmbr
+_check _ _ cmbr
 	= Left $ "Could not check a combiner without top-level annotation element: "++show cmbr
 
 
@@ -97,10 +97,10 @@ _checkBNF synts cmb (BNF.Seq [bnf])
 _checkBNF synts (SeqC cmbb cmbc _) (BNF.Seq (bnf:bnfs))
 	= do	_checkBNF synts cmbb bnf
 		_checkBNF synts cmbc (BNF.Seq bnfs)
-_checkBNF (synts, ac) annot@Annot{} (RuleCall (ns, _))
-	= _check (synts, ns) ac annot
+_checkBNF (synts, ac) annot@Annot{} (RuleCall _)
+	= _check synts ac annot
 _checkBNF synts annot@(Annot nm _) bnf
-	= Left $ "Could not match "++show (toParsable bnf)++" against the combiner expecting a "++nm
+	= Left $ "Could not match "++show (toParsable bnf)++" against the combiner expecting a "++showFQ nm
 _checkBNF synts (LiteralC _ _) (Group _)
 	= Right ()
 _checkBNF synts (LiteralC _ _) (BNF.Literal _)
@@ -169,7 +169,7 @@ _interpret (IntC f) (Int i _ _)
 _interpret (Value a) _
 	= return a
 _interpret (Annot ruleName cmber) (RuleEnter pt' ruleName' choice _ _)
-	= inMsg ("While interpreting a combiner for "++ruleName) $
+	= inMsg ("While interpreting a combiner for "++showFQ ruleName) $
           do	assert (ruleName == ruleName') $ "Assertion failed: could not interpret, expected construction with "++show ruleName++" but got a "++show ruleName'
 		assert (length cmber > choice) $ "Assertion failed: no choice with index "++show choice++" for the given combiner"
 		_interpret (cmber !! choice) pt'
@@ -219,7 +219,7 @@ infixr <+>
 
 
 
-choices	:: String -> [Combiner a] -> Combiner a
+choices	:: FQName -> [Combiner a] -> Combiner a
 choices = Annot
 
 withLocation	:: (LocationInfo -> a -> b) -> Combiner a -> Combiner b

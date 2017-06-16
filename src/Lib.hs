@@ -5,7 +5,9 @@ module Lib
 import Utils.Utils
 
 import LanguageDef.LanguageDef
-import LanguageDef.ModuleLoader
+import LanguageDef.ModuleLoader	
+import Assets
+import AssetUtils
 
 import Utils.Version
 

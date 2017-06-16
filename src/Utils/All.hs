@@ -1,4 +1,4 @@
-module Utils.All (module M, List.intercalate, List.intersperse, L.set, L.over, L._1, L._2, L.mapped, L._head, Assets.autoCreateDevAssets, fromMaybe, maybe, toUpper, toLower) where
+module Utils.All (module M, List.intercalate, List.intersperse, L.set, L.over, L._1, L._2, L.mapped, L._head, L._init, L._tail, L._last, Assets.autoCreateDevAssets, fromMaybe, maybe, toUpper, toLower) where
 
 
 import Utils.Utils as M

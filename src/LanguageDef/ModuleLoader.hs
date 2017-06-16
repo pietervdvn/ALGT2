@@ -10,6 +10,7 @@ import Utils.PureIO
 
 import LanguageDef.LanguageDef
 import LanguageDef.LangDefs
+import LanguageDef.LangDefsFix
 import LanguageDef.Scope
 
 import Data.Map as M
@@ -33,8 +34,21 @@ makeLenses ''LoadingStatus
 {- | Load all modules, given the root path where to start looking
 
 >>> import AssetUtils
->>> runPure allAssets' (loadAll "" ["TestInput","Nested","L"]) |> fst
+
+
+>>> lds = runPure allAssets' (loadAll "" ["TestInput","Nested","L"]) |> fst
+>>> lds
 Right (LangDefs ...)
+>>> Right (LangDefs langs) = lds
+>>> langL = langs ! ["TestInput", "Nested", "L"]
+>>> (resolve langL syntaxCall) ([], "a")
+Right (["TestInput","Nested","L"],"a")
+>>> (resolve langL syntaxCall) ([], "x")
+Right (["TestInput","Nested","X"],"x")
+
+>>> runPure allAssets' (loadAll "TestInput" ["LoopingSupertypes"]) |> fst
+Left "Cycles are detected in the supertype ..."
+
 
 -}
 

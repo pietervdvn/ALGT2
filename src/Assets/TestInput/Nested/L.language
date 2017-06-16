@@ -7,4 +7,14 @@ import TestInput.Nested.Z
 Syntax
 ======
 
-a ::= "b"
+a ::= "T" | "F"
+
+
+Functions
+=========
+
+
+not	: a -> a
+not("T")	= "F"
+not("F")	= "T"
+

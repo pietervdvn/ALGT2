@@ -15,6 +15,7 @@ allAssets	:: [(FilePath, String)]
 allAssets	= [("TestLanguageFaulty.language", _TestLanguageFaulty_language)
 			, ("TestLanguage.language", _TestLanguage_language)
 			, ("MetaFunctionSyntax.language", _MetaFunctionSyntax_language)
+			, ("TestInput/LoopingSupertypes.language", _TestInput_LoopingSupertypes_language)
 			, ("TestInput/Nested/Z.language", _TestInput_Nested_Z_language)
 			, ("TestInput/Nested/X.language", _TestInput_Nested_X_language)
 			, ("TestInput/Nested/L.language", _TestInput_Nested_L_language)
@@ -32,6 +33,10 @@ _TestLanguage_language
 {-# NOINLINE _MetaFunctionSyntax_language #-}
 _MetaFunctionSyntax_language
 	 = let str = unsafePerformIO $ readFile "src/Assets/MetaFunctionSyntax.language" in seq str str
+
+{-# NOINLINE _TestInput_LoopingSupertypes_language #-}
+_TestInput_LoopingSupertypes_language
+	 = let str = unsafePerformIO $ readFile "src/Assets/TestInput/LoopingSupertypes.language" in seq str str
 
 {-# NOINLINE _TestInput_Nested_Z_language #-}
 _TestInput_Nested_Z_language

@@ -1,5 +1,6 @@
 module LanguageDef.Syntax.All (module S
 		, BNF.unescape, BNF.removeTail, BNF.BNF
+		, Pt2Syntax.nls, Pt2Syntax.nl, Pt2Syntax.syntaxDecl'
 		, asSyntaxUnchecked, asSyntaxUnchecked', asSyntax, asSyntax', _patchFullQualifies
 		) where
 
@@ -11,7 +12,7 @@ import LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.Syntax as S
 import LanguageDef.Syntax.ParseTree as S
 import LanguageDef.Syntax.MetaSyntax as S
-import LanguageDef.Syntax.Pt2Syntax as S
+import LanguageDef.Syntax.Pt2Syntax as Pt2Syntax
 import LanguageDef.Syntax.Combiner as S
 
 

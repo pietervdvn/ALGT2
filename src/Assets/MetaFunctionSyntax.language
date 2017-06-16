@@ -11,21 +11,6 @@
  Syntax
 ========
 
-# The contents of comments, such as what you are reading right now
-commentContents	::= LineChar commentContents	 # Body of the comment
-	 | "\n"	 # Closing of the comment
-
-# A comment
-comment	::= "#" $commentContents
-
-# A newline, possibly with a single comment
-nl	::= comment
-	 | "\n"
-
-# Multiple nls, possibly with comments
-nls	::= nl nls
-	 | nl
-
 
 
 
@@ -73,11 +58,11 @@ expression	::=  ascription	# "a:type", "Ascription", "Check that the argument is
 		| expressionTerm
 
 # A single clause in a metafunction
-funcClause	::= Identifier "(" arguments ")" "=" expression nl
+funcClause	::= Identifier "(" arguments ")" "=" expression Syntax.nl
 funcClauses	::= funcClause funcClauses | funcClause
 
 # A full function, including leading docstring
-function	::= nls signature nl funcClauses
+function	::= Syntax.nls signature Syntax.nl funcClauses
 
 # Full function section definition
 functions	::= function functions | function

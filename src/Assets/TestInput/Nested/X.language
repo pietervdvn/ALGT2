@@ -6,4 +6,12 @@ import Y
 Syntax
 ======
 
-a ::= "b"
+x ::= "M" | "F"
+
+Functions
+=========
+
+not		: x -> x
+not("M")	= "F"
+not("F")	= "M"
+

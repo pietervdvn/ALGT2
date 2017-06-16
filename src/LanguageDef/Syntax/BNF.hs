@@ -6,9 +6,11 @@ import Utils.All
 
 import LanguageDef.LocationInfo
 import Data.Maybe
+import Data.Either
 import Control.Monad.Identity
 
-import Text.Parsec (Parsec, char, oneOf, noneOf, many, many1, (<|>), try)
+
+import Text.Parsec (Parsec, char, oneOf, noneOf, many, many1, (<|>), try, runParser)
 
 
 {- Representation of BNF-expressions. They are a part of the context free grammer notation -}
@@ -126,6 +128,13 @@ overRuleCall	:: (FQName -> FQName) -> BNF -> BNF
 overRuleCall f bnf
 		= runIdentity (overRuleCall' (return . f) bnf)	-- this might have been overkill
 
+unsequence	:: BNF -> [BNF]
+unsequence (Seq bnfs)
+		= bnfs
+unsequence bnf	= [bnf]
+
+
+
 
 ------------------------------ BUILTIN STUFF + HELPERS -------------------------
 
@@ -147,6 +156,10 @@ builtinEscapes'
 	= builtinEscapes |> fst
 
 
+isElementOf	:: String -> Builtin -> Bool
+isElementOf str bi
+	= let	fileName	= "Dynamic source: is element of" in
+		(runParser (get biParse bi) (ParserMetaInfo fileName 0 0) fileName str) & isRight
 
 knownBuiltins
 	= 	[whitespace
@@ -188,7 +201,7 @@ digitChar	= Builtin "Digit" "Any digit" "[0-9]" (_single $ oneOf digits)
 lineChar	= Builtin "LineChar" "Any single character that is not a newline. This includes \\r." "[^\\n]" (_single $ noneOf "\n")
 wordChar	= Builtin "WordChar" "Any single character that is not a whitespace or newline" "[^ \\t\\n]" (_single $ noneOf "\n")
 
-intBI	= Builtin "Integer" "Matches an (possibly negative) integer. Integers parsed by this might be passed into the builtin arithmetic functions." "-?[0-9]+"
+intBI		= Builtin "Integer" "Matches an (possibly negative) integer. Integers parsed by this might be passed into the builtin arithmetic functions." "-?[0-9]+"
 			(_negNumber |> Right)
 
 numberBI	= Builtin "Number" "Matches an positive number. Integers parsed by this might be passed into the builtin arithmetic functions." "[0-9]+"
@@ -248,15 +261,10 @@ unescape str	= _unescape $ init $ tail str
 
 instance Normalizable BNF where
 	normalize (Seq bnfs)
-		= bnfs |> normalize |>>= _unpack & Seq
+		= bnfs |> normalize |>>= unsequence & Seq
 	normalize bnf
 		= bnf
 
-
-_unpack	:: BNF -> [BNF]
-_unpack (Seq bnfs)
-		= bnfs
-_unpack bnf	= [bnf]
 
 
 

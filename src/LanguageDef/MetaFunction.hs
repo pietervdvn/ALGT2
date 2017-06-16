@@ -4,18 +4,19 @@ module LanguageDef.MetaFunction where
 
 import Utils.All
 
-import LanguageDef.MetaExpression
+import LanguageDef.MetaExpression hiding (choices')
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax.All
 
 import Data.Maybe
+import Data.Map as M
+import Data.List as L
 
 {- A metafunction represents a function over parsetrees -}
-
-
 data Function a	= Function
 	{ _funcName	:: Name
-	, _funcTypes	:: [(Maybe Name, Name)]
+	, _funcArgTypes	:: [FQName]
+	, _funcRetType	:: FQName
 	, _funcClauses	:: [FunctionClause a]
 	, _funcDoc	:: MetaInfo
 	} deriving (Show, Eq)
@@ -27,49 +28,60 @@ data FunctionClause a = FunctionClause
 	, _clauseDoc		:: MetaInfo
 	, _clauseFuncName	:: Name
 	} deriving (Show, Eq)
+
+
+type TypedFunction	= Function FQName
+
+data Functions	= Functions {_functions :: Map Name TypedFunction, _functionOrder :: [Name]}
+	deriving (Show, Eq)
+
+
+makeLenses ''Functions
 makeLenses ''Function
 makeLenses ''FunctionClause
 
+choices' nm	= choices (["Functions"], nm) 
 
-functions	:: Combiner [Function LocationInfo]
-functions = choices "functions"
-		[ cmb (:) function functions
+
+functionsCmb	:: Combiner [Function LocationInfo]
+functionsCmb = choices' "functions"
+		[ cmb (:) function functionsCmb
 		, function |> (:[])
 		]
 
 
 function	:: Combiner (Function LocationInfo)
-function = choices "function"
+function = choices' "function"
 		[(nls <+> functionSignature <+> skip **> functionClauses)
 			& withLocation (,)
-			|> (\(li, (docs,((nm, types), clauses))) -> Function nm types clauses (MetaInfo li (unlines docs)) )
+			|> (\(li, (docs,((nm, types), clauses))) -> Function nm (init types) (last types) clauses (MetaInfo li (unlines docs)) )
 		]
 
 
-functionSignature	:: Combiner (Name, [(Maybe Name, Name)])
+functionSignature	:: Combiner (Name, [FQName])
 functionSignature
-	= choices "signature"
+	= choices' "signature"
 		[ capture <+> (lit ":" **> cmb (\tps tp -> tps ++ [tp]) functionTypes (skip **> ident))
 		, capture <+> (lit ":" **> (ident |> (:[])))
 		]
 
 
-functionTypes	:: Combiner [(Maybe Name, Name)]
+functionTypes	:: Combiner [FQName]
 functionTypes
-	= choices "types" 
+	= choices' "types" 
 		[ cmb (:) ident (skip **> functionTypes)
 		, ident |> (:[])
 		]
 
 
 functionClauses	:: Combiner [FunctionClause LocationInfo]
-functionClauses = choices "funcClauses"
+functionClauses = choices' "funcClauses"
 			[ cmb (:) functionClause functionClauses
 			, functionClause |> (:[])
 			]
 
 functionClause	:: Combiner (FunctionClause LocationInfo)
-functionClause 	= choices "funcClause"
+functionClause 	= choices' "funcClause"
 			[ (capture <+> lit "(" **> (arguments <+> lit ")" **> lit "=" **> expression <+> nl))
 				& withLocation (,)
 				|> _funcClause
@@ -88,12 +100,16 @@ instance ToString (FunctionClause a) where
 
 
 instance ToString (Function a) where
-	toParsable (Function nm tps clauses mi)
+	toParsable (Function nm argTps retTp clauses mi)
 	      = unlines $ 
 		[ toParsable mi
-		, nm ++ "\t : "++(init tps |> showIdent & intercalate " × ") ++ (if length tps > 1 then " → " else "") ++ (last tps & showIdent)
+		, nm ++ "\t : "++(argTps |> showFQ & over _last (++" → ")  & intercalate " × ") ++ showFQ retTp
 		]  
 		++ clauses |> toParsable
 
-
-
+instance ToString Functions where
+	toParsable (Functions funcs order)
+		= let	order'	= order ++ (funcs & M.keys & L.filter (`M.notMember` funcs)) in
+			order'	|> (funcs ! )
+				|> toParsable
+				& unlines

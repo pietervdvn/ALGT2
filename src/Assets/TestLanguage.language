@@ -1,6 +1,3 @@
-import XYZ
-
-import Bla # hi
 
  Testing Language
 *****************
@@ -10,12 +7,16 @@ import Bla # hi
 Syntax
 ======
 
-# xyz
-a	::= "b" # def
+bool	::= "True" | "False"
+int	::= Number
+
+expr	::= bool | int
 
 
 Functions
 =========
 
-f	: a -> a
-f(a)	= a
+not		: bool -> bool
+f("True")	= "False"
+f("False")	= "True"
+

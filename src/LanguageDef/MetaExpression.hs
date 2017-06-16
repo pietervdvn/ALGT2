@@ -10,6 +10,7 @@ import Utils.All
 import LanguageDef.Syntax.All
 import LanguageDef.LocationInfo
 
+
 {- Expressions can be used both as pattern or as expression in a function/natural deduction rule, they are symmetrical. See Assets/MetaFunctionSyntax.language for more details
 
 The data might carry extra information, such as _typing info_ or such as _meta info_
@@ -19,10 +20,10 @@ data Expression a
 	= Var {_varName :: Name, 		_expAnnot :: a}
 	| DontCare {				_expAnnot :: a}
 	| ParseTree {_expPT :: ParseTree', 	_expAnnot :: a}
-	| FuncCall {_funcName :: (Maybe Name, Name)
+	| FuncCall {_funcName :: FQName
 		, _funcArgs :: [Expression a],  _expAnnot :: a}
 	| Ascription {_ascExpr	:: Expression a
-		, _ascType :: (Maybe Name, Name), _expAnnot :: a}
+		, _ascType :: FQName, _expAnnot :: a}
 	| SeqExp {_expSeq	:: [Expression a], _expAnnot :: a}
 	deriving (Show, Eq, Functor)	
 makeLenses ''Expression
@@ -36,32 +37,25 @@ instance ToString (Expression a) where
 	toParsable (ParseTree pt _)
 				= toParsable pt
 	toParsable (FuncCall ident args _)	
-				= showIdent ident ++ inParens (args |> toParsable & commas)
+				= showFQ ident ++ inParens (args |> toParsable & commas)
 	toParsable (Ascription exp as _)	
-				= toParsable exp ++ ":" ++ showIdent as
+				= toParsable exp ++ ":" ++ showFQ as
 	toParsable (SeqExp expr _)	
 				= expr |> toParsable & unwords & inParens
 	
 
 
 
+------------------------------- COMBINERS ------------------------------
 
-
-
-
-
-
-
-
-
-
+choices' nm	= choices (["Functions"], nm)
 
 {-
 Converts the parsetree into an _untyped_ expression
 -}
 expressionTerm	:: Combiner (Expression LocationInfo)
 expressionTerm
-	= choices "expressionTerm"
+	= choices' "expressionTerm"
 		[ funcCall 
 		, capture & withLocation' Var
 		, skip & withLocation' (const DontCare)
@@ -80,7 +74,7 @@ expression
 
 expression'	:: Combiner [Expression LocationInfo]
 expression'
-	= choices "expression"
+	= choices' "expression"
 		[ascription	|> (:[])
 		, cmb (:) expressionTerm expression'
 		, expressionTerm |> (:[])]
@@ -88,28 +82,28 @@ expression'
 
 ascription	:: Combiner (Expression LocationInfo)
 ascription
-	= choices "ascription"
+	= choices' "ascription"
 		[(expressionTerm <+> (lit ":" **> ident))
 			& withLocation (\li (exp, typ) -> Ascription exp typ li) ]
 
 
 funcCall	:: Combiner (Expression LocationInfo)
 funcCall
-	= choices "funcCall"
+	= choices' "funcCall"
 		[(ident <+> (lit "(" **> arguments <** lit ")"))
 			& withLocation (\li (id, args) -> FuncCall id args li)
 		]
 
 arguments	:: Combiner [Expression LocationInfo]
 arguments
-	= choices "arguments"
+	= choices' "arguments"
 		[ cmb (:) expression (lit "," **> arguments)
 		, expression |> (:[])
 		]
 
 
-ident		:: Combiner (Maybe Name, Name)
-ident	= choices "ident"
-		[(capture |> Just) <+> (lit "." **> capture)
-		, capture |> (\nm -> (Nothing, nm))]
+ident		:: Combiner ([Name], Name)
+ident	= choices' "ident"
+		[(capture |> (:[])) <+> (lit "." **> capture)
+		, capture |> (\nm -> ([], nm))]
 

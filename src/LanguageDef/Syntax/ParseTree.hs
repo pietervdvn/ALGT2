@@ -26,7 +26,7 @@ data ParseTree a
 	= Literal	{ _ptToken :: String	, _ptLocation :: LocationInfo, _ptA :: a, _ptHidden :: Bool}
 	| Int 		{ _ptInt :: Int		, _ptLocation :: LocationInfo, _ptA :: a}
 	| Seq 		{ _pts :: [ParseTree a]	, _ptLocation :: LocationInfo, _ptA :: a}
-	| RuleEnter	{ _pt	:: ParseTree a , _ptUsedRule :: Name, _ptUsedIndex :: Int , _ptLocation :: LocationInfo, _ptA :: a}
+	| RuleEnter	{ _pt	:: ParseTree a  , _ptUsedRule :: FQName, _ptUsedIndex :: Int , _ptLocation :: LocationInfo, _ptA :: a}
 	deriving (Show, Ord, Eq, Functor)
 
 makeLenses ''ParseTree
@@ -72,6 +72,9 @@ removeHidden pt
 
 --------------------- PARSER STUFF --------------------------------------
 
+simplePT	:: String -> ParseTree ()
+simplePT string	= Literal string unknownLocation () False
+
 
 parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Either String ParseTree'
 parse fileName syntax syntacticForm
@@ -86,11 +89,11 @@ _runParser fileName parser string
 _parseRule	:: (Syntaxes, [Name]) -> Name -> Parser ParseTree'
 _parseRule (syntaxes, ns) nm
 	= do	(Syntax syntax _)	<- checkExists ns syntaxes ("No namespace "++intercalate "." ns++" found while attempting to parse "++show nm) & either fail return
-		choices	<- checkExists nm syntax ("Syntactic form "++nm++" not found in the syntax")
+		choices	<- checkExists nm syntax ("Syntactic form "++showFQ (ns, nm) ++" not found")
 				& either fail return ||>> fst
-		choice (mapi choices |> _parseChoice syntaxes nm)
+		choice (mapi choices |> _parseChoice syntaxes (ns, nm))
 
-_parseChoice	:: Syntaxes -> Name -> (Int, BNF) -> Parser ParseTree'
+_parseChoice	:: Syntaxes -> FQName -> (Int, BNF) -> Parser ParseTree'
 _parseChoice syntaxes nm (i, choice)
 	= try $
 	  do	start	<- location
@@ -184,5 +187,5 @@ instance ToString (ParseTree a) where
 	debug (Seq pts _ _)
 		= pts |> debug & commas & inParens'
 	debug (RuleEnter pt name choice _ _)
-		= (debug pt & inParens) ++ (name++"."++show choice)
+		= (debug pt & inParens) ++ (showFQ name++":"++show choice)
 
