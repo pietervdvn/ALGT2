@@ -36,7 +36,7 @@ library
         Utils.CreateAssets
 
   ghc-options:         -fno-warn-tabs
-  build-depends:       base >= 4.7 && < 5, containers, microlens, microlens-th, random, parsec, directory, bytestring, Glob, QuickCheck, doctest
+  build-depends:       base >= 4.7 && < 5, containers, microlens, microlens-th, random, parsec, directory, bytestring, Glob, QuickCheck, doctest, mtl
   default-language:    Haskell2010
 
 executable ALGT2-exe

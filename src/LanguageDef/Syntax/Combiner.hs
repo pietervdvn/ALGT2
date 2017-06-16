@@ -65,7 +65,7 @@ _check (synts, ns) ac (Annot rule choices)
  | (ns, rule) `S.member` ac
 	= Right ()	-- Already checked
  | otherwise
-	= do	synt		<- checkExists ns synts ("No namespace "++ intercalate "." ns)
+	= do	synt		<- checkExists ns synts ("No namespace found: "++ (if null ns then "(empty namespace)" else show $ intercalate "." ns)++" (it should have contained: "++show rule)
 		choices'	<- checkExistsSugg id rule (synt & get syntax) ("Syntactic form "++show rule++" not found within "++intercalate "." ns)
 					||>> fst ||>> removeWS -- Remove injected WS builtin
 		let ac'	= S.insert (ns, rule) ac

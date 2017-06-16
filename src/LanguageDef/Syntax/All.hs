@@ -1,6 +1,6 @@
 module LanguageDef.Syntax.All (module S
-		, BNF.unescape, BNF.removeTail, BNF.BNF, BNF.FQName
-		, asSyntaxUnchecked, asSyntaxUnchecked', asSyntax, asSyntax'
+		, BNF.unescape, BNF.removeTail, BNF.BNF
+		, asSyntaxUnchecked, asSyntaxUnchecked', asSyntax, asSyntax', _patchFullQualifies
 		) where
 
 import Utils.All
@@ -24,8 +24,17 @@ asSyntaxUnchecked syntaxName syntaxString
 	= inMsg ("While parsing the syntax with asSyntaxUnchecked") $
 	  do	pt	<- parse ("Code: "++show syntaxName) (M.singleton ["Syntax"] bnfSyntax, ["Syntax"]) "syntax" syntaxString
 		let pt'	= removeHidden pt
-		syntax	<- interpret (syntaxDecl' [syntaxName]) pt'
-		return syntax
+		syntax	<- interpret syntaxDecl' pt'
+		syntax & _patchFullQualifies [syntaxName] & return
+
+-- Little hack: everything is fully qualified, including rulecalls. WHen they are just parsed, they are not yet fully qualified and the exact resolution should still be done. For now, the bootstraps get manual patches for full qualifications
+_patchFullQualifies	:: [Name] -> Syntax -> Syntax
+_patchFullQualifies ns
+	= over (syntax . mapped . mapped . _1)
+		(overRuleCall (_patchBNFName ns))
+
+_patchBNFName ns ([], name)	=  (ns, name)
+_patchBNFName _ fqname		= fqname
 
 asSyntaxUnchecked' nm str
 	= asSyntaxUnchecked nm str & either error id

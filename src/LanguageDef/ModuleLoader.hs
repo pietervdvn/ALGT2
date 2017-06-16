@@ -9,13 +9,14 @@ import Utils.All
 import Utils.PureIO
 
 import LanguageDef.LanguageDef
+import LanguageDef.LangDefs
+import LanguageDef.Scope
 
 import Data.Map as M
 
--- TODO remove
-import AssetUtils
-
 import Control.Monad hiding (fail)
+
+
 
 
 
@@ -31,6 +32,7 @@ makeLenses ''LoadingStatus
 
 {- | Load all modules, given the root path where to start looking
 
+>>> import AssetUtils
 >>> runPure allAssets' (loadAll "" ["TestInput","Nested","L"]) |> fst
 Right (LangDefs ...)
 
@@ -43,7 +45,7 @@ loadAll fp plzLoad
 		asLangDefs defs & either fail return
 		
 
-
+-- Adds the filepath to the imports, within the language def data
 _fixImports	:: Map [Name] (FilePath, LanguageDef' ()) -> Map [Name] LanguageDef 
 _fixImports langDefs
 	= let	resolver	= langDefs |> fst in

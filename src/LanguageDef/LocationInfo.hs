@@ -1,9 +1,14 @@
 {-# LANGUAGE RankNTypes, TemplateHaskell #-}
 module LanguageDef.LocationInfo where
 
-{-Small helper data structure, containg start and end position of parsetrees -}
+{-Small helper data structure, containg start and end position of parsetrees, metainfo or fully qualified names etc-}
 
 import Utils.All
+
+type FQName	= ([Name], Name)
+
+showFQ (ns, nm)
+		= (ns ++ [nm]) & dots
 
 
 

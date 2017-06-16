@@ -74,19 +74,6 @@ _fixImport resolver imprt
 		return (imprt |> const resolved)
 
 
-newtype LangDefs	= LangDefs {langdefs	:: Map [Name] LanguageDef}
-	deriving (Show)
-
-asLangDefs		:: Map [Name] LanguageDef -> Either String LangDefs
-asLangDefs defs	= do	let ld	= LangDefs defs
-			check ld
-			return ld
-
-instance Check LangDefs where
-	check (LangDefs defs)
-		= do	let syntaxes	= defs |> get baseSyntax & M.mapMaybe id
-			check syntaxes
-
 
 
 -- | Parses the entire file, file should still be checked against it's context!
@@ -106,7 +93,7 @@ parseFullFile ns fp contents
 -- | Converts the modules from parsetree into all the needed parts
 _fullFileCombiner	:: [Name] -> Combiner (Maybe Syntax, Maybe [Function LocationInfo])
 _fullFileCombiner ns
-	= let	s	= moduleCombiner "Syntax" (syntaxDecl' ns) |> Just
+	= let	s	= moduleCombiner "Syntax" syntaxDecl' |> Just
 		f	= moduleCombiner "Functions" functions |> Just
 		in
 	  choices "modules" $ reverse
@@ -144,6 +131,7 @@ functionSyntax
 		& either error id
 		& get baseSyntax
 		& fromMaybe (error "Metafunctionsyntax asset does not contain syntax?")
+		& _patchFullQualifies ["Functions"] -- TODO this line should become obsolete soon; when removed, remove the export of Syntax.all for _patchFullQualifies
 
 
 

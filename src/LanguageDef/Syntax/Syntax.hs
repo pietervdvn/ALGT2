@@ -96,7 +96,7 @@ mergeSyntax' a b
 -- TODO port the checks!
 {-
 
-Checks:
+Checks still to port:
 - No duplicate choices exist over multiple rules
 - Dead choices check (e.g. "a" | "a" "b")
 -}
@@ -104,11 +104,12 @@ Checks:
 instance Check Syntaxes where
 	check syntaxes
 		= do	let syntaxes'	= M.toList syntaxes |> swap
+			syntaxes' |> _checkAllIdentsExist syntaxes  & allRight_
 			[ syntaxes' |> _checkNoDuplicate
 			 , syntaxes' |> _checkNoTrivial
-			 , syntaxes' |> _checkAllIdentsExist syntaxes 
 			 ] |> allRight_ & allRight_
 			_checkLeftRecursion syntaxes
+			pass
 			-- Cycles in the supertype relationship: check unneeded, prevented by left recursion check
 
 
@@ -210,7 +211,6 @@ leftRecursiveCalls syntaxes
 	syntaxes'' = syntaxes'
 			-- only keep choices that start with a rulecall
 			  |> over (syntax . mapped) (L.filter (isRuleCall . fst))
-			  & M.mapWithKey fullyQualify	-- no pesky local calls!
 
 	fqCall bnf
 		= bnf & getRuleCall & fromJust
@@ -234,28 +234,12 @@ leftRecursiveCalls syntaxes
 -- | All Fully Qualified calls, with the first param the namespace for local calls. Metainfo is the choice in which the call is made, name is the declaration for which the call is made
 syntaxRuleCalls	:: [Name] -> Syntax -> [((MetaInfo, Name), FQName)]
 syntaxRuleCalls localScope s
-	= let	synt	= s & fullyQualify localScope & get syntax	:: Map Name [(BNF, MetaInfo)]
+	= let	synt	= s & get syntax	:: Map Name [(BNF, MetaInfo)]
 		in
 		synt & M.toList & unmerge
 			|> (\(name, (bnf, mi)) -> ((mi, name), L.nub $ getRuleCalls bnf))
 			& unmerge
 
-
-fullyQualify	:: [Name] -> Syntax -> Syntax
-fullyQualify localScope s
-	= s & over syntaxChoices (fullyQualifyBNF localScope)
-
-
-
-fullyQualifyBNF	:: [Name] -> BNF -> BNF
-fullyQualifyBNF ns (RuleCall ([], nm))
-	= RuleCall (ns, nm)
-fullyQualifyBNF ns (Seq bnfs)
-	= Seq (bnfs |> fullyQualifyBNF ns)
-fullyQualifyBNF ns (Group bnf)
-	= Group $ fullyQualifyBNF ns bnf
-fullyQualifyBNF _ bnf
-	= bnf
 
 
 -------------------------------- UTILS -------------------------------------

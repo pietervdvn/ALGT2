@@ -6,14 +6,10 @@ import Utils.All
 
 import LanguageDef.LocationInfo
 import Data.Maybe
+import Control.Monad.Identity
 
 import Text.Parsec (Parsec, char, oneOf, noneOf, many, many1, (<|>), try)
 
-
-type FQName	= ([Name], Name)
-
-showFQ (ns, nm)
-		= (ns ++ [nm]) & intercalate "."
 
 {- Representation of BNF-expressions. They are a part of the context free grammer notation -}
 data BNF	= Literal String	-- Parse literally this string
@@ -113,6 +109,22 @@ getRuleCalls (RuleCall nm)
 getRuleCalls _	= []
 
 
+{-
+Apply rulecall rewrite over the entire bnf, including recursion
+-}
+overRuleCall'	:: (Monad m) => (FQName -> m FQName) -> BNF -> m BNF
+overRuleCall' f (RuleCall fqname)
+		= f fqname |> RuleCall
+overRuleCall' f (Group bnf)
+		= overRuleCall' f bnf |> Group
+overRuleCall' f (Seq bnfs)
+		= bnfs |+> overRuleCall' f |> Seq
+overRuleCall' _ bnf
+		= return bnf
+
+overRuleCall	:: (FQName -> FQName) -> BNF -> BNF
+overRuleCall f bnf
+		= runIdentity (overRuleCall' (return . f) bnf)	-- this might have been overkill
 
 
 ------------------------------ BUILTIN STUFF + HELPERS -------------------------

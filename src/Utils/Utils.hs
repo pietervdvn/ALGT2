@@ -112,6 +112,8 @@ showComma as	= as |> show & commas
 
 
 commas		= intercalate ", "
+dots		= intercalate "."
+
 
 allCombinations	:: [[a]] -> [[a]]
 allCombinations []	= [[]]
@@ -145,6 +147,11 @@ fstEffect (ma, b)
 ifJust'		:: (a -> b -> IO ()) -> Maybe a -> b -> IO ()
 ifJust' f Nothing b	= return ()
 ifJust' f (Just a) b	= f a b
+
+
+justEffect	:: (Monad m) => Maybe (m a) -> m (Maybe a)
+justEffect Nothing	= return Nothing
+justEffect (Just ma)	= ma |> Just
 
 
 ifJust		:: (a -> IO ()) -> Maybe a -> IO ()
@@ -271,16 +278,17 @@ replaceN i a (h:as)
 
 
 
-onHead		:: (a -> a) -> [a] -> [a]
-onHead f []	= []
-onHead f (a:as)	= f a : as
-
 camelCase	:: String -> String
-camelCase (' ':str)
-		= camelCase $ onHead toUpper str
+camelCase (' ':c:str)
+		= ' ':toUpper c:str
 camelCase (c:str)
 		= c : camelCase str
 camelCase []	= []
+
+uppercase	:: String -> String
+uppercase (a:str)
+		= toUpper a:str
+uppercase []	= []
 
 
 -- Replaces each element of origs by a choice of pointwise (from a respective column. If a pointwise is empty, the original element is returned
