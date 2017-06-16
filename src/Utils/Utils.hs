@@ -26,6 +26,8 @@ import Lens.Micro.Extras as LME
 
 import System.Random
 
+import Control.Arrow (first)
+
 get	= LME.view
 
 
@@ -336,7 +338,7 @@ checkNoDuplicates as msg
 flattenWith		:: (Ord k, Ord k0, Ord k1) => Map k0 (Map k1 v) -> (k0 -> k1 -> k) -> Map k v
 flattenWith dict f
 	= let	newList = (dict |> Map.toList & Map.toList)
-				>>= (\(k0, dict) -> dict |> (\(k1, v) -> (f k0 k1, v)))
+				>>= (\(k0, dict) -> dict |> first (f k0))
 		in
 		newList & Map.fromList
 

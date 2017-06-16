@@ -49,8 +49,8 @@ function = choices "function"
 functionSignature	:: Combiner (Name, [(Maybe Name, Name)])
 functionSignature
 	= choices "signature"
-		[ capture <+> lit ":" **> (cmb (\tps tp -> tps ++ [tp]) functionTypes (skip **> ident))
-		, capture <+> lit ":" **> (ident |> (:[]))
+		[ capture <+> (lit ":" **> cmb (\tps tp -> tps ++ [tp]) functionTypes (skip **> ident))
+		, capture <+> (lit ":" **> (ident |> (:[])))
 		]
 
 
@@ -70,7 +70,7 @@ functionClauses = choices "funcClauses"
 
 functionClause	:: Combiner (FunctionClause LocationInfo)
 functionClause 	= choices "funcClause"
-			[ (capture <+> lit "(" **> arguments <+> lit ")" **> lit "=" **> expression <+> nl)
+			[ (capture <+> lit "(" **> (arguments <+> lit ")" **> lit "=" **> expression <+> nl))
 				& withLocation (,)
 				|> _funcClause
 			]

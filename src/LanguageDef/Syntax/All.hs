@@ -21,7 +21,7 @@ True
 -}
 asSyntaxUnchecked	:: Name -> String -> Either String Syntax
 asSyntaxUnchecked syntaxName syntaxString
-	= inMsg ("While parsing the syntax with asSyntaxUnchecked") $
+	= inMsg "While parsing the syntax with asSyntaxUnchecked" $
 	  do	pt	<- parse ("Code: "++show syntaxName) (M.singleton ["Syntax"] bnfSyntax, ["Syntax"]) "syntax" syntaxString
 		let pt'	= removeHidden pt
 		syntax	<- interpret syntaxDecl' pt'

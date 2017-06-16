@@ -267,9 +267,9 @@ parseLangDef parseModules
 
 instance ToString (LanguageDef' a) where
 	toParsable (LanguageDef title imports langMeta syntax)
-		= let mayb header stuff	= maybe "" (\stuff' -> inHeader' header $ toParsable stuff') stuff in
+		= let mayb header	= maybe "" (inHeader' header . toParsable) in
 		  (imports |> toParsable & unlines) ++
-		  (inHeader "" title '*' $ unlines (
+		  inHeader "" title '*' (unlines (
 			langMeta |> ("# "++)
 			++ [ mayb "Syntax" syntax]
 			))

@@ -40,7 +40,7 @@ explicitImport showName showNameInt scope nameInt
 -- Updates all 'import' references of each scope by the one in the dictionary
 knotScopes	:: (Ord name) => (name -> String) -> Map name (Scope name ni a ifl efl) -> Map name (Scope name ni a ifl efl)
 knotScopes showName scopes
-	= let 	scopes'	=  scopes |> (_knotScope showName scopes') in	-- I _love_ lazyness
+	= let 	scopes'	=  scopes |> _knotScope showName scopes' in	-- I _love_ lazyness
 		scopes'
 
 _knotScope	:: (Ord name) => (name -> String) -> Map name (Scope name ni a ifl efl) -> Scope name ni a ifl efl -> Scope name ni a ifl efl

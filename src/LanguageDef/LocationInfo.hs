@@ -50,7 +50,7 @@ unknownLocation
 
 locationSpec	:: LocationInfo -> String
 locationSpec (LocationInfo sl el sc ec file)
- | any (== (-1)) [sl, el, sc, ec]
+ | (-1) `elem` [sl, el, sc, ec]
 	= "unspecified location"
  | sl == el && sc == ec
 	= "line "++show sl++", "++show sc
@@ -61,5 +61,5 @@ locationSpec (LocationInfo sl el sc ec file)
 
 
 instance ToString LocationInfo where
-	toParsable li	= "In "++(show $ get miFile li)++" "++inParens (locationSpec li)
+	toParsable li	= "In "++show (get miFile li)++" "++inParens (locationSpec li)
 	toCoParsable li	= " at " ++ locationSpec li ++", "++ show (get miFile li)

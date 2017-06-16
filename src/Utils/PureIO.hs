@@ -107,10 +107,10 @@ _runPure' input (Apply pioA pioA2B)
 _runPure' input (ReadFile pth f)
 	= do	contents	<- checkExists pth (get fileSystem input) ("No file \""++pth++"\" found in the input")
 					& first (\msg -> (msg, input))
-		return $ (f contents, input & over filesRead (pth:))
+		return (f contents, input & over filesRead (pth:))
 _runPure' input (WriteFile pth contents b)
 	= do	let fs'	= M.insert pth contents (input & get fileSystem)
-		return $ (b, input & set fileSystem fs' & over filesWritten (pth:))
+		return (b, input & set fileSystem fs' & over filesWritten (pth:))
 _runPure' input (Fail str)
 	= Left (str, input)
 
@@ -129,7 +129,7 @@ runPureStatus input io
 						& either	(\(msg, state) -> (state, Left msg)) 
 								(\(  a, state) -> (state, Right a))
 		IO.putStrLn (_report state)
-		state & get output |> (indentWith "|   ") & intercalate "\n" & IO.putStrLn
+		state & get output |> indentWith "|   " & intercalate "\n" & IO.putStrLn
 		a & either error return 
 
 
@@ -179,7 +179,7 @@ instance Applicative PureIO where
 	(<*>) (ApplicIO a2b) (ApplicIO a)
 		= ApplicIO (a2b <*> a)
 	(<*>) a2b a
-		= Bind a2b (\f -> Bind a (\a -> pure $ f a))
+		= Bind a2b (\f -> Bind a (pure . f))
 
 
 instance Monad PureIO where

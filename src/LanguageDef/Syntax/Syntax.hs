@@ -53,8 +53,8 @@ asSyntaxes	:: [Name] -> Syntax -> (Map [Name] Syntax, [Name])
 asSyntaxes ns s
 	= (M.singleton ns s, ns)
 
-asSyntaxes' ns s
-	= M.singleton ns s
+asSyntaxes'
+	= M.singleton
 
 
 existingNames	:: Syntaxes -> Set FQName

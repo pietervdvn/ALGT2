@@ -91,7 +91,7 @@ usedSyntacticForms 	= getRuleCalls
 
 
 isRuleCall	:: BNF -> Bool
-isRuleCall (RuleCall {})
+isRuleCall RuleCall{}
 		= True
 isRuleCall _	= False
 
@@ -200,7 +200,8 @@ _single p	= p |> (:[]) |> Left
 
 _parseEscape	:: Parser String
 _parseEscape
-	= do	builtinEscapes' |> (\(inp, _) -> char inp >> return ('\\':inp:[]))
+	= builtinEscapes' |> fst 
+			|> (\inp -> char inp >> return ['\\', inp])
 			& foldr1 (<|>)
 
 _dqString	:: Parser String

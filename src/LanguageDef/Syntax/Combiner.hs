@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ExistentialQuantification, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE ExistentialQuantification, FlexibleInstances, MultiParamTypeClasses #-}
 module LanguageDef.Syntax.Combiner where
 
 
@@ -38,8 +38,8 @@ data Combiner a	= LiteralC Doc (String -> Either String a)
 
 
 instance Check' (Syntaxes, [Name]) (Combiner a) where
-	check' syntaxes combiner
-		= _check syntaxes S.empty combiner
+	check' syntaxes
+		= _check syntaxes S.empty
 
 
 {-
@@ -60,7 +60,7 @@ _check synts _ (Value a)
 _check synts ac (WithLocation cmb _)
 	= _check synts ac cmb
 _check synts _ (Debug _)
-	= Left $ "Debug value found"
+	= Left "Debug value found"
 _check (synts, ns) ac (Annot rule choices)
  | (ns, rule) `S.member` ac
 	= Right ()	-- Already checked
@@ -91,13 +91,13 @@ _checkBNF synts (Value a) _
 _checkBNF synts (WithLocation cmb _) bnf
 	= _checkBNF synts cmb bnf
 _checkBNF synts (Debug _) _
-	= Left $ "Debug value found"
+	= Left "Debug value found"
 _checkBNF synts cmb (BNF.Seq [bnf])
 	= _checkBNF synts cmb bnf
 _checkBNF synts (SeqC cmbb cmbc _) (BNF.Seq (bnf:bnfs))
 	= do	_checkBNF synts cmbb bnf
 		_checkBNF synts cmbc (BNF.Seq bnfs)
-_checkBNF (synts, ac) annot@(Annot{}) (RuleCall (ns, _))
+_checkBNF (synts, ac) annot@Annot{} (RuleCall (ns, _))
 	= _check (synts, ns) ac annot
 _checkBNF synts annot@(Annot nm _) bnf
 	= Left $ "Could not match "++show (toParsable bnf)++" against the combiner expecting a "++nm
@@ -111,14 +111,14 @@ _checkBNF synts (IntC _) builtin@(BNF.BuiltIn _ bi)
  | get biName bi `elem` ["Number", "Integer"] 
 	= Right ()
  | otherwise
-	= Left $ "Can not capture a integer/number, use the builtin Number or Integer"
+	= Left "Can not capture a integer/number, use the builtin Number or Integer"
 
 _checkBNF synts comb bnf
 	= Left $ "Could not match "++show (toParsable bnf) ++" against combiner "++show comb
 
 
 instance Show  (Combiner a) where
-	show c	= _show 5 c
+	show	= _show 5
 
 
 _show	:: Int -> Combiner a -> String
@@ -195,7 +195,7 @@ cmb f cb cc
 	= SeqC cb cc f
 
 err	:: (ParseTree' -> String) -> Combiner ()
-err f	= Debug f
+err	= Debug
 
 skip	:: Combiner ()
 skip	= Value ()
@@ -228,4 +228,4 @@ withLocation f ca
 
 withLocation'	:: (a -> LocationInfo -> b) -> Combiner a -> Combiner b
 withLocation' f ca
-	= WithLocation ca (\li a -> f a li)
+	= WithLocation ca $ flip f

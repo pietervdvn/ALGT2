@@ -33,7 +33,7 @@ nl	= choices "nl"
 nls	:: Combiner [String]
 nls	= choices "nls"
 		[ cmb (\head tail -> maybe tail (:tail) head) nl nls
-		, nl |> maybe [] (:[])
+		, nl |> maybeToList
 		]
 
 
@@ -45,7 +45,7 @@ bnfTerm	:: Combiner BNF
 bnfTerm
 	= choices "bnfTerm"
 		[ capture |> unescape |> BNF.Literal
-		, cmb (\ns nm -> BNF.RuleCall (ns, nm)) (capture {-identifier-} |> (:[])) (cmb seq (lit ".") (capture {-identifier-}))
+		, cmb (curry BNF.RuleCall) (capture {-identifier-} |> (:[])) (cmb seq (lit ".") capture {-identifier-})
 		, capture |> (\nm -> BNF.RuleCall ([], nm))
 		, builtinValue
 		, cmb seq (lit "$") (bnfTerm |> BNF.Group) 
@@ -60,7 +60,7 @@ bnfSeq	= choices "bnfSeq"
 barC	:: Combiner (Maybe String)
 barC	= choices "bar"
 		[ lit "|" |> const Nothing
-		, nl <** (lit "\t") <** (capture {-ws-}) <** (lit "|")
+		, nl <** lit "\t" <** capture{-ws-} <** lit "|"
 		]
 
 
@@ -85,7 +85,7 @@ bnfDecl
 			(cmb (,) capture {-Identifier: name-}
 			(cmb (over (mapped . _1)) assign 
 				bnfChoices))
-		, (cmb (,) capture {-Identifier:Name-} (cmb (over (mapped . _1)) assign bnfChoices))
+		, cmb (,) capture {-Identifier:Name-} (cmb (over (mapped . _1)) assign bnfChoices)
 			& withLocation (\li decl -> (MetaInfo li "", decl) )
 		] |> (\(mi, (nm, choices)) -> (nm, (choices, mi)))
 

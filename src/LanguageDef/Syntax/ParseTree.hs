@@ -74,13 +74,8 @@ removeHidden pt
 
 
 parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Either String ParseTree'
-parse fileName syntax syntacticForm string
-	= _parse fileName (_parseRule syntax syntacticForm <* eof) string
-
-_parse	:: FilePath -> Parser a -> String -> Either String a
-_parse fileName parser input
-	= _runParser fileName parser input
-
+parse fileName syntax syntacticForm
+	= _runParser fileName (_parseRule syntax syntacticForm <* eof)
 
 _runParser	:: FilePath -> Parser a -> String -> Either String a
 _runParser fileName parser string
@@ -187,7 +182,7 @@ instance ToString (ParseTree a) where
 	debug (Int i _ _)
 		= show i
 	debug (Seq pts _ _)
-		= (pts |> debug & commas & inParens')
+		= pts |> debug & commas & inParens'
 	debug (RuleEnter pt name choice _ _)
 		= (debug pt & inParens) ++ (name++"."++show choice)
 
