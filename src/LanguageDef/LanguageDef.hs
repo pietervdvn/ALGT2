@@ -37,33 +37,36 @@ data Import a = Import
 	} deriving (Show, Eq, Functor)
 makeLenses ''Import
 
--- The main definition of a language. Represents an entire langdef file
-data LanguageDef' imported
+{- | The main definition of a language. Represents an entire langdef file.
+The extra type arguments are used to indicate the level of resolution of the definition:
+- LanguageDef (indicates resolution of the imports) (indicates resolution of expressions/functions)
+
+-}
+data LanguageDef' imported funcResolution
 	 = LanguageDef 
 		{ _langTitle	:: Name		-- title of the language
 		, _langImports	:: [Import imported]
 		, _langMeta	:: [String]	-- The comments just under the title
 		, _langSyntax		:: Maybe Syntax	-- The syntax of the language, aka the BNF
 		, _langSupertypes	:: Lattice FQName	-- The global supertype relationship; is filled in later on by the langdefs-fixes
-		, _langFunctions	:: Maybe Functions
+		, _langFunctions	:: Maybe (Functions' funcResolution)
 		}
 	deriving (Show, Eq)
 makeLenses ''LanguageDef'
 
 
 type ResolvedImport	= FilePath
-type LanguageDef	= LanguageDef' ResolvedImport
+type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
 
 
 
-isSubtypeOf	:: LanguageDef -> FQName -> FQName -> Bool
-isSubtypeOf ld sub super
-		= isSubsetOf (get langSupertypes ld) sub super
+isSubtypeOf	:: LanguageDef' ResolvedImport fr -> FQName -> FQName -> Bool
+isSubtypeOf ld	= isSubsetOf (get langSupertypes ld)
 
 -------------------------------- IMPORT FIXING STUFF ------------------------------------
 
 
-resolveLocalImports	:: ([Name], [Name]) -> LanguageDef' x -> LanguageDef' x
+resolveLocalImports	:: ([Name], [Name]) -> LanguageDef' x f -> LanguageDef' x f
 resolveLocalImports (offsetForAll, extraOffsetForLocal)
 	= let	fixImport imp	= if get isLocal imp 
 					then imp & set isLocal False & over importName ((offsetForAll ++ extraOffsetForLocal) ++ )
@@ -71,7 +74,7 @@ resolveLocalImports (offsetForAll, extraOffsetForLocal)
 		in
 		over (langImports . mapped) fixImport
 
-fixImport		:: Map [Name] FilePath -> LanguageDef' () -> Either String LanguageDef
+fixImport		:: Map [Name] FilePath -> LanguageDef' () fr -> Either String (LanguageDef' ResolvedImport fr)  
 fixImport resolver ld
 	= inMsg ("While fixing the import annotations for "++show (get langTitle ld)) $
           do	let imps	= get langImports ld
@@ -95,7 +98,7 @@ _fixImport resolver imprt
 -- ()
 -- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language 
 -- Right ...
-parseFullFile	:: [Name] -> FilePath -> String -> Either String (LanguageDef' ())
+parseFullFile	:: [Name] -> FilePath -> String -> Either String (LanguageDef' () ())
 parseFullFile ns fp contents
 	= inMsg ("While parsing "++show fp) $
 	  do	pt	<- parse fp (metaSyntaxes, ["Main"]) "langDef" contents
@@ -106,7 +109,7 @@ parseFullFile ns fp contents
 			meta
 			syntax
 			(emptyLattice ([], "B") ([], "T"))	-- filled later on
-			Nothing				-- TODO
+			Nothing				-- TODO the functions!
 
 
 
@@ -282,7 +285,7 @@ parseLangDef parseModules
 
 
 
-instance ToString (LanguageDef' a) where
+instance ToString (LanguageDef' a b) where
 	toParsable (LanguageDef title imports langMeta syntax _ functions)
 		= let mayb header	= maybe "" (inHeader' header . toParsable) in
 		  (imports |> toParsable & unlines) ++

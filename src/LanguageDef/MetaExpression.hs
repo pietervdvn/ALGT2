@@ -20,8 +20,8 @@ data Expression a
 	= Var {_varName :: Name, 		_expAnnot :: a}
 	| DontCare {				_expAnnot :: a}
 	| ParseTree {_expPT :: ParseTree', 	_expAnnot :: a}
-	| FuncCall {_funcName :: FQName
-		, _funcArgs :: [Expression a],  _expAnnot :: a}
+	| FuncCall {_expCallName :: FQName
+		, _expCallcArgs :: [Expression a],  _expAnnot :: a}
 	| Ascription {_ascExpr	:: Expression a
 		, _ascType :: FQName, _expAnnot :: a}
 	| SeqExp {_expSeq	:: [Expression a], _expAnnot :: a}

@@ -41,6 +41,8 @@ data Syntax = Syntax
 	deriving (Show, Eq)
 makeLenses ''Syntax
 
+emptySyntax	= Syntax M.empty []
+
 
 syntaxChoices
 	= syntax . mapped . mapped . _1

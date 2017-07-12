@@ -54,16 +54,21 @@ header dev
       = ["module Assets where"
 	, ""
 	, ""
-	, if dev then "import System.IO.Unsafe (unsafePerformIO)" else ""
+	, if dev then "import System.IO.Unsafe (unsafePerformIO)\nimport Control.DeepSeq\nimport System.IO" else ""
 	, "import qualified Data.ByteString as B"
 	, "import qualified Data.ByteString.Builder as B"
 	, "import Data.ByteString.Lazy (toStrict)"
 	, ""
 	, ""
+	, ""
 	, "-- Automatically generated"
 	, "-- This file contains all assets, loaded via 'unsafePerformIO' or hardcoded as string, not to need IO for assets"
 	, ""
-	, ""
+	, "readFile'\t\t:: FilePath -> IO String"
+	, "readFile' str = do\th <- openFile str ReadMode"
+    	, "\t\t\ts <- hGetContents h"
+   	, "\t\t\ts `deepseq` hClose h"
+    	, "\t\t\treturn s"
 	] & unlines
 
 
@@ -75,7 +80,7 @@ fileLine dev origDir file
 	= do	let name'	=  name origDir file
 		let pragma	= if dev then "\n{-# NOINLINE "++name'++" #-}\n" else ""
 		let devAssgn'	= if isBinary file then "unsafePerformIO $ B.readFile "++show file
-					else "unsafePerformIO $ readFile "++show file
+					else "unsafePerformIO $ readFile' "++show file
 		let devAssgn	= "let str = "++devAssgn'++" in seq str str"
 		contents	<- if dev then return devAssgn else
 					if isBinary file then  

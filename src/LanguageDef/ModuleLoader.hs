@@ -26,9 +26,10 @@ import Control.Monad hiding (fail)
 data LoadingStatus = LS
 	{ _rootModule	:: [Name]
 	, _rootPath	:: FilePath
-	, _currentlyKnown	:: Map [Name] (FilePath, LanguageDef' ())
+	, _currentlyKnown	:: Map [Name] (FilePath, LanguageDef' () ())
 	}
 makeLenses ''LoadingStatus
+
 
 
 {- | Load all modules, given the root path where to start looking
@@ -60,7 +61,7 @@ loadAll fp plzLoad
 		
 
 -- Adds the filepath to the imports, within the language def data
-_fixImports	:: Map [Name] (FilePath, LanguageDef' ()) -> Map [Name] LanguageDef 
+_fixImports	:: Map [Name] (FilePath, LanguageDef' () fr) -> Map [Name] (LanguageDef' ResolvedImport fr)
 _fixImports langDefs
 	= let	resolver	= langDefs |> fst in
 		langDefs |> snd |> fixImport resolver |> either error id

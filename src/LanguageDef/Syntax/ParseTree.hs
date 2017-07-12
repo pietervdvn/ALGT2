@@ -72,10 +72,17 @@ removeHidden pt
 
 --------------------- PARSER STUFF --------------------------------------
 
+{- | Converts a string to a simple parsetree
+
+>>> simplePT "abc"
+Literal {_ptToken = "abc", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}
+-}
 simplePT	:: String -> ParseTree ()
 simplePT string	= Literal string unknownLocation () False
 
+{- | Parses a file with the given syntax
 
+-}
 parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Either String ParseTree'
 parse fileName syntax syntacticForm
 	= _runParser fileName (_parseRule syntax syntacticForm <* eof)

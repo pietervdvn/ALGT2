@@ -17,7 +17,7 @@ importFlags: extra information about the imports, such as qualified imports and 
  -}
 data Scope name nameInt a importFlags exportFlags = Scope
 	{ _scopeName		:: name		-- The fully qualified scope name, as how it is called by the outside world
-	, _imported		:: Map name (a, importFlags)	-- The fully qualified names of other scopes that are imported, and stuff that it imports. Flags might indicate extra information, such as qualified imports etc...
+	, _imported		:: Map name importFlags	-- The fully qualified names of other scopes that are imported and the used importflags
 	, _importedInternalView	:: Map nameInt name	-- The internal view; sometimes modules are referred differently internally
 	, _payload		:: a		-- The stuff that this module defines to the outside world, the actual payload
 	, _reExports		:: Map name exportFlags	-- The stuff that is imported and reexported from other modules
@@ -25,17 +25,24 @@ data Scope name nameInt a importFlags exportFlags = Scope
 makeLenses ''Scope
 
 
--- Gets an explicit import, based on the internal name
-explicitImport	:: (Ord nameInt, Ord name) => (name -> String) -> (nameInt -> String) -> Scope name nameInt a flags eflags -> nameInt -> Either String (name, a, flags)
-explicitImport showName showNameInt scope nameInt
+-- Gets a dictionary with modules available from this module (because they are imported)
+importsFromEnv	:: (Ord name) => Map name a -> Scope name nameInt a flags eFlags -> Map name a
+importsFromEnv env scope
+	= M.intersectionWith const env (get imported scope)
+
+-- Gets an explicitly imported object from the environment, based on the internally (partial) name
+explicitImport	:: (Ord nameInt, Ord name) => (name -> String) -> (nameInt -> String) -> Map name a -> Scope name nameInt a flags eflags -> nameInt -> Either String (name, a, flags)
+explicitImport showName showNameInt environment scope nameInt
 	= do	let scopeNm	= showName (get scopeName scope)	:: String
 		let msg		= "The namespace "++showNameInt nameInt++" is not available within scope "++ scopeNm ++"; try importing it"
 		explicitName	<- checkExistsSugg showNameInt nameInt (get importedInternalView scope) msg
 		let msg'	= "The fully qualified namespace "++showName explicitName++" is not available within scope "++ scopeNm ++"; this is probably a bug"
-		(a, flags)	<- checkExistsSugg showName explicitName (get imported scope) msg'
+		flags		<- checkExistsSugg showName explicitName (get imported scope) msg'
+		a		<- checkExistsSugg showName explicitName environment ("The namespace "++showName explicitName++" was not found in the environment")
 		return (explicitName, a, flags)
 
 
+{- TODO Rm 
 
 -- Updates all 'import' references of each scope by the one in the dictionary
 knotScopes	:: (Ord name) => (name -> String) -> Map name (Scope name ni a ifl efl) -> Map name (Scope name ni a ifl efl)
@@ -50,3 +57,5 @@ _knotScope showName scopes scopeToFix
 					(\nm (_, flags) -> (find nm, flags))
 		in
 		scopeToFix & set imported imported'
+-}
+

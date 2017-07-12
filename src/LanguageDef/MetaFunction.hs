@@ -30,13 +30,32 @@ data FunctionClause a = FunctionClause
 	} deriving (Show, Eq)
 
 
-type TypedFunction	= Function FQName
+type SyntForm	= FQName
+data SyntFormIndex = SyntFormIndex
+			{ _syntForm	:: SyntForm
+			, _syntChoice	:: Int	-- To what choice does it correspond?
+			, _syntSeqInd	:: Maybe Int	-- To what index in the sequence of the choice does it correspond?
+			} 
+			| NoIndex SyntForm
+			deriving (Show, Eq)
 
-data Functions	= Functions {_functions :: Map Name TypedFunction, _functionOrder :: [Name]}
+instance ToString SyntFormIndex where
+	toParsable (NoIndex sf)	= showFQ sf
+	toParsable (SyntFormIndex f ch ind)
+				= showFQ f ++":"++show ch++(ind |> show |> ("."++) & fromMaybe "")
+
+
+type TypedFunction	= Function SyntFormIndex
+
+data Functions' a	= Functions 
+		{ _functions :: Map Name (Function a)
+		, _functionOrder :: [Name]}
 	deriving (Show, Eq)
 
+type Functions	= Functions' SyntFormIndex
 
-makeLenses ''Functions
+
+makeLenses ''Functions'
 makeLenses ''Function
 makeLenses ''FunctionClause
 
@@ -107,7 +126,7 @@ instance ToString (Function a) where
 		]  
 		++ clauses |> toParsable
 
-instance ToString Functions where
+instance ToString (Functions' a) where
 	toParsable (Functions funcs order)
 		= let	order'	= order ++ (funcs & M.keys & L.filter (`M.notMember` funcs)) in
 			order'	|> (funcs ! )
