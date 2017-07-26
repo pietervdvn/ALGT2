@@ -25,6 +25,7 @@ import qualified Data.Set as S
 import Data.Either
 import Data.Maybe
 import Data.Bifunctor (first)
+import Control.Arrow ((&&&))
 
 import qualified Assets
 
@@ -102,15 +103,24 @@ parseFullFile	:: [Name] -> FilePath -> String -> Either String (LanguageDef' () 
 parseFullFile ns fp contents
 	= inMsg ("While parsing "++show fp) $
 	  do	pt	<- parse fp (metaSyntaxes, ["Main"]) "langDef" contents
-		((title, meta, imports), (syntax, _))	<- interpret (parseLangDef (_fullFileCombiner ns)) pt
+		((title, meta, imports), (syntax, funcs))	<- interpret (parseLangDef (_fullFileCombiner ns)) pt
 		return $ LanguageDef
 			title
 			imports
 			meta
 			syntax
 			(emptyLattice ([], "B") ([], "T"))	-- filled later on
-			Nothing				-- TODO the functions!
+			(funcs |> _prepFunctions)
 
+
+_prepFunctions	:: [Function LocationInfo] -> Functions' ()
+_prepFunctions funcs
+	= let	funcOrder	= funcs |> get funcName
+		funcDict	= funcs |> (get funcName &&& id)
+					& M.fromList
+					||>> const ()
+		in
+		Functions funcDict funcOrder
 
 
 -- | Converts the modules from parsetree into all the needed parts

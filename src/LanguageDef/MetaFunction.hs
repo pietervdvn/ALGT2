@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module LanguageDef.MetaFunction where
 
 
@@ -19,7 +19,7 @@ data Function a	= Function
 	, _funcRetType	:: FQName
 	, _funcClauses	:: [FunctionClause a]
 	, _funcDoc	:: MetaInfo
-	} deriving (Show, Eq)
+	} deriving (Show, Eq, Functor)
 
 
 data FunctionClause a = FunctionClause 
@@ -27,7 +27,7 @@ data FunctionClause a = FunctionClause
 	, _clauseResult		:: Expression a
 	, _clauseDoc		:: MetaInfo
 	, _clauseFuncName	:: Name
-	} deriving (Show, Eq)
+	} deriving (Show, Eq, Functor)
 
 
 type SyntForm	= FQName
@@ -38,6 +38,13 @@ data SyntFormIndex = SyntFormIndex
 			} 
 			| NoIndex SyntForm
 			deriving (Show, Eq)
+
+removeIndex'	:: SyntFormIndex -> SyntFormIndex
+removeIndex' (SyntFormIndex sf _ _)
+	= NoIndex sf
+removeIndex' noIndex	= noIndex
+
+removeIndex i	= i & removeIndex' & (\(NoIndex sf) -> sf)
 
 instance ToString SyntFormIndex where
 	toParsable (NoIndex sf)	= showFQ sf

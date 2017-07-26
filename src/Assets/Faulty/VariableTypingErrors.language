@@ -1,0 +1,34 @@
+
+ Testing Language
+*****************
+
+# Blabla
+
+Syntax
+======
+
+bool	::= "True" | "False"
+int	::= Number
+
+expr	::= bool | int
+
+
+
+Functions
+=========
+
+not		: bool -> bool
+f("True")	= "False"
+f("False")	= "True"
+
+
+f		: bool -> bool
+f(x)		= y
+
+g		: int -> int
+g(x)		= not(x)
+
+h		: expr -> bool
+g((x:int))	= bool
+g(x)		= not(x)
+

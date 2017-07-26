@@ -31,7 +31,7 @@ import Data.Maybe
 ------------------------------- TYPING -------------------------------
 
 
-typeAllFunctionsLD	:: Map [Name] (LDScope' ()) -> Either String (Map [Name] LDScope)
+typeAllFunctionsLD	:: Map [Name] (LDScope' x) -> Either String (Map [Name] LDScope)
 typeAllFunctionsLD lds
 	= do	typed	<- lds & M.toList ||>> typeScope |> sndEffect & allRight' |> M.fromList
 				:: Either String (Map [Name] (Scope [Name] [Name] LanguageDef () ()))
@@ -40,7 +40,7 @@ typeAllFunctionsLD lds
 		return scopes
 
 
-typeScope	:: LDScope' () -> Either String (Scope [Name] [Name] LanguageDef () ())
+typeScope	:: LDScope' x -> Either String (Scope [Name] [Name] LanguageDef () ())
 typeScope scope
 	= do	let langDef	= get (ldScope . payload) scope
 		langDef'	<- typeAllFunctions scope langDef
@@ -48,7 +48,7 @@ typeScope scope
 		return scope'
 
 
-typeAllFunctions	:: LDScope' fr -> LanguageDef' ResolvedImport () -> Either String LanguageDef
+typeAllFunctions	:: LDScope' fr -> LanguageDef' ResolvedImport x -> Either String LanguageDef
 typeAllFunctions ld langDef
  | isNothing (get langFunctions langDef)
 	= langDef & set langFunctions Nothing & return
@@ -57,7 +57,7 @@ typeAllFunctions ld langDef
 		let funcs	= get langFunctions langDef & fromJust
 		let bareFunctions
 				= funcs & get functions
-					& M.toList	:: [(Name, Function ())]
+					& M.toList
 		bareFunctions'	<- bareFunctions ||>> typeFunction ld supers |> sndEffect & allRight'
 		let funcs'	= funcs & set functions  (bareFunctions' & M.fromList)
 		let langDef'	= set langFunctions (Just funcs') langDef
@@ -65,7 +65,7 @@ typeAllFunctions ld langDef
 		
 
 
-typeFunction	:: LDScope' fr -> Lattice FQName -> Function () -> Either String (Function SyntFormIndex)
+typeFunction	:: LDScope' fr -> Lattice FQName -> Function x -> Either String (Function SyntFormIndex)
 typeFunction ld supers f
 	= inMsg ("While typing "++ get funcName f) $
 	  do	let clauses	= get funcClauses f
@@ -73,9 +73,21 @@ typeFunction ld supers f
 		clauses'	<- clauses & mapi |> typeClause ld supers tps & allRight'
 		f & set funcClauses clauses' & return
 		
+{- |
 
+Typing of the clause. Checks for:
 
-typeClause	:: LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause ()) -> Either String (FunctionClause SyntFormIndex)
+- Undefined variables
+- Variable usage that is smaller then the possible input (e.g. f(x:expr) = intFunction(x))
+- Conflicting usage
+
+>>> import AssetUtils
+>>> getLangDefs' ["Faulty","FunctionTyperTest"]
+Left "While typing f:\n  While typing clause f.0:\n    The variable \"y\" was not defined\nWhile typing g:\n  While typing clause g.0:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between int and Faulty.FunctionTyperTest.bool\nWhile typing h:\n  While typing clause g.0:\n    While typing pattern 0, namely x:int:\n      The ascription of x as a int is not a subtype of expr\n  While typing clause g.1:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between bool and Faulty.FunctionTyperTest.bool\n\n"
+
+-}
+
+typeClause	:: LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause x) -> Either String (FunctionClause SyntFormIndex)
 typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc nm)
  | length patExps /= length pats
 	= Left $ "Expected "++show (length patExps)++" patterns for function "++show nm++", but got "++show (length pats)++" patterns instead"
@@ -84,13 +96,30 @@ typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc 
 		pats'	<- zip patExps pats & mapi |> (\(i, (patExp, pat)) -> typePattern ("pattern "++show i) scope supertypings patExp pat)
 				& allRight'
 		ret'	<- typePattern "return expression" scope supertypings retExp ret	-- typing of the main return expression
-		inMsg "While checking for conflicting variable usage between patterns" $ mergeTypings' supertypings pats'
+
+		-- Patterns, such as `f((x:expr), (x:int))` will get the intersection
+		patternTypes	<- inMsg "While checking for conflicting variable usage between patterns" $ mergeTypings' supertypings pats'
+		-- The usage in the return expression should be smaller, but never bigger: `f((x:expr)) = !plus((x:int), 5)` implies a type error
+		exprTypes	<- inMsg "While checking for conflicting variable in the clause body" $ mergeTypings' supertypings [ret']
 		inMsg "While checking for conflicting variable usage between patterns and the clause body" $ mergeTypings' supertypings (ret':pats')
+		
+		-- check that each variable exists
+		exprTypes & M.keys & filter (not . (`M.member` patternTypes))
+			|> (\k -> "The variable "++show k++" was not defined")
+			|> Left & allRight_
+
+		-- check that usage of each variable is a supertype of what the patterns generate (what a pattern gives is a subtype of what is needed)
+		let notSubset	= M.intersectionWith (,) patternTypes exprTypes	
+					& M.filter (\(decl, usage) -> not $ isSubsetOf supertypings decl usage) :: Map Name (SyntForm, SyntForm)
+		let notSubsetMsg (nm, (patT, exprT))
+				= "The variable "++show nm++" is used as a "++showFQ exprT++", but could be a "++showFQ patT++" which is broader"
+		unless (null notSubset) $ Left $ notSubset & M.toList |> notSubsetMsg & unlines & indent
+
 		return $ FunctionClause pats' ret' doc nm
 
 
 
-typePattern	:: String -> LDScope' fr -> Lattice FQName -> FQName -> Expression ()  -> Either String (Expression SyntFormIndex)
+typePattern	:: String -> LDScope' fr -> Lattice FQName -> FQName -> Expression x  -> Either String (Expression SyntFormIndex)
 typePattern msg ld supers exp pat
 	= inMsg ("While typing "++msg++", namely "++toParsable pat) $ do
 		pat'	<- typeExpression ld exp pat ||>> snd
@@ -107,6 +136,8 @@ Right (DontCare {_expAnnot = ((),NoIndex (["A"],"b"))})
 Right (Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool"))})
 >>> typeExpression testLDScope (["TestLanguage"], "bool") (ParseTree (simplePT "True") ())
 Right (ParseTree {_expPT = Literal {_ptToken = "True", ...}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0})})
+>>> typeExpression testLDScope (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") ()) (DontCare ()) ())
+Right (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0})}, _exp2 = DontCare {_expAnnot = ((),NoIndex (["TestLanguage"],"bool"))}, _expAnnot = ((),NoIndex (["TestLanguage"],"bool"))})
  -}
 typeExpression	:: LDScope' fr -> SyntForm -> Expression a -> Either String (Expression (a, SyntFormIndex)) 
 typeExpression _ expectation (Var nm a)
@@ -120,14 +151,24 @@ typeExpression ld expectation (FuncCall funcNm args a)
 		let ld'			= get (ldScope . payload) ld
 		ftype	<- get funcRetType function & resolve ld syntaxCall
 		assert (isSubtypeOf ld' ftype expectation || isSubtypeOf ld' expectation ftype)
-			"No common ground"
+			("No common ground: expected some intersection between "++showFQ expectation++" and "++ showFQ ftype)
 		return (FuncCall fqname args' (a, NoIndex ftype))
 typeExpression ld expectation (Ascription expr name a)
 	= do	name'	<- resolve ld syntaxCall name
 		expr'	<- typeExpression ld name' expr
 		assert (isSubtypeOf (get (ldScope . payload) ld) name' expectation)
-			$ "The ascription of "++toParsable expr++" as a "++show name++" is not a subtype of "++showFQ expectation
+			$ "The ascription of "++toParsable expr++" as a "++showFQ name++" is not a subtype of "++showFQ expectation
 		return $ Ascription expr' name' (a, NoIndex name')
+typeExpression ld expectation (Split e1 e2 a)
+	= do	e1'	<- typeExpression ld expectation e1
+		e2'	<- typeExpression ld expectation e2
+		let t e	= get expAnnot e & snd & removeIndex'
+		let t1	= t e1'
+		let t2	= t e2'
+		let msg	e	= toParsable e ++ "\t: " ++toParsable (t e)
+		assert (t1 == t2) $ "Types of arguments in a split should be the same, but the types are different:" ++
+			indent (unlines [msg e1', msg e2'])
+		return $ Split e1' e2' (a, t1)
 typeExpression ld expectation pt@ParseTree{}
 	= do	(expr', _)	<- typeExpressionIndexed ld expectation [pt]
 		assert (length expr' == 1) "Huh, this is weird. Bug in typeExpression"
@@ -215,6 +256,8 @@ _typingTable (Var nm (NoIndex sf))
 	= M.singleton nm (S.singleton sf)
 _typingTable (DontCare _)
 	= M.empty
+_typingTable (ParseTree _ _)
+	= M.empty
 _typingTable (FuncCall _ args _)
 	= args |> _typingTable & M.unionsWith S.union
 _typingTable (Ascription expr _ _)
@@ -239,18 +282,17 @@ Left [("x",fromList [(["TestLanguage"],"bool"),(["TestLanguage"],"int")])]
 >>> [boolVar, intVar] ||>> snd & mergeTypings' supertypings
 Left "While checking for conflicting variable usage:\n    x\tis used as TestLanguage.bool, TestLanguage.int"
 -}
-mergeTypings	:: Lattice FQName -> [Expression SyntFormIndex] -> Either [(String, Set SyntForm)] ()
+mergeTypings	:: Lattice FQName -> [Expression SyntFormIndex] -> Either [(String, Set SyntForm)] (Map Name SyntForm)
 mergeTypings supertyping exprs
 	= do	let typings	= exprs |> _typingTable 
 					& M.unionsWith S.union
-					& M.filter (not . S.null)
-					& M.filter ((/=) 1 . S.size)
 					|> (id &&& infimums supertyping)
 		let failedTypings
 				= typings & M.filter ((==) (get bottom supertyping) . snd)
 					|> fst
 					& M.toList
 		unless (null failedTypings) $ Left failedTypings
+		return (typings |> snd)
 
 -- Same as mergeTypings, but with an error message
 mergeTypings' st exprs

@@ -159,7 +159,7 @@ builtinEscapes'
 isElementOf	:: String -> Builtin -> Bool
 isElementOf str bi
 	= let	fileName	= "Dynamic source: is element of" in
-		(runParser (get biParse bi) (ParserMetaInfo fileName 0 0) fileName str) & isRight
+		runParser (get biParse bi) (ParserMetaInfo fileName 0 0) fileName str & isRight
 
 knownBuiltins
 	= 	[whitespace

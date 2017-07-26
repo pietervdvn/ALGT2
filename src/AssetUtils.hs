@@ -20,10 +20,18 @@ allAssets'
 -- Test language as LangDefs
 testLangDefs	:: LangDefs
 testLangDefs
-	= loadAll "" ["TestLanguage"] & runPure allAssets' & either error fst
+	= getLangDefs ["TestLanguage"]
 
 testLDScope
-	= let	(LangDefs x)	= testLangDefs
-		in x ! ["TestLanguage"]
+	= getScope ["TestLanguage"]
 
+getScope	:: [Name] -> LDScope
+getScope nm
+	= getLangDefs nm & get langdefs & (! nm)
 
+getLangDefs'	:: [Name] -> Either String LangDefs
+getLangDefs' nm
+	= loadAll "" nm & runPure allAssets' |> fst
+
+getLangDefs nm
+	= getLangDefs' nm & either error id

@@ -42,6 +42,7 @@ arguments	::= expression "," arguments | expression
 funcCall	::= ident "(" arguments ")"
 
 ascription	::= expressionTerm ":" ident
+splitExpression	::= expressionTerm "&" expression
 
 # The metaExpressions/patterns that can be used (note: the comments are in a special format: example, name, behaviour in patterns, behaviour in arguments)
 # If a function can not match any expression, an error is generated
@@ -54,6 +55,7 @@ expressionTerm	::= funcCall	# "f(a, 5)", "Function call", "Evaluates the functio
 
 # A full expression, eventually a sequence
 expression	::=  ascription	# "a:type", "Ascription", "Check that the argument is an element of `type`", "Checks that an expression is of a type. Bit useless to use within expressions"
+		| splitExpression # "x&y", "Capture", "Match the argument against both patterns", "Execute both `x` and `y`, check that they are the same"
 		| expressionTerm expression
 		| expressionTerm
 

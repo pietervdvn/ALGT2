@@ -24,6 +24,7 @@ data Expression a
 		, _expCallcArgs :: [Expression a],  _expAnnot :: a}
 	| Ascription {_ascExpr	:: Expression a
 		, _ascType :: FQName, _expAnnot :: a}
+	| Split {_exp1 :: Expression a, _exp2 :: Expression a, _expAnnot :: a}
 	| SeqExp {_expSeq	:: [Expression a], _expAnnot :: a}
 	deriving (Show, Eq, Functor)	
 makeLenses ''Expression
@@ -76,8 +77,15 @@ expression'	:: Combiner [Expression LocationInfo]
 expression'
 	= choices' "expression"
 		[ascription	|> (:[])
+		, splitExpression |> (:[])
 		, cmb (:) expressionTerm expression'
 		, expressionTerm |> (:[])]
+
+splitExpression	:: Combiner (Expression LocationInfo)
+splitExpression
+	= choices' "splitExpression"
+		[(expressionTerm <+> (lit "&" **> expression))
+			& withLocation (\li (exp1, exp2) -> Split exp1 exp2 li)]
 
 
 ascription	:: Combiner (Expression LocationInfo)
