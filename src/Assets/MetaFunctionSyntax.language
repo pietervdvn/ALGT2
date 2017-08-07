@@ -60,7 +60,8 @@ expression	::=  ascription	# "a:type", "Ascription", "Check that the argument is
 		| expressionTerm
 
 # A single clause in a metafunction
-funcClause	::= Identifier "(" arguments ")" "=" expression Syntax.nl
+eqSign		::= Syntax.nl "\t" "=" | "="
+funcClause	::= Identifier "(" arguments ")" eqSign expression Syntax.nl
 funcClauses	::= funcClause funcClauses | funcClause
 
 # A full function, including leading docstring

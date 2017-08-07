@@ -80,12 +80,24 @@ fullyQualifyBNF scope (bnf, metaInfo)
 		bnf & overRuleCall' (resolve scope syntaxCall)
 
 
+-- Qualifies all function types absolutely
+fullyQualifyFunction	:: LDScope' fr -> Function a -> Either String (Function a)
+fullyQualifyFunction scope (Function nm argTps retType clauses docs)
+	= do	argTps'	<- argTps |> resolve scope syntaxCall & allRight'
+		retType'	<- retType & resolve scope syntaxCall
+		clauses'	<- clauses |> fullyQualifyClause scope & allRight'
+		return $ Function nm argTps' retType' clauses' docs
+
+
+fullyQualifyClause	:: LDScope' fr -> FunctionClause a -> Either String (FunctionClause a)
+fullyQualifyClause scope clause
+	= return clause
 
 syntaxCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe Syntax, Syntax -> Map Name [BNF])
 syntaxCall	= ("the syntactic form", get langSyntax, \synt -> get syntax synt ||>> fst)
 
 functionCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Functions' fr), Functions' fr -> Map Name (Function fr))
-functionCall	= ("the syntactic form", get langFunctions, get functions)
+functionCall	= ("the function", get langFunctions, get functions)
 
 resolve	:: LDScope' fr -> (String, LanguageDef' ResolvedImport fr -> Maybe a, a -> Map Name b) -> FQName -> Either String FQName
 resolve	scope entity name

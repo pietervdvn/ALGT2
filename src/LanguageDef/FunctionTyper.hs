@@ -83,7 +83,7 @@ Typing of the clause. Checks for:
 
 >>> import AssetUtils
 >>> getLangDefs' ["Faulty","FunctionTyperTest"]
-Left "While typing f:\n  While typing clause f.0:\n    The variable \"y\" was not defined\nWhile typing g:\n  While typing clause g.0:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between int and Faulty.FunctionTyperTest.bool\nWhile typing h:\n  While typing clause g.0:\n    While typing pattern 0, namely x:int:\n      The ascription of x as a int is not a subtype of expr\n  While typing clause g.1:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between bool and Faulty.FunctionTyperTest.bool\n\n"
+Left "While typing f:\n  While typing clause f.0:\n    The variable \"y\" was not defined\nWhile typing g:\n  While typing clause g.0:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between Faulty.FunctionTyperTest.int and Faulty.FunctionTyperTest.bool\nWhile typing h:\n  While typing clause g.0:\n    The variable \"bool\" was not defined\n  While typing clause g.1:\n      The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader\n\n"
 
 -}
 
@@ -110,6 +110,7 @@ typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc 
 
 		-- check that usage of each variable is a supertype of what the patterns generate (what a pattern gives is a subtype of what is needed)
 		let notSubset	= M.intersectionWith (,) patternTypes exprTypes	
+					& M.filter (uncurry (/=))
 					& M.filter (\(decl, usage) -> not $ isSubsetOf supertypings decl usage) :: Map Name (SyntForm, SyntForm)
 		let notSubsetMsg (nm, (patT, exprT))
 				= "The variable "++show nm++" is used as a "++showFQ exprT++", but could be a "++showFQ patT++" which is broader"

@@ -17,6 +17,9 @@ import LanguageDef.MetaExpression
 import LanguageDef.FunctionInterpreter
 import LanguageDef.Syntax
 import LanguageDef.Scope
+import LanguageDef.MetaExpression
+import LanguageDef.MetaFunction 
+
 
 import LanguageDef.API
 import LanguageDef.LangDefs

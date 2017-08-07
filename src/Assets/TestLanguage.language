@@ -22,7 +22,19 @@ tuple	::= expr expr
 Functions
 =========
 
-not		: bool -> bool
-f("True")	= "False"
-f("False")	= "True"
 
+not		: bool -> bool
+not("True")	= "False"
+not("False")	= "True"
+
+and		: bool * bool -> bool
+and("True", "True") = "True"
+and(_, _)	= "False"
+
+nand		: bool * bool -> bool
+nand(a, b)	= not(and(a, b))
+
+
+or		: bool * bool -> bool
+or(not("True"), not("True")) = "False"
+or(_, _)	= "True"

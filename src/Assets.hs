@@ -28,6 +28,7 @@ allAssets	= [("TestLanguageFaulty.language", _TestLanguageFaulty_language)
 			, ("TestInput/Nested/L.language", _TestInput_Nested_L_language)
 			, ("TestInput/Nested/Y.language", _TestInput_Nested_Y_language)
 			, ("Faulty/FunctionTyperTest.language", _Faulty_FunctionTyperTest_language)
+			, ("Faulty/VariableTypingErrors.language", _Faulty_VariableTypingErrors_language)
 			]
 
 {-# NOINLINE _TestLanguageFaulty_language #-}
@@ -65,3 +66,7 @@ _TestInput_Nested_Y_language
 {-# NOINLINE _Faulty_FunctionTyperTest_language #-}
 _Faulty_FunctionTyperTest_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/FunctionTyperTest.language" in seq str str
+
+{-# NOINLINE _Faulty_VariableTypingErrors_language #-}
+_Faulty_VariableTypingErrors_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/VariableTypingErrors.language" in seq str str

@@ -60,6 +60,7 @@ data Functions' a	= Functions
 	deriving (Show, Eq)
 
 type Functions	= Functions' SyntFormIndex
+-- TODO Check that each function clause bears the same name as the function itself
 
 
 makeLenses ''Functions'
@@ -108,7 +109,7 @@ functionClauses = choices' "funcClauses"
 
 functionClause	:: Combiner (FunctionClause LocationInfo)
 functionClause 	= choices' "funcClause"
-			[ (capture <+> lit "(" **> (arguments <+> lit ")" **> lit "=" **> expression <+> nl))
+			[ (capture <+> lit "(" **> (arguments <+> lit ")" **> skip **> expression <+> nl))
 				& withLocation (,)
 				|> _funcClause
 			]

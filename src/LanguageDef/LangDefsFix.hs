@@ -11,6 +11,7 @@ import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
 import LanguageDef.Scope
 import LanguageDef.LangDefs
 import LanguageDef.FunctionTyper
+import LanguageDef.MetaFunction
 
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)
@@ -106,7 +107,13 @@ fixLD		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Either String (Langua
 fixLD scope ld
 	= do	let syn		= get langSyntax ld
 		syn'		<- syn |> fixSyntax scope & justEffect
-		return $ set langSyntax syn' ld
+		let funcs	= get langFunctions ld
+		funcs'		<- funcs |> fixFunctions scope & justEffect
+		ld	& set langSyntax syn'
+			& set langFunctions funcs'
+			& return
+
+
 
 fixSyntax	:: LDScope' fr -> Syntax -> Either String Syntax
 fixSyntax scope syn
@@ -115,4 +122,13 @@ fixSyntax scope syn
 					|> (fst &&& fullyQualifySyntForm scope)
 					|+> sndEffect |> M.fromList
 		return $ set syntax syntx' syn
+
+
+fixFunctions	:: LDScope' fr -> Functions' a -> Either String (Functions' a)
+fixFunctions scope funcs
+	= do	let fncs	= get functions funcs
+		fncs'	<- fncs & M.toList
+				||>> fullyQualifyFunction scope
+				|+> sndEffect |> M.fromList
+		return $ set functions fncs' funcs
 

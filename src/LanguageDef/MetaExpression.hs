@@ -57,6 +57,10 @@ instance ToString' (a -> String) (Expression a) where
 				= (expr |> toParsable' showA & unwords ++ showA a) & inParens
 
 
+	toCoParsable'	= toParsable'
+	debug'		= toCoParsable'
+	show' _		= toParsable
+
 ------------------------------- COMBINERS ------------------------------
 
 choices' nm	= choices (["Functions"], nm)
