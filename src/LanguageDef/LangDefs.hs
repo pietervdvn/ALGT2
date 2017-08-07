@@ -140,3 +140,12 @@ instance Check LangDefs where
 	check (LangDefs defs)
 		= do	let syntaxes	= defs |> get (ldScope . payload . langSyntax) & M.mapMaybe id
 			check syntaxes
+
+
+instance ToString LangDefs where 
+	toParsable ld	= ld & get langdefs & M.toList |> _withHeader & unlines
+
+
+_withHeader (nm, ld)
+	= ["\n---------------", dots nm, "-------------\n"] & unwords ++ (ld & get (ldScope . payload) & toParsable)
+

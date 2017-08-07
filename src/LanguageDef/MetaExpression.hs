@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
 module LanguageDef.MetaExpression where
 
 {- 
@@ -33,18 +33,28 @@ makeLenses ''Expression
 
 
 instance ToString (Expression a) where
-	toParsable (Var nm _)	= nm
-	toParsable (DontCare _)	= "_"
-	toParsable (ParseTree pt _)
-				= toParsable pt
-	toParsable (FuncCall ident args _)	
+	toParsable (Var nm a)	= nm
+	toParsable (DontCare a)	= "_"
+	toParsable (ParseTree pt a)
+				= toCoParsable pt
+	toParsable (FuncCall ident args a)	
 				= showFQ ident ++ inParens (args |> toParsable & commas)
-	toParsable (Ascription exp as _)	
+	toParsable (Ascription exp as a)	
 				= toParsable exp ++ ":" ++ showFQ as
-	toParsable (SeqExp expr _)	
-				= expr |> toParsable & unwords & inParens
-	
+	toParsable (SeqExp expr a)	
+				= (expr |> toParsable & unwords) & inParens
 
+instance ToString' (a -> String) (Expression a) where
+	toParsable' showA (Var nm a)	= nm ++ showA a
+	toParsable' showA (DontCare a)	= "_" ++ showA a
+	toParsable' showA (ParseTree pt a)
+				= toCoParsable pt ++ showA a
+	toParsable' showA (FuncCall ident args a)	
+				= showFQ ident ++ inParens (args |> toParsable & commas) ++ showA a
+	toParsable' showA (Ascription exp as a)	
+				= toParsable exp ++ ":" ++ showFQ as ++ showA a
+	toParsable' showA (SeqExp expr a)	
+				= (expr |> toParsable' showA & unwords ++ showA a) & inParens
 
 
 ------------------------------- COMBINERS ------------------------------

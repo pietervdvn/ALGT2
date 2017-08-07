@@ -30,11 +30,12 @@ import Data.List as L
 >>> import AssetUtils
 >>>  let supertypings = testLangDefs & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)
 >>> debugLattice showFQ supertypings & putStr
-⊤ has following subtypes:  TestLanguage.expr
+⊤ has following subtypes:  TestLanguage.exprSum
 ⊥ has following subtypes:<no subs>
 TestLanguage.bool has following subtypes:  ⊥
 TestLanguage.expr has following subtypes:  TestLanguage.bool
   TestLanguage.int
+TestLanguage.exprSum has following subtypes:  TestLanguage.expr
 TestLanguage.int has following subtypes:  ⊥
 
 >>> import Graphs.Lattice

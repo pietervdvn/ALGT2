@@ -62,7 +62,10 @@ type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
 
 
 isSubtypeOf	:: LanguageDef' ResolvedImport fr -> FQName -> FQName -> Bool
-isSubtypeOf ld	= isSubsetOf (get langSupertypes ld)
+isSubtypeOf ld	sub super
+ | sub == super	= True
+ | otherwise
+	= isSubsetOf (get langSupertypes ld) sub super
 
 -------------------------------- IMPORT FIXING STUFF ------------------------------------
 

@@ -11,6 +11,9 @@ bool	::= "True" | "False"
 int	::= Number
 
 expr	::= bool | int
+exprSum	::= expr op exprSum | expr
+
+op	::= "&" | "+" 
 
 
 tuple	::= expr expr

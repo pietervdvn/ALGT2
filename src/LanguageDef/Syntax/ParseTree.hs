@@ -42,6 +42,49 @@ instance Normalizable (ParseTree a) where
 	normalize pt =  pt 
 
 
+deAnnot	:: ParseTree a -> ParseTree'
+deAnnot pt
+	= pt |> const ()
+
+annot	:: a -> ParseTree x -> ParseTree a
+annot a pt
+	= pt |> const a
+
+removeLocationInfo	:: ParseTree a -> ParseTree a
+removeLocationInfo re@RuleEnter{}
+	= re	& set ptLocation unknownLocation
+		& over pt removeLocationInfo
+removeLocationInfo seq@Seq{}
+	= seq	& set ptLocation unknownLocation
+		& over (pts . mapped) removeLocationInfo
+removeLocationInfo pt
+	= pt & set ptLocation unknownLocation
+
+
+removeRuleEnters	:: ParseTree a -> ParseTree a
+removeRuleEnters (RuleEnter pt _ _ _ _)
+			= removeRuleEnters pt
+removeRuleEnters (Seq pts loc a)
+			= Seq (pts |> removeRuleEnters) loc a
+removeRuleEnters pt	= pt
+
+
+mostSpecificRuleEnter	:: ParseTree a -> ParseTree a
+mostSpecificRuleEnter (RuleEnter (re@RuleEnter{}) _ _ _ _)
+	= mostSpecificRuleEnter re
+mostSpecificRuleEnter (Seq pts loc a)
+	= Seq (pts |> mostSpecificRuleEnter) loc a
+mostSpecificRuleEnter pt
+	= pt
+
+{-  | Removes all superfluous information (location info and such), so that parsetrees can be compared to the bare structure and contents
+
+
+-}
+bareInformation	:: ParseTree a -> ParseTree'
+bareInformation pt
+	= pt & deAnnot & removeLocationInfo & removeRuleEnters
+
 contents	:: ParseTree a -> String
 contents (Literal token _ _ _)
 	= token
@@ -180,8 +223,8 @@ instance ToString (ParseTree a) where
 	toParsable (RuleEnter pt _ _ _ _)
 		= toParsable pt
 
-	toCoParsable (Seq s _ _)
-		= s |> toCoParsable |>>= lines |> (" | " ++) & intercalate "\n"
+	toCoParsable (Literal str _ _ _)
+		= show str
 	toCoParsable (RuleEnter pt _ _ _ _)
 		= toCoParsable pt
 	toCoParsable pt
@@ -195,4 +238,12 @@ instance ToString (ParseTree a) where
 		= pts |> debug & commas & inParens'
 	debug (RuleEnter pt name choice _ _)
 		= (debug pt & inParens) ++ (showFQ name++":"++show choice)
+
+
+asTree	(RuleEnter pt usedR usedind _ _)
+	= "+ " ++ showFQ usedR ++ ":" ++ show usedind ++ "\n" ++ (asTree pt & indentWith "| ") 
+asTree (Seq pts _ _)
+	= pts |> asTree & unlines
+asTree pt
+	= toParsable pt
 

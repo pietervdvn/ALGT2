@@ -1,0 +1,17 @@
+#! /bin/bash
+cd src/
+
+TOTAL=`cat Todo.txt | wc -l`
+cat Todo.txt | sed "s/^/TODO-list: /"
+echo "TODO.txt: $TOTAL"
+for CODE in "TODO" "FIXME"
+do
+	../search $CODE
+	echo -e "\nTOTAL $CODE: "
+	FOUND=`../search $CODE | wc -l`
+	echo $FOUND
+	TOTAL=$TOTAL"+"$FOUND
+done
+	
+TOTAL=`echo $TOTAL | bc`
+echo "All issues: $TOTAL"

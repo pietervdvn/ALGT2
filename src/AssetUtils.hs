@@ -9,6 +9,7 @@ import Data.Map as M
 
 import LanguageDef.ModuleLoader
 import LanguageDef.LangDefs
+import LanguageDef.LocationInfo
 
 
 allAssets'
@@ -24,6 +25,9 @@ testLangDefs
 
 testLDScope
 	= getScope ["TestLanguage"]
+
+testType	:: Name -> FQName
+testType t	= (["TestLanguage"], t)
 
 getScope	:: [Name] -> LDScope
 getScope nm

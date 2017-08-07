@@ -42,20 +42,3 @@ explicitImport showName showNameInt environment scope nameInt
 		return (explicitName, a, flags)
 
 
-{- TODO Rm 
-
--- Updates all 'import' references of each scope by the one in the dictionary
-knotScopes	:: (Ord name) => (name -> String) -> Map name (Scope name ni a ifl efl) -> Map name (Scope name ni a ifl efl)
-knotScopes showName scopes
-	= let 	scopes'	=  scopes |> _knotScope showName scopes' in	-- I _love_ lazyness
-		scopes'
-
-_knotScope	:: (Ord name) => (name -> String) -> Map name (Scope name ni a ifl efl) -> Scope name ni a ifl efl -> Scope name ni a ifl efl
-_knotScope showName scopes scopeToFix
-	= let	find nm		= checkExists nm scopes ("Bug: "++showName nm++" missing in the already fixed") & either error (get payload)
-		imported'	= get imported scopeToFix & M.mapWithKey 
-					(\nm (_, flags) -> (find nm, flags))
-		in
-		scopeToFix & set imported imported'
--}
-
