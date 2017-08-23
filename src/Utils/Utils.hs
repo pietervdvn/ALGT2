@@ -63,6 +63,10 @@ class Check' info a where
 	check' info a
 		= return ()
 
+
+checkM	:: Check a => Maybe a -> Either String ()
+checkM	= maybe pass check
+
 class Normalizable a where
 	normalize	:: a -> a
 

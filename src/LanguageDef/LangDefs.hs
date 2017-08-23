@@ -146,13 +146,16 @@ _implicitImports (LDScope scope env)
 
 
 
-
+getSyntaxes	:: LangDefs -> Syntaxes
+getSyntaxes (LangDefs defs)
+	= defs |> get (ldScope . payload . langSyntax) & M.mapMaybe id
+			
 
 instance Check LangDefs where
-	check (LangDefs defs)
-		= do	let syntaxes	= defs |> get (ldScope . payload . langSyntax) & M.mapMaybe id
-			check syntaxes
-
+	check lds@(LangDefs defs)
+		= do	let syntaxes	= getSyntaxes lds
+			let isSubtype nms	= defs & (! nms) & get (ldScope . payload) & isSubtypeOf
+			check' isSubtype syntaxes
 
 instance ToString LangDefs where 
 	toParsable ld	= ld & get langdefs & M.toList |> _withHeader & unlines

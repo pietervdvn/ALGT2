@@ -21,14 +21,5 @@ not		: bool -> bool
 not("True")	= "False"
 not("False")	= "True"
 
-
-f		: bool -> bool
-f(x)		= y
-
-g		: int -> int
-g(x)		= not(x)
-
-h		: expr -> bool
-h((x:int))	= bool
-h(x)		= not(x)
-
+not		: bool -> bool
+not(x)		= x

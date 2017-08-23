@@ -83,7 +83,7 @@ Typing of the clause. Checks for:
 
 >>> import AssetUtils
 >>> getLangDefs' ["Faulty","FunctionTyperTest"]
-Left "While typing f:\n  While typing clause f.0:\n    The variable \"y\" was not defined\nWhile typing g:\n  While typing clause g.0:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between Faulty.FunctionTyperTest.int and Faulty.FunctionTyperTest.bool\nWhile typing h:\n  While typing clause g.0:\n    The variable \"bool\" was not defined\n  While typing clause g.1:\n      The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader\n\n"
+Left "While typing f:\n  While typing clause f.0:\n    The variable \"y\" was not defined\nWhile typing g:\n  While typing clause g.0:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between Faulty.FunctionTyperTest.int and Faulty.FunctionTyperTest.bool\nWhile typing h:\n  While typing clause h.0:\n    The variable \"bool\" was not defined\n  While typing clause h.1:\n      The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader\n\n"
 
 -}
 

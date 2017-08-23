@@ -1,0 +1,24 @@
+
+ ShadowingTest
+****************
+
+
+Syntax
+======
+
+x	::= "a" | "a" "b"
+y	::= bool | bool bool
+z	::= bool | bool
+
+bool	::= "False" | "True"
+int	::= Number
+
+expr	::= bool | int
+
+
+dead1	::= expr | bool
+dead2	::= expr | bool ";"
+
+alive1	::= bool | expr
+alive2	::= bool | expr ";"
+

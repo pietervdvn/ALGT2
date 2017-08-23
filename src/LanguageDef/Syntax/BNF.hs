@@ -8,6 +8,7 @@ import LanguageDef.LocationInfo
 import Data.Maybe
 import Data.Either
 import Control.Monad.Identity
+import Data.Char
 
 
 import Text.Parsec (Parsec, char, oneOf, noneOf, many, many1, (<|>), try, runParser)
@@ -134,6 +135,42 @@ unsequence (Seq bnfs)
 unsequence bnf	= [bnf]
 
 
+_doesKill	:: (FQName -> FQName -> Bool) -> BNF -> BNF -> Bool
+_doesKill isSubtypeOf (RuleCall murderer) (RuleCall victim)
+		= victim `isSubtypeOf` murderer
+_doesKill _ x y	= x == y
+
+
+{- | calculates if this syntax kills some other syntax; the passed function indicates if one syntactic form is a subtype of another
+
+>>> doesKill todo (Literal "ABC") (Literal "ABC")
+True
+>>> doesKill todo (Literal "ABC") (Literal "XYZ")
+False
+>>> let xn = ([], "X")
+>>> let yn = ([], "Y")
+>>> let x = RuleCall xn
+>>> let y = RuleCall yn
+>>> let subtyping a b = (a == b) || ((a == xn) && (b == yn)) -- indicates that _x_ is a subtype of _y_, thus that y kills x
+>>> doesKill subtyping x y
+False
+>>> doesKill subtyping y x
+True
+>>> doesKill subtyping x x
+True
+
+-}
+
+doesKill	::  (FQName -> FQName -> Bool) -> BNF -> BNF -> Bool
+doesKill isSubtypeOf murderer' victim'
+	= let	murderer	= unsequence murderer'
+		victim		= unsequence victim'
+		prefixIsSub	= zip murderer victim
+					|> uncurry (_doesKill isSubtypeOf)
+					& and
+		in
+		length victim >= length murderer && prefixIsSub
+
 
 
 ------------------------------ BUILTIN STUFF + HELPERS -------------------------
@@ -142,6 +179,7 @@ unsequence bnf	= [bnf]
 digits	= ['0'..'9']
 lowers	= ['a'..'z']
 uppers	= ['A'..'Z']
+ascii	= [0..127] |> chr
 hexDigits
 	= digits ++ ['a'..'f'] ++ ['A'..'F']
 
@@ -167,6 +205,7 @@ knownBuiltins
 		, identifier
 		, string
 		, anyChar
+		, unicodeChar
 		, upperChar
 		, lowerChar
 		, digitChar
@@ -206,6 +245,10 @@ intBI		= Builtin "Integer" "Matches an (possibly negative) integer. Integers par
 
 numberBI	= Builtin "Number" "Matches an positive number. Integers parsed by this might be passed into the builtin arithmetic functions." "[0-9]+"
 			(_number |> Right)
+
+unicodeChar
+		= Builtin "UnicodeChar" "Any single unicode character that is not a standard ascii-character" "[^a-zA-Z0-9\\ascii]"
+			(_single $ noneOf ascii)
 
 		
 _single		:: Parser Char -> Parser (Either String Int)

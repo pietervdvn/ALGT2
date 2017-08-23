@@ -90,6 +90,14 @@ type VariableStore a
 
 -------------------------- ABOUT RUNNING A FUNCTION ------------------------------------
 
+
+resolveAndRun'	:: LangDefs -> FQName -> [ParseTree ()] -> Either String (ParseTree ())
+resolveAndRun'
+	= resolveAndRun (const ())
+
+{- | Resolves the function, executes it. The first arguments adds an annotation to the parsetree, based on the type of the parsetree
+
+-}
 resolveAndRun	:: (SyntFormIndex -> a) -> LangDefs -> FQName -> [ParseTree a] -> Either String (ParseTree a)
 resolveAndRun fb2a lds (targetLD, name) args
 	= do	ld	<- checkExistsSugg dots targetLD (get langdefs lds) ("The module "++dots targetLD++" was not found")

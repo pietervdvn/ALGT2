@@ -1,0 +1,19 @@
+
+ Testing Language
+*****************
+
+# Blabla
+
+Syntax
+======
+
+bool	::= "True" | "False"
+
+
+
+Functions
+=========
+
+not		: bool -> bool
+f("True")	= "False"
+f("False")	= "True"

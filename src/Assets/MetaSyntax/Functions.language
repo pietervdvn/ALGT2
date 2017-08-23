@@ -1,0 +1,76 @@
+
+  Functions 
+ ***********
+
+# Automatically generated and purely informational
+ Syntax 
+========
+
+
+# The symbol between two types in the signature
+typeSep	::= "*"
+	 | "\215"
+
+
+lastTypeSep	::= "->"
+	 | "\8594"
+
+
+types	::= Functions.ident Functions.typeSep Functions.types
+	 | Functions.ident
+
+# The type signature
+signature	::= Identifier ":" Functions.types Functions.lastTypeSep Functions.ident
+	 | Identifier ":" Functions.ident
+
+# An identifier, eventually from another namespace
+ident	~~= Identifier "." Identifier	 # Absolute identifier, in another namespace
+	 | Identifier	 # Local identifier
+
+
+arguments	::= Functions.expression "," Functions.arguments
+	 | Functions.expression
+
+
+funcCall	::= Functions.ident "(" Functions.arguments ")"
+
+
+ascription	::= Functions.expressionTerm ":" Functions.ident
+
+
+splitExpression	::= Functions.expressionTerm "&" Functions.expression
+
+# The metaExpressions/patterns that can be used (note: the comments are in a special format: example, name, behaviour in patterns, behaviour in arguments)
+# If a function can not match any expression, an error is generated
+expressionTerm	::= Functions.funcCall	 # "f(a, 5)", "Function call", "Evaluates the function, matches if the argument equals the result. Can only use variables which are declared left of this pattern. If the function fails (gives an error), the pattern fails too and the next clause is tried", "Evaluate this function"
+	 | Identifier	 # "x",	"Variable","Captures the argument as the name. If multiple are used in the same pattern, the captured arguments should be the same or the match fails."
+	 | "_"	 # "_", "Wildcard", "Captures the argument and ignores it", "_Not defined_"
+	 | Number	 # "42", "Number", "Argument should be exactly this number", "This number"
+	 | String	 # "Token", "Literal", "Argument should be exactly this string", "This string"
+	 | "(" Functions.expression ")"	 # "(x y z)", "Parens", "Groups a pattern", "Groups an expression"
+
+# A full expression, eventually a sequence
+expression	::= Functions.ascription	 # "a:type", "Ascription", "Check that the argument is an element of `type`", "Checks that an expression is of a type. Bit useless to use within expressions"
+	 | Functions.splitExpression	 # "x&y", "Capture", "Match the argument against both patterns", "Execute both `x` and `y`, check that they are the same"
+	 | Functions.expressionTerm Functions.expression
+	 | Functions.expressionTerm
+
+# A single clause in a metafunction
+eqSign	~~= Syntax.nl "\t" Whitespace "="
+	 | "="
+
+
+funcClause	::= Identifier "(" Functions.arguments ")" Functions.eqSign Functions.expression Syntax.nl
+
+
+funcClauses	::= Functions.funcClause Functions.funcClauses
+	 | Functions.funcClause
+
+# A full function, including leading docstring
+function	::= Syntax.nls Functions.signature Syntax.nl Functions.funcClauses
+
+# Full function section definition
+functions	::= Functions.function Functions.functions
+	 | Functions.function
+
+

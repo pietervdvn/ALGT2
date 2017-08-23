@@ -43,7 +43,6 @@ asSyntaxUnchecked' nm str
 asSyntax	:: Name -> String -> Either String Syntax
 asSyntax nm str
 	= do 	syntax	<- asSyntaxUnchecked nm str
-		check (asSyntaxes' [nm] syntax)
 		return syntax
 
 

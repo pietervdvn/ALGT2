@@ -1,0 +1,33 @@
+
+import Functions
+
+ Relation Syntax 
+******************
+
+
+# This document contains the syntax for relations and the natural deduction rules containing them.
+# This syntax reuses many expressions from functions; so "Functions" will be seen often
+
+ Syntax
+========
+
+# --------------- Relation declaring section -----------------
+
+relChar	::= UnicodeChar 
+	| "*" | "/" | "\\"
+	| "+" | "-"
+	| "!" | "#" | "$" | "%" | "." | "~"
+	| "=" | "<" | ">" | "?" | "@" | "^"
+	| "_"
+	| Digit
+relIdentUngrouped	::= relChar relIdent | relChar
+relIdent	::= $ relIdentUngrouped
+
+
+mode		::= "in" | "out"
+type		::= ident "(" mode ")"
+types		::= type typeSep types | type
+
+relDeclarationCore	::= "(" relIdent ")" ":" types
+
+relDeclaration	::= relDeclarationCore ";" "Pronounced" "as" String | relDeclarationCore

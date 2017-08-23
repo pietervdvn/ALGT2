@@ -1,3 +1,4 @@
+import Syntax
 
  MetaFunctions
 ***************
@@ -7,6 +8,11 @@
 # This is because, in order to read metafunctions, this language should be fully parsed - if this language would contain metafunctions, it could not be fully evaluated
 
 # Pietervdvn
+
+# Imports are injected fakely
+# Imports are:
+# Syntax (nls, nl)
+#
 
  Syntax
 ========
@@ -26,11 +32,6 @@ types		::= ident typeSep types | ident
 # The type signature
 signature	::= Identifier ":" types lastTypeSep ident
 		|   Identifier ":" ident
-
-
-
-
-
 
 
 
@@ -60,7 +61,7 @@ expression	::=  ascription	# "a:type", "Ascription", "Check that the argument is
 		| expressionTerm
 
 # A single clause in a metafunction
-eqSign		::= Syntax.nl "\t" "=" | "="
+eqSign		~~= Syntax.nl "\t" Whitespace "=" | "="
 funcClause	::= Identifier "(" arguments ")" eqSign expression Syntax.nl
 funcClauses	::= funcClause funcClauses | funcClause
 

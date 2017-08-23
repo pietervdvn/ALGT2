@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, TemplateHaskell, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE RankNTypes, TemplateHaskell, TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
 module LanguageDef.Syntax.Syntax where
 
 {- 
@@ -95,27 +95,42 @@ mergeSyntax' a b
 
 -------------------------------- CHECKS -------------------------------------
 
--- TODO port the checks!
-{-
 
-Checks still to port:
-- No duplicate choices exist over multiple rules
-- Dead choices check (e.g. "a" | "a" "b")
+{- | Checks all kind of stuff
+
+>>> import LanguageDef.API
+>>> loadAssetLangDef "Faulty" ["TestShadowing"]
+Left "While checking for dead clauses in the syntactic form TestShadowing:\n  While checking syntactic form \"dead1\":\n    The choice 'TestShadowing.expr' does prevent a later choice from being parsed, killing 'TestShadowing.bool'\n  While checking syntactic form \"dead2\":\n    The choice 'TestShadowing.expr' does prevent a later choice from being parsed, killing 'TestShadowing.bool Whitespace \";\"'\n  While checking syntactic form \"x\":\n    The choice '\"a\"' does prevent a later choice from being parsed, killing '\"a\" Whitespace \"b\"'\n  While checking syntactic form \"y\":\n    The choice 'TestShadowing.bool' does prevent a later choice from being parsed, killing 'TestShadowing.bool Whitespace TestShadowing.bool'\n  While checking syntactic form \"z\":\n    The choice 'TestShadowing.bool' does prevent a later choice from being parsed, killing 'TestShadowing.bool'\n"
+
 -}
-
-instance Check Syntaxes where
-	check syntaxes
+instance Check' ([Name] -> FQName -> FQName -> Bool) Syntaxes where
+	check' isSubtypeOf syntaxes
 		= do	let syntaxes'	= M.toList syntaxes |> swap
 			syntaxes' |> _checkAllIdentsExist syntaxes  & allRight_
 			[ syntaxes' |> _checkNoDuplicate
 			 , syntaxes' |> _checkNoTrivial
 			 ] |> allRight_ & allRight_
 			_checkLeftRecursion syntaxes
-			pass
 			-- Cycles in the supertype relationship: check unneeded, prevented by left recursion check
+			syntaxes & M.toList |> _checkDeadIn isSubtypeOf & allRight_
 
 
+_checkDeadIn	:: ([Name] -> FQName -> FQName -> Bool) -> ([Name],  Syntax) -> Either String ()
+_checkDeadIn isSubtype (nm, synt)
+	=  do	inMsg ("While checking for dead clauses in the syntactic form "++dots nm) $ 
+			synt & get syntax & M.toList |> (\(syntForm, choices) -> inMsg ("While checking syntactic form "++show syntForm) $
+				_checkDeadIn' (isSubtype nm) (choices |> fst)) & allRight_
 
+_checkDeadIn'		:: (FQName -> FQName -> Bool) -> [BNF] -> Either String ()
+_checkDeadIn' _ [_]	= pass
+_checkDeadIn' isSubtypeOf (head:choices)
+	= let	recursiveCheck	= _checkDeadIn' isSubtypeOf choices
+		msg tested	= "The choice '"++toParsable head++"' does prevent a later choice from being parsed, killing '"++toParsable tested++"'"
+		checkOne tested	= assert (not $ doesKill isSubtypeOf head tested) $ msg tested
+		checkAll	= choices |> checkOne
+		in
+		allRight_ (recursiveCheck:checkAll)		
+			
 
 -- | A syntactic form should not be declared twice
 -- >>> import LanguageDef.Syntax

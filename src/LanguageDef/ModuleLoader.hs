@@ -82,6 +82,7 @@ _loadAll ls toLoad
 		-- Language def with unresolved inputs
 		let absName	= get rootModule ls ++ toLoad
 		ld	<- parseFullFile absName path contents & either fail return
+		check ld & either fail return
 		let ld'	= ld & resolveLocalImports (get rootModule ls, init toLoad)
 		let ls'	= ls & over currentlyKnown (M.insert absName (path, ld'))
 		

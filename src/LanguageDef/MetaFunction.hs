@@ -12,6 +12,8 @@ import Data.Maybe
 import Data.Map as M
 import Data.List as L
 
+import Control.Monad
+
 {- A metafunction represents a function over parsetrees -}
 data Function a	= Function
 	{ _funcName	:: Name
@@ -60,12 +62,25 @@ data Functions' a	= Functions
 	deriving (Show, Eq)
 
 type Functions	= Functions' SyntFormIndex
--- TODO Check that each function clause bears the same name as the function itself
 
 
 makeLenses ''Functions'
 makeLenses ''Function
 makeLenses ''FunctionClause
+
+
+instance Check (Function a) where
+	check (Function name argTps retTp clauses docs)
+		= inMsg ("While checking function "++show name) $
+		   do	unless (clauses |> get clauseFuncName & all (== name)) $ Left $
+				"Some clauses have a different name. The function name is "++show name++
+				", but a clause is named "++(clauses |> get clauseFuncName & sort & nub & commas)
+
+instance Check (Functions' a) where
+	check (Functions funcs funcOrder)
+		= do	funcs & M.elems |> check & allRight_
+			checkNoDuplicates funcOrder (\funcs -> "Multiple definitions of the function " ++ (funcs |> show & commas) ++" are given" )
+
 
 choices' nm	= choices (["Functions"], nm) 
 

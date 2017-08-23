@@ -26,6 +26,9 @@ import Data.Either
 import Data.Maybe
 import Data.Bifunctor (first)
 import Control.Arrow ((&&&))
+import Control.Monad
+
+import System.Directory
 
 import qualified Assets
 
@@ -58,6 +61,27 @@ makeLenses ''LanguageDef'
 
 type ResolvedImport	= FilePath
 type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
+
+
+
+{- | Performs various checks
+
+
+>>> import LanguageDef.API
+>>> loadAssetLangDef "Faulty" ["FunctionDuplicateNameTest"]
+Left "Multiple definitions of the function \"not\" are given"
+
+>>> loadAssetLangDef "Faulty" ["FunctionIncorrectNameTest"]
+Left "While checking function \"not\":\n  Some clauses have a different name. The function name is \"not\", but a clause is named f\n"
+
+
+-}
+instance Check (LanguageDef' i f) where
+	check ld
+		= do	assert (get langTitle ld /= "") "The title of a language should not be empty"
+			-- Syntaxes are checked when all syntaxes are known 
+			checkM (get langFunctions ld)
+
 
 
 
@@ -137,9 +161,12 @@ _fullFileCombiner ns
 			, f |> (\f -> (Nothing, f))
 			, s <+> f] 
 
--- | All the syntaxes needed to parse a language definition file
--- >>> check metaSyntaxes
--- Right ()
+{- | All the syntaxes needed to parse a language definition file
+
+>>> subtypeStub	= (\_ x y -> x == y) :: [Name] -> FQName -> FQName -> Bool
+>>> check' subtypeStub metaSyntaxes
+Right ()
+-}
 metaSyntaxes	:: Map [Name] Syntax
 metaSyntaxes
 	= let	syntax	= mainSyntax [("Syntax", (["Syntax"], "syntax"))
@@ -151,7 +178,27 @@ metaSyntaxes
 
 
 		
+saveMetaSyntaxes	:: IO ()
+saveMetaSyntaxes
+	= do	putStrLn "Saving metasyntaxes to the asset files..."
+		dir	<- getCurrentDirectory |> (++"/src/Assets/MetaSyntax")
+		putStrLn $ "Directory is: "++dir
+		dirExists	<- doesDirectoryExist dir
+		when dirExists $ removeDirectoryRecursive dir
+		createDirectory dir
+		metaSyntaxes & M.toList |+> uncurry (_saveMetaSyntax dir)
+		pass
 
+
+_saveMetaSyntax	:: FilePath -> [Name] -> Syntax -> IO ()
+_saveMetaSyntax dir nm syntax
+	= do	let target	= dir ++"/" ++ dots nm ++ ".language"
+		print target
+		let contents	= inHeader " " (dots nm) '*' $
+				  "# Automatically generated and purely informational" ++ 
+				  (inHeader' "Syntax" $ 
+				  toParsable syntax)
+		writeFile target contents
 
 ------------------------------------- EXTERNAL Definitions ----------------------------------------
 
@@ -163,10 +210,10 @@ Syntax ...
 
 functionSyntax	:: Syntax
 functionSyntax
-	= parseFullFile ["Functions"] "Assets.MetaFunctionSyntax.language" Assets._MetaFunctionSyntax_language 
+	= parseFullFile ["Functions"] "Assets.Function.language" Assets._Functions_language 
 		& either error id
 		& get langSyntax
-		& fromMaybe (error "Metafunctionsyntax asset does not contain syntax?")
+		& fromMaybe (error "Functions asset does not contain syntax?")
 		& _patchFullQualifies ["Functions"] -- TODO this line should become obsolete soon; when removed, remove the export of Syntax.all for _patchFullQualifies
 
 

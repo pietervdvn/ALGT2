@@ -1,0 +1,71 @@
+
+  Main 
+ ******
+
+# Automatically generated and purely informational
+ Syntax 
+========
+
+
+
+stars	::= "*" Main.stars
+	 | "*"
+
+
+dashes	::= "-" Main.dashes
+	 | "-"
+
+
+eqs	::= "=" Main.eqs
+	 | "="
+
+
+lineContents	::= LineChar Main.lineContents
+	 | "\n"
+
+
+comment	::= "#" $Main.lineContents
+
+
+title	::= Main.imports $Main.lineContents $Main.stars Syntax.nls
+	 | $Main.lineContents $Main.stars Syntax.nls
+
+
+namespace	~~= IdentifierUpper "." Main.namespace
+	 | IdentifierUpper
+
+
+importStm	::= "import" "local"
+	 | "import"
+
+
+import	::= Syntax.nls Main.importStm Main.namespace
+	 | Main.importStm Main.namespace
+
+
+imports	::= Main.import Main.imports
+	 | Syntax.nls
+
+
+titleSyntax	::= "Syntax" Syntax.nl Main.eqs Syntax.nl
+
+
+titleFunctions	::= "Functions" Syntax.nl Main.eqs Syntax.nl
+
+
+moduleSyntax	::= Main.titleSyntax Syntax.syntax Syntax.nls
+	 | Main.titleSyntax Syntax.syntax
+
+
+moduleFunctions	::= Main.titleFunctions Functions.functions Syntax.nls
+	 | Main.titleFunctions Functions.functions
+
+
+modules	::= Main.moduleSyntax Main.moduleFunctions
+	 | Main.moduleFunctions
+	 | Main.moduleSyntax
+
+
+langDef	::= Main.title Main.modules
+
+

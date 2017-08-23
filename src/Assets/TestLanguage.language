@@ -28,7 +28,8 @@ not("True")	= "False"
 not("False")	= "True"
 
 and		: bool * bool -> bool
-and("True", "True") = "True"
+and("True", "True")
+		= "True"
 and(_, _)	= "False"
 
 nand		: bool * bool -> bool
