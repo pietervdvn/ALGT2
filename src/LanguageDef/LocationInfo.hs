@@ -32,7 +32,7 @@ makeLenses ''MetaInfo
 
 instance ToString MetaInfo where
 	toParsable meta
-		= if null $ get miDoc meta then "" else meta & get miDoc & lines |> ("# "++) & intercalate "\n"	-- block comments
+		= meta & get miDoc & indentWith "# " -- block comments
 	toCoParsable meta
 		= if null $ get miDoc meta then "" else meta & get miDoc & lines & concat & ("\t # "++)
 

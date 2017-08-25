@@ -1,3 +1,4 @@
+ {-# LANGUAGE RankNTypes #-}
 module LanguageDef.LangDefsFix where
 
 {- Given a dict of {FQName --> languagedef}, fixes them into scopes, in which a languagedef is contained. This langaugedef will only contain fully qualified stuff, have filled in supertype relationships etc... -}
@@ -12,7 +13,7 @@ import LanguageDef.Scope
 import LanguageDef.LangDefs
 import LanguageDef.FunctionTyper
 import LanguageDef.MetaFunction
-
+import LanguageDef.Grouper
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)
 
@@ -23,6 +24,8 @@ import Data.Maybe
 import Data.Set as S
 import Data.Map as M
 import Data.List as L
+
+import Lens.Micro (Lens)
 
 
 {- | Input is the raw, parsed information, output is all kind of fixed stuff
@@ -107,11 +110,9 @@ fixLD		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Either String (Langua
 fixLD scope ld
 	= do	let syn		= get langSyntax ld
 		syn'		<- syn |> fixSyntax scope & justEffect
-		let funcs	= get langFunctions ld
-		funcs'		<- funcs |> fixFunctions scope & justEffect
-		ld	& set langSyntax syn'
-			& set langFunctions funcs'
-			& return
+		let ld'		= set langSyntax syn' ld
+		ld' & fixLangdefGrouper langFunctions (fullyQualifyFunction scope)
+			>>= fixLangdefGrouper langRelations (fullyQualifyRelation scope)
 
 
 
@@ -124,11 +125,15 @@ fixSyntax scope syn
 		return $ set syntax syntx' syn
 
 
-fixFunctions	:: LDScope' fr -> Functions' a -> Either String (Functions' a)
+fixFunctions	:: LDScope' fr -> Grouper (Function' a) -> Either String (Grouper (Function' a))
 fixFunctions scope funcs
-	= do	let fncs	= get functions funcs
-		fncs'	<- fncs & M.toList
-				||>> fullyQualifyFunction scope
-				|+> sndEffect |> M.fromList
-		return $ set functions fncs' funcs
+	= overGrouperM (fullyQualifyFunction scope) funcs
+
+
+fixLangdefGrouper	:: Monad m => Lens ld ld (Maybe (Grouper x)) (Maybe (Grouper x)) 
+				 -> (x -> m x) -> ld -> m ld
+fixLangdefGrouper lens fixer langDef
+	= do	let grouper	= get lens langDef
+		grouper'	<- grouper |> overGrouperM fixer & justEffect
+		return $ set lens grouper' langDef
 

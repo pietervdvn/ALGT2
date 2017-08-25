@@ -23,7 +23,7 @@ import Text.Parsec
 
 import Control.Monad
 
-{- A combiner is a tree mimmicing the BNF structure, which converts a parsetree into a user chosen data structure -}
+{- A combiner is a tree mimmicking the BNF structure, which converts a parsetree into a user chosen data structure -}
 data Combiner a	= LiteralC Doc (String -> Either String a)
 		| forall b c . SeqC (Combiner b) (Combiner c) (b -> c -> a)
 		| forall b . MapC (Combiner b) (b -> a)

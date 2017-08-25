@@ -1,0 +1,15 @@
+
+ Duplicate Relation
+**********************
+
+Syntax
+=======
+
+a	::= "a"
+
+ Relations
+===========
+
+
+(~) : a (in) * a (out)
+(~) : a (in)

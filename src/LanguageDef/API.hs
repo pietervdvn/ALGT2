@@ -61,15 +61,17 @@ createTypedExpression ld source str typ@(loc, nm)
 -- TODO REMOVE THIS
 
 t' rule str
-	= do	def	<- loadLangDef "/home/pietervdvn/git/ALGT2/src/Assets" ["RelationSyntax"]
+	= do	def	<- loadLangDef "/home/pietervdvn/git/ALGT2/src/Assets" ["Relations"]
 	--	toParsable def & Utils.PureIO.putStrLn
-		let parsed'	= parseTarget def (["RelationSyntax"], rule) "TestFile" str
+		let parsed'	= parseTarget def (["Relations"], rule) "TestFile" str
 		parsed	<- parsed' & either error return
 		Utils.PureIO.putStrLn $ toParsable parsed
 		Utils.PureIO.putStrLn $ toCoParsable parsed
 		Utils.PureIO.putStrLn $ debug parsed
+	--	desugared	<- resolveAndRun' def (["RelationSyntax"], "asPrefixPredicate") [removeHidden parsed] & either error return
+	--	Utils.PureIO.putStrLn $ toParsable desugared
 
 
 
-
-t	= runIO $ t' "relDeclarationCore" "(→*) : expr (in) * expr (out) ; Pronounced as \"Bigstep\""
+t rule code
+	= runIO $ t' rule code

@@ -1,8 +1,13 @@
+import Functions
+import Helper
+import Main
+import Relations
+import Syntax
 
   Main 
  ******
 
-# Automatically generated and purely informational
+# Automatically generated; do not edit
  Syntax 
 ========
 
@@ -53,6 +58,12 @@ titleSyntax	::= "Syntax" Syntax.nl Main.eqs Syntax.nl
 titleFunctions	::= "Functions" Syntax.nl Main.eqs Syntax.nl
 
 
+titleRelations	::= "Relations" Syntax.nl Main.eqs Syntax.nl
+
+
+titleRules	::= "Rules" Syntax.nl Main.eqs Syntax.nl
+
+
 moduleSyntax	::= Main.titleSyntax Syntax.syntax Syntax.nls
 	 | Main.titleSyntax Syntax.syntax
 
@@ -61,7 +72,27 @@ moduleFunctions	::= Main.titleFunctions Functions.functions Syntax.nls
 	 | Main.titleFunctions Functions.functions
 
 
-modules	::= Main.moduleSyntax Main.moduleFunctions
+moduleRelations	::= Main.titleRelations Relations.relations Syntax.nls
+	 | Main.titleRelations Relations.relations
+
+
+moduleRules	::= Main.titleRules Relations.rules Syntax.nls
+	 | Main.titleRules Relations.rules
+
+
+modules	::= Main.moduleSyntax Main.moduleFunctions Main.moduleRelations Main.moduleRules
+	 | Main.moduleSyntax Main.moduleFunctions Main.moduleRules
+	 | Main.moduleSyntax Main.moduleFunctions Main.moduleRelations
+	 | Main.moduleSyntax Main.moduleRelations Main.moduleRules
+	 | Main.moduleSyntax Main.moduleRules
+	 | Main.moduleSyntax Main.moduleRelations
+	 | Main.moduleSyntax Main.moduleFunctions
+	 | Main.moduleFunctions Main.moduleRelations Main.moduleRules
+	 | Main.moduleFunctions Main.moduleRules
+	 | Main.moduleFunctions Main.moduleRelations
+	 | Main.moduleRelations Main.moduleRules
+	 | Main.moduleRules
+	 | Main.moduleRelations
 	 | Main.moduleFunctions
 	 | Main.moduleSyntax
 

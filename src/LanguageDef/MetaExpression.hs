@@ -126,6 +126,7 @@ arguments
 
 ident		:: Combiner ([Name], Name)
 ident	= choices' "ident"
-		[(capture |> (:[])) <+> (lit "." **> capture)
-		, capture |> (\nm -> ([], nm))]
+		[ cmb (\head (tail, nm) -> (head:tail, nm))
+			capture (lit "." **> ident)
+		, capture |> ((,) [])]
 

@@ -1,0 +1,111 @@
+import Functions
+import Helper
+import Main
+import Relations
+import Syntax
+
+  Relations 
+ ***********
+
+# Automatically generated; do not edit
+ Syntax 
+========
+
+
+# ==================== Relation declaring section ===================
+# -------------------- Identifiers of relations ---------------------
+symbolChar	::= UnicodeChar
+	 | "*"
+	 | "/"
+	 | "\\"
+	 | "+"
+	 | "-"
+	 | "!"
+	 | "#"
+	 | "$"
+	 | "%"
+	 | "."
+	 | "~"
+	 | "="
+	 | "<"
+	 | ">"
+	 | "?"
+	 | "@"
+	 | "^"
+	 | "_"
+	 | Digit
+
+
+symbol	::= Relations.symbolChar Relations.relIdent
+	 | Relations.symbolChar
+
+
+relIdent	::= Identifier "." Relations.relIdent
+	 | $Relations.symbol
+
+# -------------------- Parts of the declaration ---------------------
+# The mode (input/output)
+mode	::= "in"
+	 | "out"
+
+
+type	::= Functions.ident "(" Relations.mode ")"
+
+# Full type: ` bool (in) * bool (out)`
+types	::= Relations.type Functions.typeSep Relations.types
+	 | Relations.type
+
+# The actually relevant part
+relDeclarationCore	::= "(" $Relations.symbol ")" ":" Relations.types
+
+# The optional prononciation
+relPronounce	::= ";" "Pronounced" "as" String Syntax.nl
+	 | Syntax.nl
+
+
+relation	::= Syntax.nls Relations.relDeclarationCore Relations.relPronounce
+	 | Relations.relDeclarationCore Relations.relPronounce
+
+# -------------------- The relation declaration section -------------
+relations	::= Relations.relation Relations.relations
+	 | Relations.relation
+
+# ==================== Actual Rules ==================================
+# Expressions, comma seperated for use as arguments for a relation
+commaSepExpr	::= Functions.expression "," Relations.commaSepExpr
+	 | Functions.expression
+
+# Some conclusion about a relation
+conclusion	::= "(" Relations.relIdent ")" Relations.commaSepExpr
+
+# A single predicate that should be met
+# A lonely expression should evaluate without error
+# A predicate with a relation should hold
+predicate	::= Relations.conclusion
+	 | Functions.expression
+
+
+predicates	~~= Relations.predicate "\t" Relations.predicates
+	 | Relations.predicate
+
+
+ruleChar	::= Lower
+	 | Upper
+	 | Digit
+
+
+ruleName	::= Relations.ruleChar Relations.ruleName
+	 | Relations.ruleChar
+
+
+line	::= $Main.dashes "[" $Relations.ruleName "]"
+
+
+rule	::= Syntax.nls Relations.predicates Syntax.nl Relations.line Syntax.nl Relations.conclusion Syntax.nl
+	 | Syntax.nls Relations.line Syntax.nl Relations.conclusion Syntax.nl
+
+
+rules	::= Relations.rule Relations.rules
+	 | Relations.rule
+
+

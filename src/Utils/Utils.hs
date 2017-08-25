@@ -67,6 +67,11 @@ class Check' info a where
 checkM	:: Check a => Maybe a -> Either String ()
 checkM	= maybe pass check
 
+
+checkM'	:: Check' x a => x -> Maybe a -> Either String ()
+checkM'	x
+	= maybe pass (check' x)
+
 class Normalizable a where
 	normalize	:: a -> a
 
@@ -83,6 +88,9 @@ class Normalizable a where
 (||>>)	:: (Functor f, Functor g) => f (g a) -> (a -> b) -> f (g b)
 (||>>) container f
 	= container |> (|> f) 
+
+(|||>>>) container f
+	= container ||>> (|> f)
 
 (|+>)	:: (Monad m, Traversable t) => t a -> (a -> m b) -> m (t b)
 (|+>)	= forM
@@ -140,6 +148,10 @@ fixLoop a f
 pass		:: Monad m => m ()
 pass		= return ()
 
+distrEffect	:: Monad m => m (m a, m b) -> (m a, m b)
+distrEffect mmamb
+		= (mmamb |> fst >>= id, mmamb |> snd >>= id)
+			
 
 sndEffect	:: Monad m => (a, m b) -> m (a, b)
 sndEffect (a, mb)
@@ -183,7 +195,7 @@ firstRight vals	= let r	= rights vals in
 allRight	:: Show b => [Either String b] -> Either String [b]
 allRight eithers
  | all isRight eithers	= Right $ rights eithers
- | otherwise	= eithers |> either id ((++) "Successfull: " . show) & unlines & Left
+ | otherwise	= eithers |> either id ((++) "Successfull: " . show) & intercalate "\n" & Left
 
 
 allRight_	:: [Either String ()] -> Either String ()

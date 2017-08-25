@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
 module LanguageDef.LanguageDef where
 
 {-
@@ -11,9 +11,12 @@ import Utils.All
 
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.All
+import LanguageDef.LocationInfo
 import LanguageDef.MetaExpression hiding (choices')
 import LanguageDef.MetaFunction hiding (choices')
-import LanguageDef.LocationInfo
+import LanguageDef.Relations hiding (choices')
+import qualified LanguageDef.Relations as Relations
+import LanguageDef.Grouper
 
 import Graphs.Lattice
 
@@ -53,7 +56,9 @@ data LanguageDef' imported funcResolution
 		, _langMeta	:: [String]	-- The comments just under the title
 		, _langSyntax		:: Maybe Syntax	-- The syntax of the language, aka the BNF
 		, _langSupertypes	:: Lattice FQName	-- The global supertype relationship; is filled in later on by the langdefs-fixes
-		, _langFunctions	:: Maybe (Functions' funcResolution)
+		, _langFunctions	:: Maybe (Grouper (Function' funcResolution))
+		, _langRelations	:: Maybe (Grouper Relation)
+		, _langRules		:: Maybe (Grouper Rule)
 		}
 	deriving (Show, Eq)
 makeLenses ''LanguageDef'
@@ -64,24 +69,27 @@ type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
 
 
 
-{- | Performs various checks
+{- | Performs various checks. These checks are run post name resolution, so we might assume that no unqualified names still exists
 
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty" ["FunctionDuplicateNameTest"]
-Left "Multiple definitions of the function \"not\" are given"
+Left "The function \"not\" is defined multiple times"
 
 >>> loadAssetLangDef "Faulty" ["FunctionIncorrectNameTest"]
-Left "While checking function \"not\":\n  Some clauses have a different name. The function name is \"not\", but a clause is named f\n"
-
+Left "While checking function \"not\":\n  Some clauses have a different name. The function name is \"not\", but a clause is named f"
 
 -}
-instance Check (LanguageDef' i f) where
-	check ld
-		= do	assert (get langTitle ld /= "") "The title of a language should not be empty"
-			-- Syntaxes are checked when all syntaxes are known 
-			checkM (get langFunctions ld)
 
+instance Check' () (LanguageDef' ResolvedImport SyntFormIndex) where
+	check' () (LanguageDef title imports meta syntax superTypes functions rels rules)
+		= do	assert (title /= "") "The title of a language should not be empty"
+			-- Syntaxes are checked when all syntaxes are known 
+			checkM functions
+			checkM rels
+			assert (isNothing rules || isJust rels) $ "When rules are defined, a relation declaration section should be present"
+			checkM' (fromJust rels) rules
+			
 
 
 
@@ -119,47 +127,77 @@ _fixImport resolver imprt
 
 ------------------------------ PARSING STUFF --------------------------------------------------------
 
-
+_checkCombiner	= check' metaSyntaxes (parseLangDef $ _fullFileCombiner) & either error id
 
 -- | Parses the entire file, file should still be checked against it's context!
--- >>> check' metaSyntaxes (parseLangDef $ _fullFileCombiner ["Main"]) & either error id
+-- >>> _checkCombiner
 -- ()
 -- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language 
 -- Right ...
 parseFullFile	:: [Name] -> FilePath -> String -> Either String (LanguageDef' () ())
-parseFullFile ns fp contents
+parseFullFile _ fp contents
 	= inMsg ("While parsing "++show fp) $
 	  do	pt	<- parse fp (metaSyntaxes, ["Main"]) "langDef" contents
-		((title, meta, imports), (syntax, funcs))	<- interpret (parseLangDef (_fullFileCombiner ns)) pt
+		((title, meta, imports), (syntax, (funcs, (rels, rules))))	<- interpret (parseLangDef _fullFileCombiner) pt
 		return $ LanguageDef
 			title
 			imports
 			meta
 			syntax
 			(emptyLattice ([], "B") ([], "T"))	-- filled later on
-			(funcs |> _prepFunctions)
-
-
-_prepFunctions	:: [Function LocationInfo] -> Functions' ()
-_prepFunctions funcs
-	= let	funcOrder	= funcs |> get funcName
-		funcDict	= funcs |> (get funcName &&& id)
-					& M.fromList
-					||>> const ()
-		in
-		Functions funcDict funcOrder
+			funcs
+			rels
+			rules
 
 
 -- | Converts the modules from parsetree into all the needed parts
-_fullFileCombiner	:: [Name] -> Combiner (Maybe Syntax, Maybe [Function LocationInfo])
-_fullFileCombiner ns
-	= let	s	= moduleCombiner "Syntax" syntaxDecl' |> Just
-		f	= moduleCombiner "Functions" functionsCmb |> Just
+_fullFileCombiner	:: Combiner 
+				(Maybe Syntax,
+				(Maybe (Grouper (Function' ())),
+				(Maybe (Grouper Relation),
+				(Maybe (Grouper Rule)
+				))))
+
+_fullFileCombiner
+	= let	s	= moduleCombiner "Syntax" syntaxDecl'
+		f	= moduleCombiner "Functions" functionsCmb
+		rels	= moduleCombiner "Relations" relations
+		rules	= moduleCombiner "Rules" Relations.rules
+		inJ cmb	= cmb |> Just 
+		modules	= _optionalCombiners (inJ s) $
+				_optionalCombiners (inJ f) $
+				_optionalCombiners' (inJ rels) $
+				[inJ rules]
+		modules'	= modules & reverse ||>> _chain ||>> (|> _chain)
 		in
-	  choices' "modules" $ reverse
-			[ s |> (\s -> (s, Nothing))
-			, f |> (\f -> (Nothing, f))
-			, s <+> f] 
+	  choices' "modules" modules'
+
+
+
+_chain		:: (Maybe (Maybe a), Maybe (Maybe b, Maybe c)) -> (Maybe a, (Maybe b, Maybe c))
+_chain (mma, mmbmc)
+		= (mma >>= id, distrEffect mmbmc)
+
+_optionalCombiners'	:: Combiner (Maybe a) -> [Combiner (Maybe b)] -> [Combiner (Maybe a, Maybe b)]
+_optionalCombiners' a b
+	= _optionalCombiners a b ||>> (\(a, b) -> (a >>= id, b >>= id))
+
+_optionalCombiners	:: Combiner a -> [Combiner b] -> [Combiner (Maybe a, Maybe b)]
+_optionalCombiners cmbA cmbB
+	= let	cmbA'	= cmbA |> Just
+		cmbB'	= cmbB ||>> Just
+		a	= cmbA' |> (\a -> (a, Nothing))
+		as	= cmbB'
+		fstNothing b	= (Nothing, b)
+		in
+		(a : (as ||>> fstNothing)) ++ [ cmbA' <+> a' | a' <- as ] 
+
+
+_optionalOrder		:: (a -> a -> a) -> a -> [a] -> [a]
+_optionalOrder plus a as
+	= (a : as) ++ [ a `plus` a' | a' <- as]
+
+
 
 {- | All the syntaxes needed to parse a language definition file
 
@@ -170,8 +208,16 @@ Right ()
 metaSyntaxes	:: Map [Name] Syntax
 metaSyntaxes
 	= let	syntax	= mainSyntax [("Syntax", (["Syntax"], "syntax"))
-					, ("Functions", (["Functions"], "functions"))]
-		syntaxes	=  [("Helper", helperSyntax), ("Main", syntax), ("Syntax", bnfSyntax), ("Functions", functionSyntax)]
+					, ("Functions", (["Functions"], "functions"))
+					, ("Relations", (["Relations"], "relations"))
+					, ("Rules", (["Relations"], "rules"))
+					]
+		syntaxes	=  [("Helper", helperSyntax)
+					, ("Main", syntax)
+					, ("Syntax", bnfSyntax)
+					, ("Functions", functionSyntax)
+					, ("Relations", relationSyntax)
+					]
 					|> first (:[]) & M.fromList
 		in
 		syntaxes 
@@ -194,11 +240,26 @@ _saveMetaSyntax	:: FilePath -> [Name] -> Syntax -> IO ()
 _saveMetaSyntax dir nm syntax
 	= do	let target	= dir ++"/" ++ dots nm ++ ".language"
 		print target
-		let contents	= inHeader " " (dots nm) '*' $
-				  "# Automatically generated and purely informational" ++ 
+		let imports	= metaSyntaxes & M.keys |> dots |> ("import "++) & unlines
+		let contents	= imports ++ 
+				  (inHeader " " (dots nm) '*' $
+				  "# Automatically generated; do not edit" ++ 
 				  (inHeader' "Syntax" $ 
-				  toParsable syntax)
+				  toParsable syntax))
 		writeFile target contents
+
+
+-- Tests parsing of a rule against a given string
+testSyntax	:: Name -> String -> IO ()
+testSyntax rule string
+	= do	let found	= metaSyntaxes & M.filter (\s -> rule `M.member` (get syntax s)) & M.keys
+		unless (length found > 0) $ error $ "No rule "++rule++" does exist within any syntax"
+		when (length found > 1) $ error $ "Rule "++rule ++" does exist in "++(found |> dots & commas)
+		let fqn	= found & head
+		putStrLn $ showFQ (fqn, rule)
+		let parsed	= parse "testSyntax" (metaSyntaxes, fqn) rule string
+					 & either error id
+		printPars parsed
 
 ------------------------------------- EXTERNAL Definitions ----------------------------------------
 
@@ -210,17 +271,26 @@ Syntax ...
 
 functionSyntax	:: Syntax
 functionSyntax
-	= parseFullFile ["Functions"] "Assets.Function.language" Assets._Functions_language 
+	= _loadAssetsSyntax "Functions" Assets._Functions_language
+
+
+{- | The syntax that declares relations, as defined in the Assets
+>>> relationSyntax
+Syntax ...
+-}
+relationSyntax	:: Syntax
+relationSyntax
+	= _loadAssetsSyntax "Relations" Assets._Relations_language
+
+
+
+_loadAssetsSyntax	:: Name -> String -> Syntax
+_loadAssetsSyntax title contents
+	= parseFullFile [title] ("Assets."++title++".language") contents
 		& either error id
 		& get langSyntax
-		& fromMaybe (error "Functions asset does not contain syntax?")
-		& _patchFullQualifies ["Functions"] -- TODO this line should become obsolete soon; when removed, remove the export of Syntax.all for _patchFullQualifies
-
-
-
-
-
-
+		& fromMaybe (error $ title ++ " asset does not contain syntax?")
+		& _patchFullQualifies [title]
 
 
 
@@ -267,10 +337,13 @@ mainSyntax subRules
 
 
 
-allOptional	:: [Name] -> [String]
+_allOptional	:: [Name] -> [[String]]
+_allOptional [name]	= [[name]]
+_allOptional (name:names)
+	= _optionalOrder (++) [name] $ _allOptional names
+
 allOptional names
-	= subsequences names & tail & reverse
-		|> unwords
+	= _allOptional names & reverse |> unwords
 
 _moduleCall	:: (Name, FQName) -> String
 _moduleCall (modName, calledRule)
@@ -346,12 +419,12 @@ parseLangDef parseModules
 
 
 instance ToString (LanguageDef' a b) where
-	toParsable (LanguageDef title imports langMeta syntax _ functions)
+	toParsable (LanguageDef title imports langMeta syntax _ functions rels rules)
 		= let mayb header	= maybe "" (inHeader' header . toParsable) in
 		  (imports |> toParsable & unlines) ++
 		  inHeader "" title '*' (unlines (
 			langMeta |> ("# "++)
-			++ [ mayb "Syntax" syntax, mayb "Functions" functions]
+			++ [ mayb "Syntax" syntax, mayb "Functions" functions, mayb "Relations" rels, mayb "Rules" rules]
 			))
 
 

@@ -7,6 +7,7 @@ import Utils.All
 import LanguageDef.MetaExpression hiding (choices')
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax.All
+import LanguageDef.Grouper
 
 import Data.Maybe
 import Data.Map as M
@@ -15,13 +16,16 @@ import Data.List as L
 import Control.Monad
 
 {- A metafunction represents a function over parsetrees -}
-data Function a	= Function
+data Function' a	= Function
 	{ _funcName	:: Name
 	, _funcArgTypes	:: [FQName]
 	, _funcRetType	:: FQName
 	, _funcClauses	:: [FunctionClause a]
 	, _funcDoc	:: MetaInfo
 	} deriving (Show, Eq, Functor)
+
+
+type Function	= Function' SyntFormIndex
 
 
 data FunctionClause a = FunctionClause 
@@ -54,45 +58,37 @@ instance ToString SyntFormIndex where
 				= showFQ f ++":"++show ch++(ind |> show |> ("."++) & fromMaybe "")
 
 
-type TypedFunction	= Function SyntFormIndex
-
-data Functions' a	= Functions 
-		{ _functions :: Map Name (Function a)
-		, _functionOrder :: [Name]}
-	deriving (Show, Eq)
-
-type Functions	= Functions' SyntFormIndex
-
-
-makeLenses ''Functions'
-makeLenses ''Function
+makeLenses ''Function'
 makeLenses ''FunctionClause
 
 
-instance Check (Function a) where
+instance Check (Function' a) where
 	check (Function name argTps retTp clauses docs)
 		= inMsg ("While checking function "++show name) $
 		   do	unless (clauses |> get clauseFuncName & all (== name)) $ Left $
 				"Some clauses have a different name. The function name is "++show name++
 				", but a clause is named "++(clauses |> get clauseFuncName & sort & nub & commas)
 
-instance Check (Functions' a) where
-	check (Functions funcs funcOrder)
-		= do	funcs & M.elems |> check & allRight_
-			checkNoDuplicates funcOrder (\funcs -> "Multiple definitions of the function " ++ (funcs |> show & commas) ++" are given" )
+
+
 
 
 choices' nm	= choices (["Functions"], nm) 
 
 
-functionsCmb	:: Combiner [Function LocationInfo]
-functionsCmb = choices' "functions"
-		[ cmb (:) function functionsCmb
+_functionsCmb	:: Combiner [Function' LocationInfo]
+_functionsCmb = choices' "functions"
+		[ cmb (:) function _functionsCmb
 		, function |> (:[])
 		]
 
+functionsCmb	:: Combiner (Grouper (Function' ()))
+functionsCmb	= _functionsCmb ||>> (|> const ())
+			|> asGrouper ("function", "functions") (get funcName)
 
-function	:: Combiner (Function LocationInfo)
+
+
+function	:: Combiner (Function' LocationInfo)
 function = choices' "function"
 		[(nls <+> functionSignature <+> skip **> functionClauses)
 			& withLocation (,)
@@ -141,7 +137,7 @@ instance ToString (FunctionClause a) where
 		= name ++ inParens (pats |> toParsable & commas) ++"\t = " ++ toParsable result ++ toCoParsable mi
 
 
-instance ToString (Function a) where
+instance ToString (Function' a) where
 	toParsable (Function nm argTps retTp clauses mi)
 	      = unlines $ 
 		[ toParsable mi
@@ -149,9 +145,3 @@ instance ToString (Function a) where
 		]  
 		++ clauses |> toParsable
 
-instance ToString (Functions' a) where
-	toParsable (Functions funcs order)
-		= let	order'	= order ++ (funcs & M.keys & L.filter (`M.notMember` funcs)) in
-			order'	|> (funcs ! )
-				|> toParsable
-				& unlines

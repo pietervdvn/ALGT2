@@ -1,0 +1,15 @@
+
+ Unknown Type Relation
+***********************
+
+Syntax
+=======
+
+a	::= "a"
+
+ Relations
+===========
+
+
+(~) : x (in) * x (out)
+

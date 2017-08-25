@@ -13,6 +13,7 @@ import LanguageDef.Scope
 import LanguageDef.Syntax.BNF (BNF)
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax
+import LanguageDef.Grouper
 
 import Graphs.Lattice
 
@@ -56,16 +57,16 @@ typeAllFunctions ld langDef
 	= do	let supers	= get langSupertypes langDef
 		let funcs	= get langFunctions langDef & fromJust
 		let bareFunctions
-				= funcs & get functions
+				= funcs & get grouperDict
 					& M.toList
 		bareFunctions'	<- bareFunctions ||>> typeFunction ld supers |> sndEffect & allRight'
-		let funcs'	= funcs & set functions  (bareFunctions' & M.fromList)
+		let funcs'	= funcs & set grouperDict  (bareFunctions' & M.fromList)
 		let langDef'	= set langFunctions (Just funcs') langDef
 		return langDef'
 		
 
 
-typeFunction	:: LDScope' fr -> Lattice FQName -> Function x -> Either String (Function SyntFormIndex)
+typeFunction	:: LDScope' fr -> Lattice FQName -> Function' x -> Either String Function
 typeFunction ld supers f
 	= inMsg ("While typing "++ get funcName f) $
 	  do	let clauses	= get funcClauses f
@@ -197,6 +198,9 @@ typeExpressionIndexed ld syntForm exprs
 
 typeExpressionIndexed'	:: LDScope' fr -> SyntForm -> [Expression a] -> (Int, [BNF]) -> Either String [Expression (a, SyntFormIndex)]
 typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
+ | length choiceElems == 1 && length exprs /= 1 && BNF.isRuleCall (head choiceElems) 
+	= do	let [BNF.RuleCall fqname]	= choiceElems
+		typeExpressionIndexed ld fqname exprs |> fst 
  | length exprs /= length choiceElems
 	= Left $ "Can not match choice "++show choiceIndex++": this choice has "++show (length choiceElems) ++ 
 			" elements, whereas the expression has "++show (length exprs)

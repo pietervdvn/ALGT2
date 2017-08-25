@@ -1,0 +1,81 @@
+
+import Functions
+import Syntax
+import Main
+
+ Relation Syntax 
+******************
+
+
+# This document contains the syntax for relations and the natural deduction rules containing them.
+# This syntax reuses many expressions from functions; so "Functions" will be seen often
+
+# Because this document is loaded with the bootstrapper, all outside links should be fully qualified
+
+ Syntax
+========
+
+# ==================== Relation declaring section ===================
+
+# -------------------- Identifiers of relations ---------------------
+
+symbolChar	::= UnicodeChar 
+		| "*" | "/" | "\\"
+		| "+" | "-"
+		| "!" | "#" | "$" | "%" | "." | "~"
+		| "=" | "<" | ">" | "?" | "@" | "^"
+		| "_"
+		| Digit
+symbol		::= symbolChar relIdent | symbolChar
+relIdent	::= Identifier "." relIdent | $symbol
+
+
+# -------------------- Parts of the declaration ---------------------
+
+# The mode (input/output)
+mode		::= "in" | "out"
+type		::= Functions.ident "(" mode ")"
+# Full type: ` bool (in) * bool (out)`
+types		::= type Functions.typeSep types | type
+
+# The actually relevant part
+relDeclarationCore	::= "(" $symbol ")" ":" types
+# The optional prononciation
+relPronounce	::= ";" "Pronounced" "as" String Syntax.nl | Syntax.nl
+relation	::= Syntax.nls relDeclarationCore relPronounce  | relDeclarationCore relPronounce
+
+
+# -------------------- The relation declaration section -------------
+
+relations	::= relation relations | relation
+
+# ==================== Actual Rules ==================================
+
+# Expressions, comma seperated for use as arguments for a relation
+commaSepExpr	::= Functions.expression "," commaSepExpr | Functions.expression
+
+
+# Some conclusion about a relation
+conclusion	::= "(" relIdent ")" commaSepExpr
+
+# A single predicate that should be met
+# A lonely expression should evaluate without error
+# A predicate with a relation should hold
+predicate	::= conclusion
+		| Functions.expression
+predicates	~~= predicate "\t" predicates | predicate
+
+
+ruleChar	::= Lower | Upper | Digit
+ruleName	::= ruleChar ruleName | ruleChar
+
+line		::= $Main.dashes "[" $ruleName "]"
+		| $Main.dashes
+
+
+rule		::= Syntax.nls predicates Syntax.nl line Syntax.nl conclusion Syntax.nl
+		| Syntax.nls line Syntax.nl conclusion Syntax.nl
+
+rules		::= rule rules | rule
+
+

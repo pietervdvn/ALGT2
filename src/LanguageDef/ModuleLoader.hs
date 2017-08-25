@@ -70,6 +70,10 @@ _fixImports langDefs
 
 _loadAll	:: LoadingStatus -> [Name] -> PureIO LoadingStatus
 _loadAll ls toLoad
+ | toLoad `member` get currentlyKnown ls
+	= do	putStrLn $ "Already loaded "++dots toLoad
+		return ls
+ | otherwise
 	= do	let path	= ((get rootPath ls : toLoad) & intercalate "/") ++ ".language"
 		let msgs	= [ "Target", intercalate "." toLoad
 				  , "Root filepath", get rootPath ls
@@ -82,7 +86,6 @@ _loadAll ls toLoad
 		-- Language def with unresolved inputs
 		let absName	= get rootModule ls ++ toLoad
 		ld	<- parseFullFile absName path contents & either fail return
-		check ld & either fail return
 		let ld'	= ld & resolveLocalImports (get rootModule ls, init toLoad)
 		let ls'	= ls & over currentlyKnown (M.insert absName (path, ld'))
 		

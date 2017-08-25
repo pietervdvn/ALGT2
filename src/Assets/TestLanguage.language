@@ -1,5 +1,5 @@
 
- Testing Language
+ Test Language
 *****************
 
 # Blabla
@@ -39,3 +39,20 @@ nand(a, b)	= not(and(a, b))
 or		: bool * bool -> bool
 or(not("True"), not("True")) = "False"
 or(_, _)	= "True"
+
+
+ Relations
+===========
+
+(→) : exprSum (in) * exprSum (out); Pronounced as "smallstep"
+
+
+ Rules
+=======
+
+
+------------------------- [ x ]
+ (→) i "&" j, and(i, j)
+
+
+

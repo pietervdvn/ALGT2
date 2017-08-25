@@ -12,6 +12,7 @@ import LanguageDef.LocationInfo
 
 import LanguageDef.LangDefs
 import LanguageDef.Scope
+import LanguageDef.Grouper
 
 import qualified Data.Map as M
 import Data.Map (Map)
@@ -105,10 +106,10 @@ resolveAndRun fb2a lds (targetLD, name) args
 		funcs	<- ld' & get langFunctions |> Right
 				& fromMaybe (Left $ "The module "++dots targetLD++" does not have a function section and thus does not define "++name)
 
-		func	<- checkExistsSugg show name (get functions funcs) ("The module "++dots targetLD++" does not define the function "++show name)
+		func	<- checkExistsSugg show name (get grouperDict funcs) ("The module "++dots targetLD++" does not define the function "++show name)
 		runFunction fb2a lds ld' func args 
 
-runFunction	::  (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> Function SyntFormIndex -> [ParseTree a] -> Either String (ParseTree a)
+runFunction	::  (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> Function -> [ParseTree a] -> Either String (ParseTree a)
 runFunction fb2a lds ld func args
 	= inMsg ("While executing the function "++get funcName func) $ 
 		do	let clauses	= func & get funcClauses

@@ -18,6 +18,9 @@ import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
 import LanguageDef.Scope
 import LanguageDef.MetaFunction
+import LanguageDef.Relations
+
+import LanguageDef.Grouper
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)
 
@@ -38,7 +41,7 @@ data LDScope' funcResolution = LDScope
 makeLenses ''LDScope'
 type LDScope	=  LDScope' SyntFormIndex
 
-{- Contains the full cluster of language defintions + checks -}
+{- Contains the full cluster of language defintions -}
 data LangDefs	= LangDefs {_langdefs	:: Map [Name] LDScope}
 	deriving (Show)
 makeLenses ''LangDefs
@@ -81,7 +84,7 @@ fullyQualifyBNF scope (bnf, metaInfo)
 
 
 -- Qualifies all function types absolutely
-fullyQualifyFunction	:: LDScope' fr -> Function a -> Either String (Function a)
+fullyQualifyFunction	:: LDScope' fr -> Function' a -> Either String (Function' a)
 fullyQualifyFunction scope (Function nm argTps retType clauses docs)
 	= do	argTps'	<- argTps |> resolve scope syntaxCall & allRight'
 		retType'	<- retType & resolve scope syntaxCall
@@ -93,11 +96,23 @@ fullyQualifyClause	:: LDScope' fr -> FunctionClause a -> Either String (Function
 fullyQualifyClause scope clause
 	= return clause
 
+
+
+fullyQualifyRelation	:: LDScope' fr -> Relation -> Either String Relation
+fullyQualifyRelation scope rel
+	= do	let tps	= get relTypes rel
+		tps'	<- tps |> first (resolve scope syntaxCall) |+> fstEffect
+		return $ set relTypes tps' rel
+
+
+
 syntaxCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe Syntax, Syntax -> Map Name [BNF])
 syntaxCall	= ("the syntactic form", get langSyntax, \synt -> get syntax synt ||>> fst)
 
-functionCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Functions' fr), Functions' fr -> Map Name (Function fr))
-functionCall	= ("the function", get langFunctions, get functions)
+functionCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper (Function' fr)), Grouper (Function' fr) -> Map Name (Function' fr))
+functionCall	= ("the function", get langFunctions, get grouperDict)
+
+
 
 resolve	:: LDScope' fr -> (String, LanguageDef' ResolvedImport fr -> Maybe a, a -> Map Name b) -> FQName -> Either String FQName
 resolve	scope entity name
@@ -150,12 +165,28 @@ getSyntaxes	:: LangDefs -> Syntaxes
 getSyntaxes (LangDefs defs)
 	= defs |> get (ldScope . payload . langSyntax) & M.mapMaybe id
 			
-
+{- |
+>>> import LanguageDef.API
+>>> loadAssetLangDef "Faulty" ["TitleMismatch"]
+Left "The module in file TitleMismatch is titled \"Some Other Title\". Retitle them to be the same (whitespace insensitive)"
+-}
 instance Check LangDefs where
 	check lds@(LangDefs defs)
 		= do	let syntaxes	= getSyntaxes lds
 			let isSubtype nms	= defs & (! nms) & get (ldScope . payload) & isSubtypeOf
-			check' isSubtype syntaxes
+			[ defs & M.elems |> get (ldScope . payload) 
+				|> check' ()
+				& allRight_
+			 , check' isSubtype syntaxes
+			 , defs & M.toList ||>> get (ldScope . payload . langTitle)
+				 |> uncurry _checkSameTitle & allRight_
+			 ] & allRight_
+
+_checkSameTitle	:: [Name] -> Name -> Either String ()
+_checkSameTitle fp nm
+	= do	let noWS string	= string & L.filter (`notElem` " \t")
+		let msg	= "The module in file "++dots fp ++" is titled "++show nm++". Retitle them to be the same (whitespace insensitive)"
+		assert (noWS (last fp) == noWS nm) msg
 
 instance ToString LangDefs where 
 	toParsable ld	= ld & get langdefs & M.toList |> _withHeader & unlines

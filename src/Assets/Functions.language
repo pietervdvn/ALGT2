@@ -36,7 +36,7 @@ signature	::= Identifier ":" types lastTypeSep ident
 
 
 # An identifier, eventually from another namespace
-ident		~~= Identifier "." Identifier	# Absolute identifier, in another namespace
+ident		~~= Identifier "." ident	# Absolute identifier, in another namespace
 		| Identifier			# Local identifier
 
 arguments	::= expression "," arguments | expression
