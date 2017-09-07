@@ -14,8 +14,9 @@ import LanguageDef.Syntax.All
 import LanguageDef.LocationInfo
 import LanguageDef.MetaExpression hiding (choices')
 import LanguageDef.MetaFunction hiding (choices')
-import LanguageDef.Relations hiding (choices')
-import qualified LanguageDef.Relations as Relations
+import LanguageDef.Relation hiding (choices')
+import LanguageDef.Rule
+import qualified LanguageDef.Relation as Relations
 import LanguageDef.Grouper
 
 import Graphs.Lattice
@@ -54,7 +55,7 @@ data LanguageDef' imported funcResolution
 		{ _langTitle	:: Name		-- title of the language
 		, _langImports	:: [Import imported]
 		, _langMeta	:: [String]	-- The comments just under the title
-		, _langSyntax		:: Maybe Syntax	-- The syntax of the language, aka the BNF
+		, _langSyntax		:: Maybe (Grouper [BNF])	-- The syntax of the language, aka the BNF
 		, _langSupertypes	:: Lattice FQName	-- The global supertype relationship; is filled in later on by the langdefs-fixes
 		, _langFunctions	:: Maybe (Grouper (Function' funcResolution))
 		, _langRelations	:: Maybe (Grouper Relation)

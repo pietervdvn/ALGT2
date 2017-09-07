@@ -1,10 +1,11 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, DeriveFunctor #-}
-module LanguageDef.Relations where
+module LanguageDef.Relation where
 
 
 import Utils.All
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax.All
+import LanguageDef.Rule
 import LanguageDef.MetaExpression hiding (choices')
 import LanguageDef.Grouper
 
@@ -15,26 +16,7 @@ import qualified Data.Map as M
 import Control.Arrow ((&&&))
 
 
-data Conclusion a
-	= Conclusion
-		{ _conclRelName	:: FQName
-		, _conclArgs	:: [Expression a]
-		} deriving (Show, Eq, Functor)
 
-data Rule' a
-	= Rule	{ _rulePreds	:: [Either (Conclusion a) (Expression a)]
-		, _ruleConcl	:: Conclusion a
-		, _ruleName	:: Name
-		, _ruleDocs	:: MetaInfo
-		} deriving (Show, Eq)
-
-instance Functor Rule' where
-	fmap f (Rule preds concl nm docs)
-		= Rule (preds |> either (\concl -> concl |> f & Left)
-					(\expr -> expr |> f & Right))
-			(concl |> f)
-			nm
-			docs
 
 
 data Mode	= In | Out
@@ -46,13 +28,8 @@ data Relation	= Relation
 		, _relPronounce	:: Maybe String
 		, _relDocs	:: MetaInfo
 		} deriving (Show, Eq)
-
-
-makeLenses ''Conclusion
-makeLenses ''Rule'
 makeLenses ''Relation
 
-type Rule	= Rule' ()
 
 
 ---------------------------- PARSING -----------------------
@@ -233,27 +210,6 @@ instance ToString Relation where
 			maybe "" ("; Pronounced as " ++ ) pronounce
 		] & unlines
 
-
-
-instance ToString (Conclusion a) where
-	toParsable (Conclusion nm args)
-		= inParens (showFQ nm) ++ " " ++ (args |> toParsable & commas)
-
-
-instance ToString (Rule' a) where
-	toParsable (Rule preds concl nm docs)
-		= let	doc'	= toParsable docs
-		 	preds'	= preds |> either toParsable toParsable
-					& intercalate "\t"
-			concl'	= toParsable concl
-			dashesL	= 1 + max (length preds') (length concl')
-			dashes	= replicate dashesL '-'
-			in
-			[ doc'
-			, " " ++ preds'
-			, "-" ++ dashes ++ " [ "++nm++" ]"
-			, " " ++ concl'
-			] & unlines 
 
 
 _typeModeToPars	:: (FQName, Mode) -> String

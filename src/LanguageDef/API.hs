@@ -1,4 +1,6 @@
-module LanguageDef.API (loadLangDef, loadAssetLangDef, createParseTree, createExpression, createTypedExpression, resolveAndRun', parseTarget) where
+module LanguageDef.API (loadLangDef, loadAssetLangDef, createParseTree, createExpression, createTypedExpression, resolveAndRun', parseTarget,
+				LangDefs.resolveGlobal, LangDefs.resolve, LangDefs.resolve', LangDefs.syntaxCall, LangDefs.functionCall, LangDefs.ruleCall
+		, resolveGlobal') where
 
 {- 
 
@@ -24,7 +26,7 @@ import LanguageDef.MetaFunction
 
 import LanguageDef.FunctionInterpreter
 
-import LanguageDef.LangDefs
+import LanguageDef.LangDefs as LangDefs
 
 {- Loads a language definition from the filesystem; use with 'runIO'-}
 loadLangDef :: FilePath -> [Name] -> PureIO LangDefs
@@ -55,7 +57,8 @@ createTypedExpression ld source str typ@(loc, nm)
 				("Module "++dots loc++ " not found")
 		typeExpression scope typ expr
 
-
+resolveGlobal' lds entity fqn
+	= resolveGlobal lds entity fqn |> snd
 
 ------------------ Testing codee
 -- TODO REMOVE THIS

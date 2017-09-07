@@ -111,8 +111,9 @@ fixLD scope ld
 	= do	let syn		= get langSyntax ld
 		syn'		<- syn |> fixSyntax scope & justEffect
 		let ld'		= set langSyntax syn' ld
-		ld' & fixLangdefGrouper langFunctions (fullyQualifyFunction scope)
+		ld' 	& fixLangdefGrouper langFunctions (fullyQualifyFunction scope)
 			>>= fixLangdefGrouper langRelations (fullyQualifyRelation scope)
+			>>= fixLangdefGrouper langRules (fullyQualifyRule scope)
 
 
 
@@ -125,9 +126,6 @@ fixSyntax scope syn
 		return $ set syntax syntx' syn
 
 
-fixFunctions	:: LDScope' fr -> Grouper (Function' a) -> Either String (Grouper (Function' a))
-fixFunctions scope
-	= overGrouperM (fullyQualifyFunction scope)
 
 
 fixLangdefGrouper	:: Monad m => Lens ld ld (Maybe (Grouper x)) (Maybe (Grouper x)) 

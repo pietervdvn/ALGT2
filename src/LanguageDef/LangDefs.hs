@@ -18,7 +18,9 @@ import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
 import LanguageDef.Scope
 import LanguageDef.MetaFunction
-import LanguageDef.Relations
+import LanguageDef.Rule
+import LanguageDef.Relation
+import LanguageDef.MetaExpression
 
 import LanguageDef.Grouper
 
@@ -105,6 +107,27 @@ fullyQualifyRelation scope rel
 
 
 
+fullyQualifyRule	:: LDScope' fr -> Rule -> Either String Rule
+fullyQualifyRule scope (Rule preds concl name docs)
+	= do	concl'	<- fullyQualifyConcl scope concl
+		preds'	<- preds |> fullyQualifyPred scope & allRight
+		return $ Rule preds' concl' name docs
+
+
+fullyQualifyPred	:: LDScope' fr -> Either (Conclusion a) (Expression a) -> Either String (Either (Conclusion a) (Expression a))
+fullyQualifyPred scope (Left concl)
+	= fullyQualifyConcl scope concl |> Left
+fullyQualifyPred scope (Right expr)
+	= return $ Right expr	-- should be typechecked
+
+
+fullyQualifyConcl	:: LDScope' fr -> Conclusion a -> Either String (Conclusion a)
+fullyQualifyConcl scope (Conclusion relName args)
+	= do	let args'	= args	-- qualification of expressions is done by the typechecker
+		relName'	<- resolve scope relationCall relName
+		return $ Conclusion relName' args'
+
+
 syntaxCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe Syntax, Syntax -> Map Name [BNF])
 syntaxCall	= ("the syntactic form", get langSyntax, \synt -> get syntax synt ||>> fst)
 
@@ -112,6 +135,16 @@ functionCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper (Funct
 functionCall	= ("the function", get langFunctions, get grouperDict)
 
 
+relationCall	= ("the relation", get langRelations, get grouperDict)
+
+ruleCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper Rule), Grouper Rule -> Map Name Rule)
+ruleCall	= ("the rule", get langRules, get grouperDict)
+
+
+resolveGlobal	:: LangDefs -> (String, LanguageDef -> Maybe a, a -> Map Name b) -> FQName -> Either String (FQName, b)
+resolveGlobal lds entity fqname
+	= do	ld	<- checkExistsSugg show (fst fqname) (lds & get langdefs) ("Namespace "++ dots (fst fqname) ++ " was not found")
+		resolve' ld entity fqname
 
 resolve	:: LDScope' fr -> (String, LanguageDef' ResolvedImport fr -> Maybe a, a -> Map Name b) -> FQName -> Either String FQName
 resolve	scope entity name

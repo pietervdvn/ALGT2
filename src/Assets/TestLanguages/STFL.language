@@ -17,9 +17,35 @@ var		::= Identifier
 value		::= bool | number | var | "(" "\\" var ":" type "." expr ")"
 
 term		::= "If" expr "Then" expr "Else" expr
+		| "(" expr ")"
 		| value
 expr		::= term expr 
 		| term "::" type
 		| term "+" expr
 		| term "=" expr
+
+ Relations
+===========
+
+(→) : expr (in) * expr (out); Pronounced as "Smallstep"
+
+
+ Rules
+=======
+
+
+
+-------------------- [EvalPar]
+ (→) "(" e ")", e
+
+
+
+----------------------------------------- [EvalIfTrue]
+ (→) "If" "True" "Then" e1 "Else" e2, e1
+
+
+------------------------------------------- [EvalIfFalse]
+ (→) "If" "False" "Then" e1 "Else" e2, e2
+
+
 

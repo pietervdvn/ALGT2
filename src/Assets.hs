@@ -48,7 +48,6 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("MetaSyntax/ALGT.language", _MetaSyntax_ALGT_language)
 			, ("MetaSyntax/Helper.language", _MetaSyntax_Helper_language)
 			, ("MetaSyntax/Relations.language", _MetaSyntax_Relations_language)
-			, ("TestLanguages/TestLanguageFaulty.language.a", _TestLanguages_TestLanguageFaulty_language_a)
 			, ("TestLanguages/STFL.language", _TestLanguages_STFL_language)
 			]
 
@@ -167,10 +166,6 @@ _MetaSyntax_Helper_language
 {-# NOINLINE _MetaSyntax_Relations_language #-}
 _MetaSyntax_Relations_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Relations.language" in seq str str
-
-{-# NOINLINE _TestLanguages_TestLanguageFaulty_language_a #-}
-_TestLanguages_TestLanguageFaulty_language_a
-	 = let str = unsafePerformIO $ readFile' "src/Assets/TestLanguages/TestLanguageFaulty.language.a" in seq str str
 
 {-# NOINLINE _TestLanguages_STFL_language #-}
 _TestLanguages_STFL_language
