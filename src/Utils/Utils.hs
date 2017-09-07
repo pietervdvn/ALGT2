@@ -150,7 +150,7 @@ pass		= return ()
 
 distrEffect	:: Monad m => m (m a, m b) -> (m a, m b)
 distrEffect mmamb
-		= (mmamb |> fst >>= id, mmamb |> snd >>= id)
+		= (mmamb |> fst & join, mmamb |> snd & join)
 			
 
 sndEffect	:: Monad m => (a, m b) -> m (a, b)

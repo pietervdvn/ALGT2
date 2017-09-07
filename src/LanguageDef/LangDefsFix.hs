@@ -126,8 +126,8 @@ fixSyntax scope syn
 
 
 fixFunctions	:: LDScope' fr -> Grouper (Function' a) -> Either String (Grouper (Function' a))
-fixFunctions scope funcs
-	= overGrouperM (fullyQualifyFunction scope) funcs
+fixFunctions scope
+	= overGrouperM (fullyQualifyFunction scope)
 
 
 fixLangdefGrouper	:: Monad m => Lens ld ld (Maybe (Grouper x)) (Maybe (Grouper x)) 

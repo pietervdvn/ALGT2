@@ -117,9 +117,9 @@ instance Check' ([Name] -> FQName -> FQName -> Bool) Syntaxes where
 
 _checkDeadIn	:: ([Name] -> FQName -> FQName -> Bool) -> ([Name],  Syntax) -> Either String ()
 _checkDeadIn isSubtype (nm, synt)
-	=  do	inMsg ("While checking for dead clauses in the syntactic form "++dots nm) $ 
-			synt & get syntax & M.toList |> (\(syntForm, choices) -> inMsg ("While checking syntactic form "++show syntForm) $
-				_checkDeadIn' (isSubtype nm) (choices |> fst)) & allRight_
+	=  inMsg ("While checking for dead clauses in the syntactic form "++dots nm) $ 
+		synt & get syntax & M.toList |> (\(syntForm, choices) -> inMsg ("While checking syntactic form "++show syntForm) $
+			_checkDeadIn' (isSubtype nm) (choices |> fst)) & allRight_
 
 _checkDeadIn'		:: (FQName -> FQName -> Bool) -> [BNF] -> Either String ()
 _checkDeadIn' _ [_]	= pass

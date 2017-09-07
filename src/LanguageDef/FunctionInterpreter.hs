@@ -130,7 +130,7 @@ constructParseTree	:: (SyntFormIndex -> a) -> LangDefs -> VariableStore a -> Exp
 constructParseTree _ _ vars (Var nm _)
 	= checkExistsSugg id nm vars ("The variable "++show nm++" was not defined by the pattern")
 constructParseTree _ _ _ (DontCare _)
-	= Left $ "Found a wildcard (_) in an expression context. Only use these as patterns!"
+	= Left "Found a wildcard (_) in an expression context. Only use these as patterns!"
 constructParseTree fb2a _ _ (ParseTree pt b)
 	= do	let a	= fb2a b
 		pt |> const a & return

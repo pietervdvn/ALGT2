@@ -41,9 +41,7 @@ asSyntaxUnchecked' nm str
 	= asSyntaxUnchecked nm str & either error id
 
 asSyntax	:: Name -> String -> Either String Syntax
-asSyntax nm str
-	= do 	syntax	<- asSyntaxUnchecked nm str
-		return syntax
+asSyntax 	= asSyntaxUnchecked
 
 
 

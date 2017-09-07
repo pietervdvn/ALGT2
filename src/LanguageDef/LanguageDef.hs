@@ -21,14 +21,14 @@ import LanguageDef.Grouper
 import Graphs.Lattice
 
 import Data.Char
-import Data.List
+import Data.List as L
 
 import Data.Map as M
 import qualified Data.Set as S
 import Data.Either
 import Data.Maybe
 import Data.Bifunctor (first)
-import Control.Arrow ((&&&))
+import Control.Arrow ((&&&), (***))
 import Control.Monad
 
 import System.Directory
@@ -87,7 +87,7 @@ instance Check' () (LanguageDef' ResolvedImport SyntFormIndex) where
 			-- Syntaxes are checked when all syntaxes are known 
 			checkM functions
 			checkM rels
-			assert (isNothing rules || isJust rels) $ "When rules are defined, a relation declaration section should be present"
+			assert (isNothing rules || isJust rels) "When rules are defined, a relation declaration section should be present"
 			checkM' (fromJust rels) rules
 			
 
@@ -127,7 +127,7 @@ _fixImport resolver imprt
 
 ------------------------------ PARSING STUFF --------------------------------------------------------
 
-_checkCombiner	= check' metaSyntaxes (parseLangDef $ _fullFileCombiner) & either error id
+_checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner) & either error id
 
 -- | Parses the entire file, file should still be checked against it's context!
 -- >>> _checkCombiner
@@ -155,8 +155,8 @@ _fullFileCombiner	:: Combiner
 				(Maybe Syntax,
 				(Maybe (Grouper (Function' ())),
 				(Maybe (Grouper Relation),
-				(Maybe (Grouper Rule)
-				))))
+				Maybe (Grouper Rule)
+				)))
 
 _fullFileCombiner
 	= let	s	= moduleCombiner "Syntax" syntaxDecl'
@@ -166,7 +166,7 @@ _fullFileCombiner
 		inJ cmb	= cmb |> Just 
 		modules	= _optionalCombiners (inJ s) $
 				_optionalCombiners (inJ f) $
-				_optionalCombiners' (inJ rels) $
+				_optionalCombiners' (inJ rels)
 				[inJ rules]
 		modules'	= modules & reverse ||>> _chain ||>> (|> _chain)
 		in
@@ -176,11 +176,11 @@ _fullFileCombiner
 
 _chain		:: (Maybe (Maybe a), Maybe (Maybe b, Maybe c)) -> (Maybe a, (Maybe b, Maybe c))
 _chain (mma, mmbmc)
-		= (mma >>= id, distrEffect mmbmc)
+		= (join mma, distrEffect mmbmc)
 
 _optionalCombiners'	:: Combiner (Maybe a) -> [Combiner (Maybe b)] -> [Combiner (Maybe a, Maybe b)]
 _optionalCombiners' a b
-	= _optionalCombiners a b ||>> (\(a, b) -> (a >>= id, b >>= id))
+	= _optionalCombiners a b ||>> (join *** join)
 
 _optionalCombiners	:: Combiner a -> [Combiner b] -> [Combiner (Maybe a, Maybe b)]
 _optionalCombiners cmbA cmbB
@@ -242,18 +242,18 @@ _saveMetaSyntax dir nm syntax
 		print target
 		let imports	= metaSyntaxes & M.keys |> dots |> ("import "++) & unlines
 		let contents	= imports ++ 
-				  (inHeader " " (dots nm) '*' $
-				  "# Automatically generated; do not edit" ++ 
-				  (inHeader' "Syntax" $ 
-				  toParsable syntax))
+				  inHeader " " (dots nm) '*' 
+				  ("# Automatically generated; do not edit" ++ 
+				  inHeader' "Syntax"
+				  (toParsable syntax))
 		writeFile target contents
 
 
 -- Tests parsing of a rule against a given string
 testSyntax	:: Name -> String -> IO ()
 testSyntax rule string
-	= do	let found	= metaSyntaxes & M.filter (\s -> rule `M.member` (get syntax s)) & M.keys
-		unless (length found > 0) $ error $ "No rule "++rule++" does exist within any syntax"
+	= do	let found	= metaSyntaxes & M.filter (\s -> rule `M.member` get syntax s) & M.keys
+		unless (L.null found) $ error $ "No rule "++rule++" does exist within any syntax"
 		when (length found > 1) $ error $ "Rule "++rule ++" does exist in "++(found |> dots & commas)
 		let fqn	= found & head
 		putStrLn $ showFQ (fqn, rule)

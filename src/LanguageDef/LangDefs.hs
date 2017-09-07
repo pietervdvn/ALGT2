@@ -93,8 +93,7 @@ fullyQualifyFunction scope (Function nm argTps retType clauses docs)
 
 
 fullyQualifyClause	:: LDScope' fr -> FunctionClause a -> Either String (FunctionClause a)
-fullyQualifyClause scope clause
-	= return clause
+fullyQualifyClause _	= return	-- full qualification happens by the typer
 
 
 

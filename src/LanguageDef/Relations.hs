@@ -64,7 +64,7 @@ relIdent	:: Combiner FQName
 relIdent	= choices' "relIdent"
 			[ cmb (\head (tail, nm) -> (head:tail, nm))
 				capture (lit "." **> relIdent)
-			, capture |> ((,) []) 
+			, capture |> (,) []
 			]
 
 mode		= choices' "mode"
@@ -93,14 +93,14 @@ relDeclarationCore
 
 relPronounc	= choices' "relPronounce"
 			[ lit ";" **> lit "Pronounced" **> lit "as" **> (capture |> Just) <+> nl
-			, nl |> ((,) Nothing)
+			, nl |> (,) Nothing
 			]
 
 
 relation	:: Combiner Relation
 relation	= choices' "relation"
 			[ (nls <+> relDeclarationCore <+> relPronounc) & withLocation _asRel
-			, (relDeclarationCore <+> relPronounc) |> ((,) []) & withLocation _asRel
+			, (relDeclarationCore <+> relPronounc) |> (,) [] & withLocation _asRel
 			]
 
 _asRel		:: LocationInfo 
@@ -216,9 +216,10 @@ Left "Rule \"abc\" is about relation (~) which is not declared in this document.
 -}
 instance Check' (Grouper Relation) (Rule' a) where
 	check' relations rule
-		= do	assert (not $ null $ get ruleName rule) $ "This rule has no name. Add a name after the line, in square brackets\n\n predicate\n----------- [ name ]\n (~) args"
+		= do	assert (not $ null $ get ruleName rule) 
+				"This rule has no name. Add a name after the line, in square brackets\n\n predicate\n----------- [ name ]\n (~) args"
 			let ruleAbout	= rule & get (ruleConcl . conclRelName) & snd
-			assert (ruleAbout `M.member` (get grouperDict relations))
+			assert (ruleAbout `M.member` get grouperDict relations)
 				$ ["Rule", show $ get ruleName rule, "is about relation", inParens ruleAbout, "which is not declared in this document. Only locally declared relations can be implemented with rules"]  & unwords
 
 

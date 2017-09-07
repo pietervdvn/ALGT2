@@ -65,7 +65,7 @@ makeLenses ''FunctionClause
 instance Check (Function' a) where
 	check (Function name argTps retTp clauses docs)
 		= inMsg ("While checking function "++show name) $
-		   do	unless (clauses |> get clauseFuncName & all (== name)) $ Left $
+		  	unless (clauses |> get clauseFuncName & all (== name)) $ Left $
 				"Some clauses have a different name. The function name is "++show name++
 				", but a clause is named "++(clauses |> get clauseFuncName & sort & nub & commas)
 
