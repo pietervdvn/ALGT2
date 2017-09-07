@@ -55,11 +55,12 @@ data LanguageDef' imported funcResolution
 		{ _langTitle	:: Name		-- title of the language
 		, _langImports	:: [Import imported]
 		, _langMeta	:: [String]	-- The comments just under the title
-		, _langSyntax		:: Maybe (Grouper [BNF])	-- The syntax of the language, aka the BNF
+		, _langSyntax		:: Maybe (Grouper SyntacticForm)	-- The syntax of the language, aka the BNF
 		, _langSupertypes	:: Lattice FQName	-- The global supertype relationship; is filled in later on by the langdefs-fixes
 		, _langFunctions	:: Maybe (Grouper (Function' funcResolution))
 		, _langRelations	:: Maybe (Grouper Relation)
 		, _langRules		:: Maybe (Grouper Rule)
+			-- TODO typecheck the rules!
 		}
 	deriving (Show, Eq)
 makeLenses ''LanguageDef'
@@ -253,7 +254,7 @@ _saveMetaSyntax dir nm syntax
 -- Tests parsing of a rule against a given string
 testSyntax	:: Name -> String -> IO ()
 testSyntax rule string
-	= do	let found	= metaSyntaxes & M.filter (\s -> rule `M.member` get syntax s) & M.keys
+	= do	let found	= metaSyntaxes & M.filter (\s -> rule `M.member` get grouperDict s) & M.keys
 		unless (L.null found) $ error $ "No rule "++rule++" does exist within any syntax"
 		when (length found > 1) $ error $ "Rule "++rule ++" does exist in "++(found |> dots & commas)
 		let fqn	= found & head

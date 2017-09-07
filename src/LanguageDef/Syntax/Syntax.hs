@@ -17,6 +17,7 @@ import Utils.All
 
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax.BNF
+import LanguageDef.Grouper
 
 import Data.Maybe
 import qualified Data.Map as M
@@ -34,18 +35,33 @@ import Lens.Micro (mapped)
 
 
 
-data Syntax = Syntax
+data SyntacticForm
+	= SyntacticForm
+		{ _syntName		:: Name
+		, _syntChoices		:: [BNF]
+		, _syntChoiceMeta	:: [MetaInfo]	-- meta info of a choice
+		, _syntMeta		:: MetaInfo	-- meta info of the entire rule
+		} deriving (Show, Eq)
+	-- TODO further port this refactoring
+
+makeLenses ''SyntacticForm
+
+type Syntax = Grouper SyntacticForm
+
+{-data Syntax = Syntax
 		{ _syntax :: Map Name [(BNF, MetaInfo)]
 		, _syntaxElementsOrder	:: [(Name, MetaInfo)]	-- Only for pretty printing and error detection
 		}
 	deriving (Show, Eq)
-makeLenses ''Syntax
+makeLenses ''Syntax-}
 
-emptySyntax	= Syntax M.empty []
+emptySyntax	= emptyGrouper ("syntax", "syntaxes")
 
 
-syntaxChoices
+-- TODO REMOVE
+{- syntaxChoices
 	= syntax . mapped . mapped . _1
+-}
 
 -------------------- SYNTAX TOOLS ----------------------
 
@@ -61,23 +77,23 @@ asSyntaxes'
 
 existingNames	:: Syntaxes -> Set FQName
 existingNames s
-	= s |> get syntax |> M.keys & M.toList & unmerge & S.fromList
+	= s |> get grouperDict |> M.keys & M.toList & unmerge & S.fromList
 
 
 callExists	:: Syntaxes -> FQName -> Bool
 callExists s (ns, nm)
 	= isJust $ do
-		synt	<- M.lookup ns s |> get syntax
+		synt	<- M.lookup ns s |> get grouperDict
 		M.lookup nm synt
 
 
-createSyntax	:: [(Name, ([(BNF, MetaInfo)], MetaInfo))] -> Syntax
-createSyntax elements
-	= let	order	= elements |> (fst &&& (snd . snd))
-		dict	= elements ||>> fst & M.fromList in
-		Syntax dict order & normalize
+createSyntax	:: [SyntacticForm] -> Syntax
+createSyntax
+	= asGrouper ("syntax", "syntaxes") (get syntName)
 
+{-
 
+-- TODO is this needed?
 mergeSyntax		:: Syntax -> Syntax -> Either String Syntax
 mergeSyntax (Syntax synt order) (Syntax synt' order')
 	= inMsg "While merging two syntaxes" $
@@ -88,7 +104,7 @@ mergeSyntax (Syntax synt order) (Syntax synt' order')
 mergeSyntax' a b
 	= mergeSyntax a b  & either error id
 
-
+-}
 
 
 
@@ -103,22 +119,24 @@ mergeSyntax' a b
 Left "While checking for dead clauses in the syntactic form TestShadowing:\n  While checking syntactic form \"dead1\":\n    The choice 'TestShadowing.expr' does prevent a later choice from being parsed, killing 'TestShadowing.bool'\n  While checking syntactic form \"dead2\":\n    The choice 'TestShadowing.expr' does prevent a later choice from being parsed, killing 'TestShadowing.bool Whitespace \";\"'\n  While checking syntactic form \"x\":\n    The choice '\"a\"' does prevent a later choice from being parsed, killing '\"a\" Whitespace \"b\"'\n  While checking syntactic form \"y\":\n    The choice 'TestShadowing.bool' does prevent a later choice from being parsed, killing 'TestShadowing.bool Whitespace TestShadowing.bool'\n  While checking syntactic form \"z\":\n    The choice 'TestShadowing.bool' does prevent a later choice from being parsed, killing 'TestShadowing.bool'"
 
 -}
+
+
 instance Check' ([Name] -> FQName -> FQName -> Bool) Syntaxes where
 	check' isSubtypeOf syntaxes
-		= do	let syntaxes'	= M.toList syntaxes |> swap
-			syntaxes' |> _checkAllIdentsExist syntaxes  & allRight_
-			[ syntaxes' |> _checkNoDuplicate
-			 , syntaxes' |> _checkNoTrivial
-			 ] |> allRight_ & allRight_
-			_checkLeftRecursion syntaxes
+		= do	--let syntaxes'	= M.toList syntaxes |> swap
+			--syntaxes' |> _checkAllIdentsExist syntaxes  & allRight_
+			--[  syntaxes' |> _checkNoTrivial
+			-- ] |> allRight_ & allRight_
+			--_checkLeftRecursion syntaxes
 			-- Cycles in the supertype relationship: check unneeded, prevented by left recursion check
-			syntaxes & M.toList |> _checkDeadIn isSubtypeOf & allRight_
+			--syntaxes & M.toList |> _checkDeadIn isSubtypeOf & allRight_
+			pass -- TODO reenable checks
 
-
+{-
 _checkDeadIn	:: ([Name] -> FQName -> FQName -> Bool) -> ([Name],  Syntax) -> Either String ()
 _checkDeadIn isSubtype (nm, synt)
 	=  inMsg ("While checking for dead clauses in the syntactic form "++dots nm) $ 
-		synt & get syntax & M.toList |> (\(syntForm, choices) -> inMsg ("While checking syntactic form "++show syntForm) $
+		synt & get grouperDict & M.toList |> (\(syntForm, choices) -> inMsg ("While checking syntactic form "++show syntForm) $
 			_checkDeadIn' (isSubtype nm) (choices |> fst)) & allRight_
 
 _checkDeadIn'		:: (FQName -> FQName -> Bool) -> [BNF] -> Either String ()
@@ -131,23 +149,6 @@ _checkDeadIn' isSubtypeOf (head:choices)
 		in
 		allRight_ (recursiveCheck:checkAll)		
 			
-
--- | A syntactic form should not be declared twice
--- >>> import LanguageDef.Syntax
--- >>> _checkNoDuplicate (asSyntaxUnchecked' "Tests" "\nabc ::= Number\nabc ::= Number\n", ["Tests"])
--- Left ...
--- >>> _checkNoDuplicate (asSyntaxUnchecked' "Tests" "\nabc ::= Number\n", ["Tests"])
--- Right ...
-_checkNoDuplicate	:: (Syntax, [Name]) -> Either String ()
-_checkNoDuplicate (Syntax synts order, nm)
-	= inMsg ("While checking the syntax or "++intercalate "." nm) $ 
-	  checkNoDuplicates (order |> fst) $ \dupNames ->
-	  let 	dupMeta	= dupNames |> (id &&& flip lookup order) |> sndEffect & catMaybes
-		dupEntries
-			= dupMeta |> (\(nm, meta) -> nm ++ "\t "++toCoParsable meta) & unlines
-		in
-		"Some syntactic forms are declared multiple times:" ++ indent dupEntries
-		
 
 		
 
@@ -243,11 +244,12 @@ leftRecursiveCalls syntaxes
 	fixLoop syntaxes'' (cleanSynt . removeEmpty)
 
 
+-}
 
 -------------------------------- TOOLS -------------------------------------
 
 
-
+{- TODO what is this? Is this needed?
 -- | All Fully Qualified calls, with the first param the namespace for local calls. Metainfo is the choice in which the call is made, name is the declaration for which the call is made
 syntaxRuleCalls	:: [Name] -> Syntax -> [((MetaInfo, Name), FQName)]
 syntaxRuleCalls localScope s
@@ -257,36 +259,28 @@ syntaxRuleCalls localScope s
 			|> (\(name, (bnf, mi)) -> ((mi, name), L.nub $ getRuleCalls bnf))
 			& unmerge
 
+-}
+
 
 
 -------------------------------- UTILS -------------------------------------
 
 
 
-instance Normalizable Syntax where
-	normalize synt
-		= synt & over (syntax . mapped . mapped . _1) normalize
+instance Normalizable SyntacticForm where
+	normalize sf
+		= sf & over (syntChoices . mapped) normalize
 
 
 
-
-
-
-
-instance ToString Syntax where
-	toParsable (Syntax syntax order)
-		= order	|> ((fst &&& (flip M.lookup syntax . fst)) &&& snd)
-			|> unmerge3l
-			|> _showForm & unlines
-
-_showForm	:: (Name, Maybe [(BNF, MetaInfo)], MetaInfo) -> String
-_showForm (nm, Nothing, mi)	= error $ "Huh? No entry in syntax for "++nm
-_showForm (nm, Just choices, meta)
-	= let	docStr	= toParsable meta
-		assgn	= if all (\(bnf, _) -> containsHidden bnf || isSingle bnf) choices then "::=" else "~~="
-		header	= nm ++ "\t"++ assgn ++" "
-		choices'	= choices |> (\(bnf, meta) -> toParsable (removeWS bnf) ++toCoParsable meta) & intercalate "\n\t | "
-		in
-		["", docStr, header ++ choices'] & intercalate "\n"
+instance ToString SyntacticForm where
+	toParsable (SyntacticForm nm choices chMeta meta)
+		= let	docStr		= toParsable meta
+			chMeta'		= chMeta |> toCoParsable |> ("\t"++)
+			choices'	= choices |> removeWS |> toParsable & zipWith (++) chMeta'
+			allChoices	= choices' & intercalate "\n\t | "
+			assgn	= if all (\bnf -> containsHidden bnf || isSingle bnf) choices then "::=" else "~~="
+			in
+			["", docStr, nm ++ "\t" ++ assgn ++ allChoices] & intercalate "\n"
 
 

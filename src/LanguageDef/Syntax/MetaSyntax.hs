@@ -89,9 +89,9 @@ choice doc bnfs
 choice' doc bnfs
 	= (Seq bnfs & normalize, doc)
 
-syntForm	:: Name -> Doc -> [(BNF, Doc)] -> (Name, ([(BNF, MetaInfo)], MetaInfo))
+syntForm	:: Name -> Doc -> [(BNF, Doc)] -> SyntacticForm
 syntForm name information choices
-	= (name, (choices |> over _2 asInfo, asInfo information))
+	= SyntacticForm name (choices |> fst) (choices |> snd |> asInfo) (asInfo information)
 
 
 asInfo	:: Doc -> MetaInfo

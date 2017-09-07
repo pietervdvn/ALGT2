@@ -182,7 +182,7 @@ typeExpression ld expectation (SeqExp exprs a)
 {-Search for a choice matching the expressions -}
 typeExpressionIndexed	:: LDScope' fr -> SyntForm -> [Expression a] -> Either String ([Expression (a, SyntFormIndex)], SyntFormIndex)
 typeExpressionIndexed ld syntForm exprs
-	= do	(fqname, choices)	<- resolve' ld syntaxCall syntForm
+	= do	(fqname, choices)	<- resolve' ld syntaxCall syntForm ||>> get syntChoices
 		let tries	= choices |> BNF.removeWS |> BNF.unsequence	-- prepare individual choices
 					& mapi 					-- Number the choices
 					|> typeExpressionIndexed' ld syntForm exprs	-- Actually type them

@@ -7,6 +7,7 @@ import Utils.All
 
 import LanguageDef.Syntax.Syntax
 import LanguageDef.LocationInfo
+import LanguageDef.Grouper
 import LanguageDef.Syntax.BNF hiding (Literal, Seq, string)
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.ParseTree
@@ -66,8 +67,8 @@ _check synts ac (Annot fqname@(ns, rule) choices)
 	= Right ()	-- Already checked
  | otherwise
 	= do	synt		<- checkExists ns synts ("No namespace found: "++ (if null ns then "(empty namespace)" else show $ intercalate "." ns)++" (it should have contained: "++show rule)
-		choices'	<- checkExistsSugg id rule (synt & get syntax) ("Syntactic form "++show rule++" not found within "++intercalate "." ns)
-					||>> fst ||>> removeWS -- Remove injected WS builtin
+		choices'	<- checkExistsSugg show rule (synt & get grouperDict) ("Syntactic form "++show rule++" not found within "++intercalate "." ns)
+					|> get syntChoices ||>> removeWS -- Remove injected WS builtin
 		let ac'	= S.insert fqname ac
 		let recCheck	= zip choices choices'	|> uncurry (_checkBNF (synts, ac'))
 		let choiceIndicator	= (recCheck |> either (const "✘ ") (const "✓ ")) ++ repeat "  "

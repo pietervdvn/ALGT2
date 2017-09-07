@@ -17,6 +17,9 @@ data Grouper x	= Grouper
 		} deriving (Show, Ord, Eq)
 makeLenses ''Grouper
 
+emptyGrouper	:: (Name, Name) -> Grouper a
+emptyGrouper nm
+	= Grouper M.empty [] nm
 
 asGrouper	:: (Name, Name) -> (a -> Name) -> [a] -> Grouper a
 asGrouper groupName getName as

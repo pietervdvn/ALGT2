@@ -4,7 +4,7 @@ import Utils.All
 
 import LanguageDef.Syntax.MetaSyntax (bnfSyntax)
 import LanguageDef.Syntax.ParseTree
-import LanguageDef.Syntax.Syntax (Syntax, createSyntax)
+import LanguageDef.Syntax.Syntax (Syntax, createSyntax, SyntacticForm (SyntacticForm))
 import LanguageDef.Syntax.BNF as BNF
 
 import LanguageDef.Syntax.Combiner
@@ -82,7 +82,7 @@ assign	= choices' "assign"
 		[lit "::=" |> const (injectWS . normalize)
 		, lit "~~=" |> const id]
 
-bnfDecl	:: Combiner (Name, ([(BNF, MetaInfo)], MetaInfo))
+bnfDecl	:: Combiner SyntacticForm
 bnfDecl
 	= choices' "bnfDecl"
 		[ cmb (,) (nls |> concat & withLocation MetaInfo) 
@@ -91,10 +91,10 @@ bnfDecl
 				bnfchoices'))
 		, cmb (,) capture {-Identifier:Name-} (cmb (over (mapped . _1)) assign bnfchoices')
 			& withLocation (\li decl -> (MetaInfo li "", decl) )
-		] |> (\(mi, (nm, choices')) -> (nm, (choices', mi)))
+		] |> (\(mi, (nm, choices')) -> SyntacticForm nm (choices' |> fst) (choices' |> snd) mi)
 
 
-syntaxDecl	:: Combiner [(Name, ([(BNF, MetaInfo)], MetaInfo))]
+syntaxDecl	:: Combiner [SyntacticForm]
 syntaxDecl
 	= choices' "syntax"
 		[ cmb (:) bnfDecl syntaxDecl

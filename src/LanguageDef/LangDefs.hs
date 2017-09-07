@@ -73,16 +73,16 @@ parseTarget langs (startModule, startRule) file contents
 
 
 fullyQualifySyntForm
-			:: LDScope' fr -> (Name, [(BNF, MetaInfo)]) -> Either String [(BNF, MetaInfo)]
-fullyQualifySyntForm scope (syntFormName, choices)
-	= inMsg ("In the definition of "++syntFormName) $
-		choices |> (fullyQualifyBNF scope &&& snd) |+> fstEffect
+			:: LDScope' fr -> SyntacticForm -> Either String SyntacticForm
+fullyQualifySyntForm scope (SyntacticForm nm choices meta docs)
+	= inMsg ("In the definition of "++nm) $
+	   do	choices'	<- choices |> fullyQualifyBNF scope & allRight'
+		return $ SyntacticForm nm choices' meta docs
 
 
-fullyQualifyBNF	:: LDScope' fr -> (BNF, MetaInfo) -> Either String BNF
-fullyQualifyBNF scope (bnf, metaInfo)
-	= inMsg ("In a choice "++toCoParsable (get miLoc metaInfo)) $
-		bnf & overRuleCall' (resolve scope syntaxCall)
+fullyQualifyBNF	:: LDScope' fr -> BNF -> Either String BNF
+fullyQualifyBNF scope bnf
+	= bnf & overRuleCall' (resolve scope syntaxCall)
 
 
 -- Qualifies all function types absolutely
@@ -128,8 +128,8 @@ fullyQualifyConcl scope (Conclusion relName args)
 		return $ Conclusion relName' args'
 
 
-syntaxCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe Syntax, Syntax -> Map Name [BNF])
-syntaxCall	= ("the syntactic form", get langSyntax, \synt -> get syntax synt ||>> fst)
+syntaxCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe Syntax, Syntax -> Map Name SyntacticForm)
+syntaxCall	= ("the syntactic form", get langSyntax, get grouperDict)
 
 functionCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper (Function' fr)), Grouper (Function' fr) -> Map Name (Function' fr))
 functionCall	= ("the function", get langFunctions, get grouperDict)

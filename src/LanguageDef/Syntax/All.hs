@@ -28,11 +28,10 @@ asSyntaxUnchecked syntaxName syntaxString
 		syntax	<- interpret syntaxDecl' pt'
 		syntax & _patchFullQualifies [syntaxName] & return
 
--- Little hack: everything is fully qualified, including rulecalls. WHen they are just parsed, they are not yet fully qualified and the exact resolution should still be done. For now, the bootstraps get manual patches for full qualifications
+-- Little hack: everything is fully qualified, including syntacticForm calls. When they are just parsed, they are not yet fully qualified and the exact resolution should still be done. For now, the bootstraps get manual patches for full qualifications
 _patchFullQualifies	:: [Name] -> Syntax -> Syntax
-_patchFullQualifies ns
-	= over (syntax . mapped . mapped . _1)
-		(overRuleCall (_patchBNFName ns))
+_patchFullQualifies ns syntax
+	= syntax |> over (syntChoices . mapped) (overRuleCall $ _patchBNFName ns)
 
 _patchBNFName ns ([], name)	=  (ns, name)
 _patchBNFName _ fqname		= fqname

@@ -71,9 +71,11 @@ top	= ([], "⊤")
 -}
 createSupertypingRelationship	:: [([Name], LanguageDef' ResolvedImport a)] -> Either String (Lattice FQName)
 createSupertypingRelationship lds
-	= do	let syntaxes	= lds ||>> get langSyntax |> sndEffect & catMaybes ||>> get syntax		:: [([Name], Map Name [(BNF, MetaInfo)])]
+	= do	let syntaxes	= lds ||>> get langSyntax |> sndEffect & catMaybes 
+					||>> get grouperDict
+					|||>>> get syntChoices 		:: [([Name], Map Name [BNF])]
 		let fqsyntax	= syntaxes ||>> M.toList & unmerge
-					|> (\(fq, (nm, cont)) -> ((fq, nm), cont |> fst))
+					|> (\(fq, (nm, cont)) -> ((fq, nm), cont))
 					& M.fromList						:: Map FQName [BNF]
 		let supertypes	= fqsyntax ||>> getRuleCall |> catMaybes |> S.fromList		:: Map FQName (Set FQName)
 		let subtypes	= invertDict supertypes
@@ -108,23 +110,10 @@ fixScope scopeToFix
 
 fixLD		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Either String (LanguageDef' ResolvedImport fr)
 fixLD scope ld
-	= do	let syn		= get langSyntax ld
-		syn'		<- syn |> fixSyntax scope & justEffect
-		let ld'		= set langSyntax syn' ld
-		ld' 	& fixLangdefGrouper langFunctions (fullyQualifyFunction scope)
-			>>= fixLangdefGrouper langRelations (fullyQualifyRelation scope)
-			>>= fixLangdefGrouper langRules (fullyQualifyRule scope)
-
-
-
-fixSyntax	:: LDScope' fr -> Syntax -> Either String Syntax
-fixSyntax scope syn
-	= do	let syntx	= get syntax syn
-		syntx'		<- syntx & M.toList
-					|> (fst &&& fullyQualifySyntForm scope)
-					|+> sndEffect |> M.fromList
-		return $ set syntax syntx' syn
-
+	= ld	& fixLangdefGrouper langSyntax (fullyQualifySyntForm scope)
+		>>= fixLangdefGrouper langFunctions (fullyQualifyFunction scope)
+		>>= fixLangdefGrouper langRelations (fullyQualifyRelation scope)
+		>>= fixLangdefGrouper langRules (fullyQualifyRule scope)
 
 
 

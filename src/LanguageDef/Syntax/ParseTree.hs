@@ -11,6 +11,7 @@ import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.BNF (Parser, BNF, ParserMetaInfo (ParserMetaInfo), pmiColumn, pmiLine, pmiFile, biParse)
 import LanguageDef.Syntax.Syntax
 import LanguageDef.LocationInfo
+import LanguageDef.Grouper
 
 import qualified Data.Map as M
 import Data.Map (Map)
@@ -138,9 +139,11 @@ _runParser fileName parser string
 
 _parseRule	:: (Syntaxes, [Name]) -> Name -> Parser ParseTree'
 _parseRule (syntaxes, ns) nm
-	= do	(Syntax syntax _)	<- checkExistsSugg show ns syntaxes ("No namespace "++intercalate "." ns++" found while attempting to parse "++show nm) & either fail return
-		choices	<- checkExistsSugg show nm syntax ("Syntactic form "++showFQ (ns, nm) ++" not found")
-				& either fail return ||>> fst
+	= do	syntax'	<- checkExistsSugg show ns syntaxes ("No namespace "++intercalate "." ns++" found while attempting to parse "++show nm) & either fail return
+		let syntax	= get grouperDict syntax'	
+		syntForm	<- checkExistsSugg show nm syntax ("Syntactic form "++showFQ (ns, nm) ++" not found")
+					& either fail return
+		let choices	= get syntChoices syntForm
 		choice (mapi choices |> _parseChoice syntaxes (ns, nm) |> try)
 
 _parseChoice	:: Syntaxes -> FQName -> (Int, BNF) -> Parser ParseTree'
