@@ -137,7 +137,7 @@ _checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner) & either e
 parseFullFile	:: [Name] -> FilePath -> String -> Either String (LanguageDef' () ())
 parseFullFile _ fp contents
 	= inMsg ("While parsing "++show fp) $
-	  do	pt	<- parse fp (metaSyntaxes, ["Main"]) "langDef" contents
+	  do	pt	<- parse fp (metaSyntaxes, ["ALGT"]) "langDef" contents
 		((title, meta, imports), (syntax, (funcs, (rels, rules))))	<- interpret (parseLangDef _fullFileCombiner) pt
 		return $ LanguageDef
 			title
@@ -213,7 +213,7 @@ metaSyntaxes
 					, ("Rules", (["Relations"], "rules"))
 					]
 		syntaxes	=  [("Helper", helperSyntax)
-					, ("Main", syntax)
+					, ("ALGT", syntax)
 					, ("Syntax", bnfSyntax)
 					, ("Functions", functionSyntax)
 					, ("Relations", relationSyntax)
@@ -309,7 +309,7 @@ _loadAssetsSyntax title contents
 ------------------------------------------- Explicit BNF (of skeleton etc) -------------------------------------
 
 
-choices' nm	= choices (["Main"], nm)
+choices' nm	= choices (["ALGT"], nm)
 
 
 -- The syntax of the entire file skeleton, with: [("Syntax to call into", "Title", rule to call")
@@ -333,7 +333,7 @@ mainSyntax subRules
 	++ ["modules    ::= "++subRules |> _titledModCall |> fst & allOptional & intercalate "\n\t|"]
 	++ [ "langDef      ::= title modules"
 	]
-	)  & unlines & asSyntaxUnchecked "Main" & either error id
+	)  & unlines & asSyntaxUnchecked "ALGT" & either error id
 
 
 

@@ -1,0 +1,102 @@
+import ALGT
+import Functions
+import Helper
+import Relations
+import Syntax
+
+  ALGT 
+ ******
+
+# Automatically generated; do not edit
+ Syntax 
+========
+
+
+
+stars	::= "*" ALGT.stars
+	 | "*"
+
+
+dashes	::= "-" ALGT.dashes
+	 | "-"
+
+
+eqs	::= "=" ALGT.eqs
+	 | "="
+
+
+lineContents	::= LineChar ALGT.lineContents
+	 | "\n"
+
+
+comment	::= "#" $ALGT.lineContents
+
+
+title	::= ALGT.imports $ALGT.lineContents $ALGT.stars Syntax.nls
+	 | $ALGT.lineContents $ALGT.stars Syntax.nls
+
+
+namespace	~~= IdentifierUpper "." ALGT.namespace
+	 | IdentifierUpper
+
+
+importStm	::= "import" "local"
+	 | "import"
+
+
+import	::= Syntax.nls ALGT.importStm ALGT.namespace
+	 | ALGT.importStm ALGT.namespace
+
+
+imports	::= ALGT.import ALGT.imports
+	 | Syntax.nls
+
+
+titleSyntax	::= "Syntax" Syntax.nl ALGT.eqs Syntax.nl
+
+
+titleFunctions	::= "Functions" Syntax.nl ALGT.eqs Syntax.nl
+
+
+titleRelations	::= "Relations" Syntax.nl ALGT.eqs Syntax.nl
+
+
+titleRules	::= "Rules" Syntax.nl ALGT.eqs Syntax.nl
+
+
+moduleSyntax	::= ALGT.titleSyntax Syntax.syntax Syntax.nls
+	 | ALGT.titleSyntax Syntax.syntax
+
+
+moduleFunctions	::= ALGT.titleFunctions Functions.functions Syntax.nls
+	 | ALGT.titleFunctions Functions.functions
+
+
+moduleRelations	::= ALGT.titleRelations Relations.relations Syntax.nls
+	 | ALGT.titleRelations Relations.relations
+
+
+moduleRules	::= ALGT.titleRules Relations.rules Syntax.nls
+	 | ALGT.titleRules Relations.rules
+
+
+modules	::= ALGT.moduleSyntax ALGT.moduleFunctions ALGT.moduleRelations ALGT.moduleRules
+	 | ALGT.moduleSyntax ALGT.moduleFunctions ALGT.moduleRules
+	 | ALGT.moduleSyntax ALGT.moduleFunctions ALGT.moduleRelations
+	 | ALGT.moduleSyntax ALGT.moduleRelations ALGT.moduleRules
+	 | ALGT.moduleSyntax ALGT.moduleRules
+	 | ALGT.moduleSyntax ALGT.moduleRelations
+	 | ALGT.moduleSyntax ALGT.moduleFunctions
+	 | ALGT.moduleFunctions ALGT.moduleRelations ALGT.moduleRules
+	 | ALGT.moduleFunctions ALGT.moduleRules
+	 | ALGT.moduleFunctions ALGT.moduleRelations
+	 | ALGT.moduleRelations ALGT.moduleRules
+	 | ALGT.moduleRules
+	 | ALGT.moduleRelations
+	 | ALGT.moduleFunctions
+	 | ALGT.moduleSyntax
+
+
+langDef	::= ALGT.title ALGT.modules
+
+

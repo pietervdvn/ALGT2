@@ -246,8 +246,14 @@ instance ToString (Rule' a) where
 		 	preds'	= preds |> either toParsable toParsable
 					& intercalate "\t"
 			concl'	= toParsable concl
+			dashesL	= 1 + max (length preds') (length concl')
+			dashes	= replicate dashesL '-'
 			in
-			[ doc', preds', "--- [ "++nm++" ]", concl'] & unlines 
+			[ doc'
+			, " " ++ preds'
+			, "-" ++ dashes ++ " [ "++nm++" ]"
+			, " " ++ concl'
+			] & unlines 
 
 
 _typeModeToPars	:: (FQName, Mode) -> String

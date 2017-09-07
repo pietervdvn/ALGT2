@@ -1,6 +1,6 @@
+import ALGT
 import Functions
 import Helper
-import Main
 import Relations
 import Syntax
 

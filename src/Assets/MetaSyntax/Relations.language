@@ -1,6 +1,6 @@
+import ALGT
 import Functions
 import Helper
-import Main
 import Relations
 import Syntax
 
@@ -99,6 +99,7 @@ ruleName	::= Relations.ruleChar Relations.ruleName
 
 
 line	::= $Main.dashes "[" $Relations.ruleName "]"
+	 | $Main.dashes
 
 
 rule	::= Syntax.nls Relations.predicates Syntax.nl Relations.line Syntax.nl Relations.conclusion Syntax.nl

@@ -19,9 +19,9 @@ readFile' str = do	h <- openFile str ReadMode
 			s `deepseq` hClose h
 			return s
 allAssets	:: [(FilePath, String)]
-allAssets	= [("Main.language", _Main_language)
-			, ("Syntax.language", _Syntax_language)
+allAssets	= [("Syntax.language", _Syntax_language)
 			, ("Functions.language", _Functions_language)
+			, ("ALGT.language", _ALGT_language)
 			, ("TestLanguage.language", _TestLanguage_language)
 			, ("Helper.language", _Helper_language)
 			, ("Relations.language", _Relations_language)
@@ -43,17 +43,14 @@ allAssets	= [("Main.language", _Main_language)
 			, ("Faulty/Relations/AllOutRel.language", _Faulty_Relations_AllOutRel_language)
 			, ("Faulty/Relations/NotDeclared.language", _Faulty_Relations_NotDeclared_language)
 			, ("Faulty/Relations/UnkownTypeRelation.language", _Faulty_Relations_UnkownTypeRelation_language)
-			, ("MetaSyntax/Main.language", _MetaSyntax_Main_language)
 			, ("MetaSyntax/Syntax.language", _MetaSyntax_Syntax_language)
 			, ("MetaSyntax/Functions.language", _MetaSyntax_Functions_language)
+			, ("MetaSyntax/ALGT.language", _MetaSyntax_ALGT_language)
 			, ("MetaSyntax/Helper.language", _MetaSyntax_Helper_language)
 			, ("MetaSyntax/Relations.language", _MetaSyntax_Relations_language)
-			, ("TestLanguages/TestLanguageFaulty.language", _TestLanguages_TestLanguageFaulty_language)
+			, ("TestLanguages/TestLanguageFaulty.language.a", _TestLanguages_TestLanguageFaulty_language_a)
+			, ("TestLanguages/STFL.language", _TestLanguages_STFL_language)
 			]
-
-{-# NOINLINE _Main_language #-}
-_Main_language
-	 = let str = unsafePerformIO $ readFile' "src/Assets/Main.language" in seq str str
 
 {-# NOINLINE _Syntax_language #-}
 _Syntax_language
@@ -62,6 +59,10 @@ _Syntax_language
 {-# NOINLINE _Functions_language #-}
 _Functions_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Functions.language" in seq str str
+
+{-# NOINLINE _ALGT_language #-}
+_ALGT_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT.language" in seq str str
 
 {-# NOINLINE _TestLanguage_language #-}
 _TestLanguage_language
@@ -147,10 +148,6 @@ _Faulty_Relations_NotDeclared_language
 _Faulty_Relations_UnkownTypeRelation_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/UnkownTypeRelation.language" in seq str str
 
-{-# NOINLINE _MetaSyntax_Main_language #-}
-_MetaSyntax_Main_language
-	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Main.language" in seq str str
-
 {-# NOINLINE _MetaSyntax_Syntax_language #-}
 _MetaSyntax_Syntax_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Syntax.language" in seq str str
@@ -158,6 +155,10 @@ _MetaSyntax_Syntax_language
 {-# NOINLINE _MetaSyntax_Functions_language #-}
 _MetaSyntax_Functions_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Functions.language" in seq str str
+
+{-# NOINLINE _MetaSyntax_ALGT_language #-}
+_MetaSyntax_ALGT_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/ALGT.language" in seq str str
 
 {-# NOINLINE _MetaSyntax_Helper_language #-}
 _MetaSyntax_Helper_language
@@ -167,6 +168,10 @@ _MetaSyntax_Helper_language
 _MetaSyntax_Relations_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Relations.language" in seq str str
 
-{-# NOINLINE _TestLanguages_TestLanguageFaulty_language #-}
-_TestLanguages_TestLanguageFaulty_language
-	 = let str = unsafePerformIO $ readFile' "src/Assets/TestLanguages/TestLanguageFaulty.language" in seq str str
+{-# NOINLINE _TestLanguages_TestLanguageFaulty_language_a #-}
+_TestLanguages_TestLanguageFaulty_language_a
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestLanguages/TestLanguageFaulty.language.a" in seq str str
+
+{-# NOINLINE _TestLanguages_STFL_language #-}
+_TestLanguages_STFL_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestLanguages/STFL.language" in seq str str

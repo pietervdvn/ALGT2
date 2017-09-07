@@ -138,8 +138,8 @@ _runParser fileName parser string
 
 _parseRule	:: (Syntaxes, [Name]) -> Name -> Parser ParseTree'
 _parseRule (syntaxes, ns) nm
-	= do	(Syntax syntax _)	<- checkExists ns syntaxes ("No namespace "++intercalate "." ns++" found while attempting to parse "++show nm) & either fail return
-		choices	<- checkExists nm syntax ("Syntactic form "++showFQ (ns, nm) ++" not found")
+	= do	(Syntax syntax _)	<- checkExistsSugg show ns syntaxes ("No namespace "++intercalate "." ns++" found while attempting to parse "++show nm) & either fail return
+		choices	<- checkExistsSugg show nm syntax ("Syntactic form "++showFQ (ns, nm) ++" not found")
 				& either fail return ||>> fst
 		choice (mapi choices |> _parseChoice syntaxes (ns, nm))
 

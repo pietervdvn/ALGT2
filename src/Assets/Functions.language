@@ -1,7 +1,7 @@
 import Syntax
 
- MetaFunctions
-***************
+ Functions
+***********
 
 # This file implements the syntax of metafunctions
 # As this file is part of the bootstrap for language definitions, only the syntax part can be used. Adding a metafunction section will cause a hang of ALGT

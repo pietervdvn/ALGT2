@@ -63,7 +63,7 @@ createTypedExpression ld source str typ@(loc, nm)
 t' rule str
 	= do	def	<- loadLangDef "/home/pietervdvn/git/ALGT2/src/Assets" ["Relations"]
 	--	toParsable def & Utils.PureIO.putStrLn
-		let parsed'	= parseTarget def (["Relations"], rule) "TestFile" str
+		let parsed'	= parseTarget def (["Relations"], rule) "Relations:test" str
 		parsed	<- parsed' & either error return
 		Utils.PureIO.putStrLn $ toParsable parsed
 		Utils.PureIO.putStrLn $ toCoParsable parsed
@@ -75,3 +75,15 @@ t' rule str
 
 t rule code
 	= runIO $ t' rule code
+
+
+rulesTest = unlines 
+		[ ""
+		, "abc"
+		, "---- [x]"
+		, "(→) abc"
+		, ""
+		, "def"
+		, "---- [y]"
+		, "(→) ghi"
+		]
