@@ -50,25 +50,30 @@ type Path	= [Int]
 -- Markdown documentation
 type Doc	= String
 
+type Check	= Either String ()
+
+(<>)	:: Check -> Check -> Check
+(<>) a b
+	= allRight_ [a, b]
+
 class (Named d) => Documented d where
 	documentation	:: d -> Doc
 
-
-class Check a where
-	check	:: a -> Either String ()
+class Checkable a where
+	check	:: a -> Check
 	check a	= return ()
 
-class Check' info a where
-	check'	:: info -> a -> Either String ()
+class Checkable' info a where
+	check'	:: info -> a -> Check
 	check' info a
 		= return ()
 
 
-checkM	:: Check a => Maybe a -> Either String ()
+checkM	:: Checkable a => Maybe a -> Check
 checkM	= maybe pass check
 
 
-checkM'	:: Check' x a => x -> Maybe a -> Either String ()
+checkM'	:: Checkable' x a => x -> Maybe a -> Check
 checkM'	x
 	= maybe pass (check' x)
 

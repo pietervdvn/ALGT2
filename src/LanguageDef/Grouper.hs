@@ -41,7 +41,7 @@ instance ToString a => ToString (Grouper a) where
 				& unlines
 
 
-instance Check a => Check (Grouper a) where
+instance Checkable a => Checkable (Grouper a) where
 	check (Grouper as order groupName )
 		= let	ch1	= _checkNoDups groupName order
 			chcks	=  as & M.elems |> check
@@ -49,7 +49,7 @@ instance Check a => Check (Grouper a) where
 			allRight_ (ch1:chcks)
 
 
-instance Check' x a => Check' x (Grouper a) where
+instance Checkable' x a => Checkable' x (Grouper a) where
 	check' x (Grouper as order groupName)
 		= let	ch1	= _checkNoDups groupName order 
 			chcks	= as & M.elems |> check' x

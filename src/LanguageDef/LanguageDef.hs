@@ -83,10 +83,10 @@ Left "While checking function \"not\":\n  Some clauses have a different name. Th
 
 -}
 
-instance Check' () (LanguageDef' ResolvedImport SyntFormIndex) where
-	check' () (LanguageDef title imports meta syntax superTypes functions rels rules)
+instance Checkable' (FQName -> Either String FQName, FQName -> FQName -> Bool, [Name]) (LanguageDef' ResolvedImport SyntFormIndex) where
+	check' extras (LanguageDef title imports meta syntax superTypes functions rels rules)
 		= do	assert (title /= "") "The title of a language should not be empty"
-			-- Syntaxes are checked when all syntaxes are known 
+			checkM' extras syntax
 			checkM functions
 			checkM rels
 			assert (isNothing rules || isJust rels) "When rules are defined, a relation declaration section should be present"
@@ -203,8 +203,9 @@ _optionalOrder plus a as
 
 {- | All the syntaxes needed to parse a language definition file
 
->>> subtypeStub	= (\_ x y -> x == y) :: [Name] -> FQName -> FQName -> Bool
->>> check' subtypeStub metaSyntaxes
+>>> let resolve		= Right	:: FQName -> Either String FQName
+>>> let subtypeStub	= (==) :: FQName -> FQName -> Bool
+>>> metaSyntaxes & M.toList |> (\(fq, s) -> check' (resolve, subtypeStub, fq) s) & allRight_ 
 Right ()
 -}
 metaSyntaxes	:: Map [Name] Syntax
@@ -268,7 +269,7 @@ testSyntax rule string
 
 {- | The syntax that declares metafunctions, as defined in the Assets
 >>> functionSyntax
-Syntax ...
+Grouper {_grouperDict = fromList [("arguments",SyntacticForm ...
 -}
 
 functionSyntax	:: Syntax
@@ -278,7 +279,7 @@ functionSyntax
 
 {- | The syntax that declares relations, as defined in the Assets
 >>> relationSyntax
-Syntax ...
+Grouper {_grouperDict = fromList [("commaSepExpr",SyntacticForm ...
 -}
 relationSyntax	:: Syntax
 relationSyntax

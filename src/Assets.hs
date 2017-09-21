@@ -31,6 +31,7 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("TestInput/Nested/L.language", _TestInput_Nested_L_language)
 			, ("TestInput/Nested/Y.language", _TestInput_Nested_Y_language)
 			, ("Faulty/TitleMismatch.language", _Faulty_TitleMismatch_language)
+			, ("Faulty/LeftRecursiveSyntax.language", _Faulty_LeftRecursiveSyntax_language)
 			, ("Faulty/FunctionDuplicateNameTest.language", _Faulty_FunctionDuplicateNameTest_language)
 			, ("Faulty/TestShadowing.language", _Faulty_TestShadowing_language)
 			, ("Faulty/FunctionIncorrectNameTest.language", _Faulty_FunctionIncorrectNameTest_language)
@@ -42,6 +43,7 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("Faulty/Relations/UnknownTypeRelation.language", _Faulty_Relations_UnknownTypeRelation_language)
 			, ("Faulty/Relations/AllOutRel.language", _Faulty_Relations_AllOutRel_language)
 			, ("Faulty/Relations/NotDeclared.language", _Faulty_Relations_NotDeclared_language)
+			, ("Faulty/Relations/Relation.language", _Faulty_Relations_Relation_language)
 			, ("Faulty/Relations/UnkownTypeRelation.language", _Faulty_Relations_UnkownTypeRelation_language)
 			, ("MetaSyntax/Syntax.language", _MetaSyntax_Syntax_language)
 			, ("MetaSyntax/Functions.language", _MetaSyntax_Functions_language)
@@ -99,6 +101,10 @@ _TestInput_Nested_Y_language
 _Faulty_TitleMismatch_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/TitleMismatch.language" in seq str str
 
+{-# NOINLINE _Faulty_LeftRecursiveSyntax_language #-}
+_Faulty_LeftRecursiveSyntax_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/LeftRecursiveSyntax.language" in seq str str
+
 {-# NOINLINE _Faulty_FunctionDuplicateNameTest_language #-}
 _Faulty_FunctionDuplicateNameTest_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/FunctionDuplicateNameTest.language" in seq str str
@@ -142,6 +148,10 @@ _Faulty_Relations_AllOutRel_language
 {-# NOINLINE _Faulty_Relations_NotDeclared_language #-}
 _Faulty_Relations_NotDeclared_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/NotDeclared.language" in seq str str
+
+{-# NOINLINE _Faulty_Relations_Relation_language #-}
+_Faulty_Relations_Relation_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/Relation.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_UnkownTypeRelation_language #-}
 _Faulty_Relations_UnkownTypeRelation_language

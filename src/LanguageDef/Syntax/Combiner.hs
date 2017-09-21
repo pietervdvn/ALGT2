@@ -38,7 +38,7 @@ data Combiner a	= LiteralC Doc (String -> Either String a)
 
 
 
-instance Check' Syntaxes (Combiner a) where
+instance Checkable' Syntaxes (Combiner a) where
 	check' syntaxes
 		= _check syntaxes S.empty
 
@@ -53,7 +53,7 @@ This check checks combiners against the syntax, so that:
 This does the call check; not that the given rule should be in the current namespace
 To prevent loops, already checked is a blacklist
 -}
-_check	:: Syntaxes -> Set FQName -> Combiner a -> Either String ()
+_check	:: Syntaxes -> Set FQName -> Combiner a -> Check
 _check synts ac (MapC c _)
 	= _check synts ac c
 _check synts _ (Value a)
@@ -84,7 +84,7 @@ _check _ _ cmbr
 	= Left $ "Could not check a combiner without top-level annotation element: "++show cmbr
 
 
-_checkBNF	:: (Syntaxes, Set FQName) -> Combiner a -> BNF -> Either String ()
+_checkBNF	:: (Syntaxes, Set FQName) -> Combiner a -> BNF -> Check
 _checkBNF synts (MapC c _) bnf
 	= _checkBNF synts c bnf
 _checkBNF synts (Value a) _

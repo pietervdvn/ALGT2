@@ -225,7 +225,7 @@ typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
 		s@SeqExp{}		-> Left $ "Found a sequence "++toParsable s++" where a literal value of the form "++toParsable bnf++
 							" was expected; ascriptions can only match rulecalls"
 
-_compareBNFPT	:: BNF -> ParseTree a -> Either String ()
+_compareBNFPT	:: BNF -> ParseTree a -> Check
 _compareBNFPT (BNF.Literal str) (Literal token  _ _ _)
 	= assert (str == token) $ "Expected a literal "++show str++" but got the token "++show token
 _compareBNFPT (BNF.Literal str) (Int token  _ _)

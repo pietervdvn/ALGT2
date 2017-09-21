@@ -176,7 +176,7 @@ Left "The relation \"~\" is defined multiple times"
 Left "Relation (~) should have at least one input type"
 
 -}
-instance Check Relation where
+instance Checkable Relation where
 	check relation
 		= do	let modes	= relation & get relTypes |> snd
 			assert (In `elem` modes) $ "Relation "++inParens (get relSymbol relation) ++" should have at least one input type"
@@ -189,9 +189,9 @@ Left "This rule has no name. Add a name after the line, in square brackets\n\n p
 >>> loadAssetLangDef "Faulty/Relations" ["NotDeclared"]
 Left "When rules are defined, a relation declaration section should be present"
 >>> loadAssetLangDef "Faulty/Relations" ["NotLocal"]
-Left "Rule \"abc\" is about relation (~) which is not declared in this document. Only locally declared relations can be implemented with rules"
+Left "The relation \"~\" was not found. It is not defined in the current namespace, nor imported"
 -}
-instance Check' (Grouper Relation) (Rule' a) where
+instance Checkable' (Grouper Relation) (Rule' a) where
 	check' relations rule
 		= do	assert (not $ null $ get ruleName rule) 
 				"This rule has no name. Add a name after the line, in square brackets\n\n predicate\n----------- [ name ]\n (~) args"

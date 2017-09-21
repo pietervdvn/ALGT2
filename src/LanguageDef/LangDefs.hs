@@ -48,6 +48,11 @@ data LangDefs	= LangDefs {_langdefs	:: Map [Name] LDScope}
 	deriving (Show)
 makeLenses ''LangDefs
 
+langDef	:: LangDefs -> [Name] -> Maybe LanguageDef
+langDef defs fq
+	= do	def'	<- M.lookup fq (get langdefs defs)
+		def' & get (ldScope . payload) & return
+
 
 -- Re-updates the environment of an LDScope
 knotScopes :: Map [Name] (LDScope' fr) -> Map [Name] (LDScope' fr)
@@ -192,33 +197,33 @@ _implicitImports (LDScope scope env)
 	= importsFromEnv env scope
 
 
-
-getSyntaxes	:: LangDefs -> Syntaxes
-getSyntaxes (LangDefs defs)
-	= defs |> get (ldScope . payload . langSyntax) & M.mapMaybe id
-			
+	
 {- |
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty" ["TitleMismatch"]
 Left "The module in file TitleMismatch is titled \"Some Other Title\". Retitle them to be the same (whitespace insensitive)"
 -}
-instance Check LangDefs where
+instance Checkable LangDefs where
 	check lds@(LangDefs defs)
-		= do	let syntaxes	= getSyntaxes lds
-			let isSubtype nms	= defs & (! nms) & get (ldScope . payload) & isSubtypeOf
-			[ defs & M.elems |> get (ldScope . payload) 
-				|> check' ()
-				& allRight_
-			 , check' isSubtype syntaxes
-			 , defs & M.toList ||>> get (ldScope . payload . langTitle)
-				 |> uncurry _checkSameTitle & allRight_
-			 ] & allRight_
+		= defs & M.toList |> _checkOne & allRight_
+	
 
-_checkSameTitle	:: [Name] -> Name -> Either String ()
-_checkSameTitle fp nm
-	= do	let noWS string	= string & L.filter (`notElem` " \t")
-		let msg	= "The module in file "++dots fp ++" is titled "++show nm++". Retitle them to be the same (whitespace insensitive)"
-		assert (noWS (last fp) == noWS nm) msg
+-- Check' (FQName -> Either String FQName, [Name] -> FQName -> FQName -> Bool, [Name])
+
+_checkOne	:: ([Name], LDScope) -> Check
+_checkOne (fq, ldscope)
+	= do	let ld		= get (ldScope . payload) ldscope
+		let isSubtype	= ld & isSubtypeOf
+		let resolveSF	= resolve ldscope syntaxCall
+		let extras	= (resolveSF , isSubtype, fq)	:: (FQName -> Either String FQName, FQName -> FQName -> Bool, [Name])
+		check' extras ld <> _checkSameTitle fq ld
+
+_checkSameTitle	:: [Name] -> LanguageDef -> Check
+_checkSameTitle fq ld
+	= do	let nm	= get langTitle ld
+		let noWS string	= string & L.filter (`notElem` " \t")
+		let msg	= "The module in file "++dots fq ++" is titled "++show nm++". Retitle them to be the same (whitespace insensitive)"
+		assert (noWS (last fq) == noWS nm) msg
 
 instance ToString LangDefs where 
 	toParsable ld	= ld & get langdefs & M.toList |> _withHeader & unlines

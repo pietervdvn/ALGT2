@@ -1,0 +1,11 @@
+
+ Syntax Undeclared
+*******************
+
+ Syntax
+========
+
+a	::= "x" "y"
+
+# C is not known
+b	::= a c

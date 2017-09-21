@@ -1,0 +1,10 @@
+
+ Left Recursive Syntax
+***********************
+
+ Syntax
+========
+
+a	::= b "x"
+b	::= a "y"
+

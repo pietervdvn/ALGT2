@@ -34,6 +34,9 @@ makeLenses ''ParseTree
 
 type ParseTree'	= ParseTree ()
 
+-- Used only here
+type Syntaxes	= Map [Name] Syntax
+
 
 instance Normalizable (ParseTree a) where
 	normalize (Seq [pt] _ _)
@@ -123,6 +126,7 @@ Literal {_ptToken = "abc", _ptLocation = LocationInfo {_liStartLine = -1, _liEnd
 -}
 simplePT	:: String -> ParseTree ()
 simplePT string	= Literal string unknownLocation () False
+
 
 {- | Parses a file with the given syntax
 

@@ -29,9 +29,11 @@ import Data.Set (Set)
 import Data.Function (fix)
 
 import Control.Arrow ((&&&))
-
+import Data.Bifunctor (first)
 import Lens.Micro.TH
 import Lens.Micro (mapped)
+
+import Graphs.SearchCycles
 
 
 
@@ -46,6 +48,7 @@ data SyntacticForm
 
 makeLenses ''SyntacticForm
 
+-- TODO deprecate syntax
 type Syntax = Grouper SyntacticForm
 
 {-data Syntax = Syntax
@@ -58,12 +61,8 @@ makeLenses ''Syntax-}
 emptySyntax	= emptyGrouper ("syntax", "syntaxes")
 
 
--- TODO REMOVE
-{- syntaxChoices
-	= syntax . mapped . mapped . _1
--}
-
 -------------------- SYNTAX TOOLS ----------------------
+{-
 
 type Syntaxes	= Map [Name] Syntax
 
@@ -73,87 +72,27 @@ asSyntaxes ns s
 
 asSyntaxes'
 	= M.singleton
-
-
-existingNames	:: Syntaxes -> Set FQName
-existingNames s
-	= s |> get grouperDict |> M.keys & M.toList & unmerge & S.fromList
-
-
-callExists	:: Syntaxes -> FQName -> Bool
-callExists s (ns, nm)
-	= isJust $ do
-		synt	<- M.lookup ns s |> get grouperDict
-		M.lookup nm synt
+-}
 
 
 createSyntax	:: [SyntacticForm] -> Syntax
 createSyntax
 	= asGrouper ("syntax", "syntaxes") (get syntName)
 
-{-
-
--- TODO is this needed?
-mergeSyntax		:: Syntax -> Syntax -> Either String Syntax
-mergeSyntax (Syntax synt order) (Syntax synt' order')
-	= inMsg "While merging two syntaxes" $
-	  do	let merged	= Syntax (M.union synt synt') (order ++ order')
-		_checkNoDuplicate (merged, [])
-		return merged
-
-mergeSyntax' a b
-	= mergeSyntax a b  & either error id
-
--}
-
-
-
 
 -------------------------------- CHECKS -------------------------------------
 
 
-{- | Checks all kind of stuff
 
->>> import LanguageDef.API
->>> loadAssetLangDef "Faulty" ["TestShadowing"]
-Left "While checking for dead clauses in the syntactic form TestShadowing:\n  While checking syntactic form \"dead1\":\n    The choice 'TestShadowing.expr' does prevent a later choice from being parsed, killing 'TestShadowing.bool'\n  While checking syntactic form \"dead2\":\n    The choice 'TestShadowing.expr' does prevent a later choice from being parsed, killing 'TestShadowing.bool Whitespace \";\"'\n  While checking syntactic form \"x\":\n    The choice '\"a\"' does prevent a later choice from being parsed, killing '\"a\" Whitespace \"b\"'\n  While checking syntactic form \"y\":\n    The choice 'TestShadowing.bool' does prevent a later choice from being parsed, killing 'TestShadowing.bool Whitespace TestShadowing.bool'\n  While checking syntactic form \"z\":\n    The choice 'TestShadowing.bool' does prevent a later choice from being parsed, killing 'TestShadowing.bool'"
-
--}
-
-
-instance Check' ([Name] -> FQName -> FQName -> Bool) Syntaxes where
-	check' isSubtypeOf syntaxes
-		= do	--let syntaxes'	= M.toList syntaxes |> swap
-			--syntaxes' |> _checkAllIdentsExist syntaxes  & allRight_
-			--[  syntaxes' |> _checkNoTrivial
-			-- ] |> allRight_ & allRight_
-			--_checkLeftRecursion syntaxes
-			-- Cycles in the supertype relationship: check unneeded, prevented by left recursion check
-			--syntaxes & M.toList |> _checkDeadIn isSubtypeOf & allRight_
-			pass -- TODO reenable checks
-
-{-
-_checkDeadIn	:: ([Name] -> FQName -> FQName -> Bool) -> ([Name],  Syntax) -> Either String ()
-_checkDeadIn isSubtype (nm, synt)
-	=  inMsg ("While checking for dead clauses in the syntactic form "++dots nm) $ 
-		synt & get grouperDict & M.toList |> (\(syntForm, choices) -> inMsg ("While checking syntactic form "++show syntForm) $
-			_checkDeadIn' (isSubtype nm) (choices |> fst)) & allRight_
-
-_checkDeadIn'		:: (FQName -> FQName -> Bool) -> [BNF] -> Either String ()
-_checkDeadIn' _ [_]	= pass
-_checkDeadIn' isSubtypeOf (head:choices)
-	= let	recursiveCheck	= _checkDeadIn' isSubtypeOf choices
-		msg tested	= "The choice '"++toParsable head++"' does prevent a later choice from being parsed, killing '"++toParsable tested++"'"
-		checkOne tested	= assert (not $ doesKill isSubtypeOf head tested) $ msg tested
-		checkAll	= choices |> checkOne
-		in
-		allRight_ (recursiveCheck:checkAll)		
-			
-
-		
+instance Checkable' (FQName -> Either String FQName, FQName -> FQName -> Bool, [Name]) SyntacticForm where
+	check' (resolve, isSubtypeOf, fqname) sf
+		= allRight_ 
+			[ _checkAllIdentsExist resolve sf
+			, _checkNoTrivial sf
+			, _checkDeadClauses isSubtypeOf fqname sf] 
 
 
--- | All rulecalls shoud exist
+{- | All rulecalls shoud exist
 -- >>> import LanguageDef.Syntax
 -- >>> let syntax1 = asSyntaxUnchecked' "Tests" "\nabc ::= x\n"
 -- >>> _checkAllIdentsExist (asSyntaxes' ["Tests"] syntax1) (syntax1, ["Tests"])
@@ -161,90 +100,124 @@ _checkDeadIn' isSubtypeOf (head:choices)
 -- >>> let syntax2 = asSyntaxUnchecked' "Tests" "\nabc ::= abc\n"
 -- >>> _checkAllIdentsExist (asSyntaxes' ["Tests"] syntax2) (syntax2, ["Tests"])
 -- Right ...
-_checkAllIdentsExist	:: Syntaxes -> (Syntax, [Name]) -> Either String ()
-_checkAllIdentsExist otherSyntaxes (syntx, localScope)
-	= let	existingFQ	= existingNames otherSyntaxes
-		called		= syntx & syntaxRuleCalls localScope
-					:: [((MetaInfo, Name), FQName)]
-		missing	= called & filter ((`S.notMember` existingFQ) . snd)
-		printMissing ((mi, nm), fq)
-			= showFQ fq ++"\t (used in the declaration of "++nm++", "++toCoParsable (get miLoc mi) ++")"
+-}
+_checkAllIdentsExist	:: (FQName -> Either String FQName) -> SyntacticForm -> Check
+_checkAllIdentsExist resolve sf
+	= inMsg ("While resolving all calls in "++get syntName sf) $
+		do	let allCalls	= sf & get syntChoices >>= getRuleCalls
+			allCalls |> resolve & allRight'
+			pass
+
+{- | Rules are not trivial (= one choice with only the rulecall)
+>>> import LanguageDef.Syntax
+>>> let syntax2 = asSyntaxUnchecked' "Tests" "\nabc ::= abc\n"
+>>> let sf = syntax2 & get grouperDict & (M.! "abc")
+>>> _checkNoTrivial sf
+Left "The syntactic form abc is trivial. Remove the rule and replace it by Tests.abc"
+-}
+
+_checkNoTrivial	:: SyntacticForm -> Check
+_checkNoTrivial sf
+	= do	let replacedBy	= get syntChoices sf & head & getRuleCall & fromJust
+		assert (not $ isTrivial sf) $
+			("The syntactic form "++get syntName sf++" is trivial. Remove the rule and replace it by "++showFQ replacedBy)
+	
+
+isTrivial	:: SyntacticForm -> Bool
+isTrivial sf
+	= let	choices	= get syntChoices sf
 		in
-		assert (null missing) $ 
-			"Some used syntactic forms are not known: "++
-			(missing |> printMissing |> indent & unlines)
-		
+		length choices == 1 && isRuleCall (head choices)
 
--- | Rules are not trivial (= one choice with only the rulecall)
--- >>> import LanguageDef.Syntax
--- >>> let syntax2 = asSyntaxUnchecked' "Tests" "\nabc ::= abc\n"
--- >>> _checkNoTrivial (syntax2, ["Tests"])
--- Left ...
-_checkNoTrivial	:: (Syntax, [Name]) -> Either String ()
-_checkNoTrivial (synt, nm)
-	= let	trivial	= synt & get syntax & M.toList 
-				& filter ((==) 1 . length . snd)
-				& unmerge	-- does not have a real effect, all the remaining lists have length 1
-				& filter (isRuleCall . fst . snd)	-- Now only trivial stuff remains
-		printTriv (nm, (bnf, mi))
-			= nm++" = "++toParsable bnf++"\t (declared "++toCoParsable (get miLoc mi)++")"
-		in
-		inMsg ("In the syntax of "++intercalate "." nm ) $
-		assert (null trivial) $
-			"Some syntactic forms are trivial, remove them: "++
-				trivial |> printTriv |> indent & unlines
-
-
-
--- | No left recursion exists
--- >>> import LanguageDef.Syntax
--- >>> let synt0 = asSyntaxUnchecked' "test" "\nabc ::= def\ndef ::= abc\n"
--- >>> _checkLeftRecursion (asSyntaxes' ["test"] synt0)
--- Left ...
--- >>> let synt1 = asSyntaxUnchecked' "test" "\nx ::= x\n"
--- >>> _checkLeftRecursion (asSyntaxes' ["test"] synt1)
--- Left ...
--- >>> let synt2 = asSyntaxUnchecked' "test" "\nx ::= x \"a\"\n"
--- >>> _checkLeftRecursion (asSyntaxes' ["test"] synt2)
--- Left ...
-_checkLeftRecursion	:: Syntaxes -> Either String ()
-_checkLeftRecursion syntaxes
-  = do	let lr	= leftRecursiveCalls syntaxes
-			& existingNames & S.toList
-	-- only the left recursive stuff is left by the algo
-	assert (null lr) $ "Some left recursive rules are left: "
-		++ (lr |> showFQ |> indent & unlines) 
-
-
--- | Calculates the left recursive calls in all syntaxes
--- Only values left will be left recursive
--- >>> import LanguageDef.Syntax
--- >>> let synt = asSyntaxUnchecked' "Test" "\nabc ::= def\ndef ::= abc\n" & asSyntaxes' ["Test"]
--- >>> leftRecursiveCalls synt & M.toList & head & snd & toParsable
--- "\n\nabc\t::= Test.def\n\n\ndef\t::= Test.abc\n"
-leftRecursiveCalls	:: Syntaxes -> Syntaxes
-leftRecursiveCalls syntaxes
- = let  -- Remove all but the first element of all choices
-	syntaxes' = syntaxes |> over syntaxChoices removeTail
-	syntaxes'' = syntaxes'
-			-- only keep choices that start with a rulecall
-			  |> over (syntax . mapped) (L.filter (isRuleCall . fst))
-
-	fqCall bnf
-		= bnf & getRuleCall & fromJust
-
-	-- remove syntactic forms with no resting choices from the syntaxes
-	cleanSynt syntaxes
-		= syntaxes |> over syntax (M.filter (not . L.null))
-	-- remove rules for which the syntactic forms don't exist anymore
-	removeEmpty syntaxes
-		= syntaxes |> over (syntax . mapped) (L.filter (callExists syntaxes . fqCall . fst))
-
-	in
-	fixLoop syntaxes'' (cleanSynt . removeEmpty)
-
+{- | Checks for dead clauses
+>>> import LanguageDef.API
+>>> import LanguageDef.LangDefs
+>>> import Data.Maybe (fromJust)
+>>> import LanguageDef.LanguageDef
+>>> let fqname = ["TestShadowing"]
+>>> let unit = loadAssetLangDef "Faulty" fqname
 
 -}
+_checkDeadClauses	:: (FQName -> FQName -> Bool) -> [Name] -> SyntacticForm -> Check
+_checkDeadClauses isSubtypeOf fq sf
+	= do	let dead	= deadChoices isSubtypeOf sf
+		let sBNF (i, bnf)	= (bnf & removeWS & toParsable) ++ " (choice "++show i++")"
+		let choicesMsg (a, b)
+				= sBNF a++ " shadows "++ sBNF b
+		assert (L.null dead) $
+			"In syntactic form "++showFQ (fq, get syntName sf) ++"\n"++ (dead |> choicesMsg & unlines & indent)
+
+
+{- | Filters all dead clauses. Maps an fqnname on shadowing clauses (e.g. "x ::= a | a b" will yield {"x", [(0, 1)]} as choice 0 kills 1)
+>>> import LanguageDef.API
+>>> import LanguageDef.LangDefs
+>>> import Data.Maybe (fromJust)
+>>> import LanguageDef.LanguageDef
+>>> let fqname = ["TestShadowing"]
+>>> let unit = loadAssetLangDef "Faulty" fqname 
+-}
+deadClauses	:: (FQName -> FQName -> Bool) -> [Name] -> Syntax -> Map FQName [((Int, BNF), (Int, BNF))]
+deadClauses isSubtypeOf fq synt
+	= let	dead	= synt & get grouperDict & M.toList |> (\(nm, sf) -> ((fq, nm), deadChoices isSubtypeOf sf)) 
+		dead'	= dead & filter (not . null . snd)
+		in
+		M.fromList dead'
+
+
+deadChoices	:: (FQName -> FQName -> Bool) -> SyntacticForm -> [((Int, BNF), (Int, BNF))]
+deadChoices isSubtypeOf sf
+	= let	choices	= get syntChoices sf & mapi
+		doesKill' a b	= doesKill isSubtypeOf (snd a) (snd b)	:: Bool 
+		in [(ch1, ch2) | ch1 <- choices, ch2 <- choices, fst ch1 < fst ch2, doesKill' ch1 ch2]
+		
+		
+
+
+
+{- | No left recursion exists
+>>> import LanguageDef.API
+>>> import LanguageDef.LangDefs
+>>> import Data.Maybe (fromJust)
+>>> import LanguageDef.LanguageDef
+>>> let fqname = ["LeftRecursiveSyntax"]
+>>> let unit = loadAssetLangDef "Faulty" fqname & either error (flip langDef fqname) & fromJust
+>>> let synt = unit & get langSyntax & fromJust
+>>> _checkLeftRecursion fqname synt
+Left "Left recursive calls detected:\nLeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b\n\n"
+-}
+
+
+_checkLeftRecursion	:: [Name] -> Syntax -> Check
+_checkLeftRecursion fq s
+	= do	let cycles = leftRecursiveCalls fq s
+		assert (null cycles) $ unlines
+			[ "Left recursive calls detected:"
+			, cycles ||>> showFQ |> commas & unlines]
+
+
+{- | Calculates the left recursive calls in all syntaxes. Only values left will be left recursive
+>>> import LanguageDef.API
+>>> import LanguageDef.LangDefs
+>>> import Data.Maybe (fromJust)
+>>> import LanguageDef.LanguageDef
+>>> let fqname = ["LeftRecursiveSyntax"]
+>>> let unit = loadAssetLangDef "Faulty" fqname & either error (flip langDef fqname) & fromJust
+>>> let synt = unit & get langSyntax & fromJust
+>>> leftRecursiveCalls fqname synt ||>> showFQ |> commas
+["LeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b"]
+ 
+-}
+leftRecursiveCalls	:: [Name] -> Syntax -> [[FQName]]
+leftRecursiveCalls fq syntax
+ = let	syntax' = syntax & get grouperDict & M.toList
+			||>> get syntChoices |||>>> (getRuleCall . removeTail)
+			||>> catMaybes
+			|> first ((,) fq)
+			||>> S.fromList
+			& M.fromList
+				:: Map FQName (Set FQName)
+	in cleanCycles syntax'
+
 
 -------------------------------- TOOLS -------------------------------------
 
@@ -277,7 +250,7 @@ instance ToString SyntacticForm where
 	toParsable (SyntacticForm nm choices chMeta meta)
 		= let	docStr		= toParsable meta
 			chMeta'		= chMeta |> toCoParsable |> ("\t"++)
-			choices'	= choices |> removeWS |> toParsable & zipWith (++) chMeta'
+			choices'	= choices |> removeWS |> toParsable & zipWith (flip (++)) chMeta'
 			allChoices	= choices' & intercalate "\n\t | "
 			assgn	= if all (\bnf -> containsHidden bnf || isSingle bnf) choices then "::=" else "~~="
 			in

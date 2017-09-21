@@ -62,7 +62,7 @@ makeLenses ''Function'
 makeLenses ''FunctionClause
 
 
-instance Check (Function' a) where
+instance Checkable (Function' a) where
 	check (Function name argTps retTp clauses docs)
 		= inMsg ("While checking function "++show name) $
 		  	unless (clauses |> get clauseFuncName & all (== name)) $ Left $
