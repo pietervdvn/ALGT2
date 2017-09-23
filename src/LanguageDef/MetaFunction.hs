@@ -145,3 +145,7 @@ instance ToString (Function' a) where
 		]  
 		++ clauses |> toParsable
 
+
+instance Infoable (Function' a) where
+	getInfo f
+		= AllInfo (get funcName f) "Function" (get funcDoc f) (toParsable f)

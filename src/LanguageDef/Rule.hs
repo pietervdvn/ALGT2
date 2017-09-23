@@ -61,3 +61,8 @@ instance ToString (Rule' a) where
 			, " " ++ concl'
 			] & unlines 
 
+
+instance Infoable (Rule' a) where
+	getInfo r
+		= AllInfo (get ruleName r) "Rule" (get ruleDocs r) (toParsable r)
+

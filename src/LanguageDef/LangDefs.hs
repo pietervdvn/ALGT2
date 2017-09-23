@@ -35,8 +35,15 @@ import Data.Map as M
 import Data.List as L
 
 
+data ImportFlags = ImportFlags
+	{ _ifOrigin	:: FilePath
+	, _ifIsSelf	:: Bool		-- If true: this is the namespace itself, and thus has priority
+	, _ifDiffName	:: [[Name]]	-- Reachable with these names
+	} deriving (Show, Ord, Eq)
+makeLenses ''ImportFlags
+
 data LDScope' funcResolution = LDScope
-	{ _ldScope	:: Scope [Name] [Name] (LanguageDef' ResolvedImport funcResolution) ({-Import flags-}) ({-Re-export flags-})
+	{ _ldScope	:: Scope [Name] [Name] (LanguageDef' ResolvedImport funcResolution) ImportFlags ({-Re-export flags-})
 	, _environment	:: Map [Name] (LanguageDef' ResolvedImport funcResolution)
 	} 
 	deriving (Show, Eq)
@@ -133,70 +140,86 @@ fullyQualifyConcl scope (Conclusion relName args)
 		return $ Conclusion relName' args'
 
 
-syntaxCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe Syntax, Syntax -> Map Name SyntacticForm)
+type Resolver fr x
+		= (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper x), Grouper x -> Map Name x)
+
+syntaxCall	:: Resolver fr SyntacticForm
 syntaxCall	= ("the syntactic form", get langSyntax, get grouperDict)
 
-functionCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper (Function' fr)), Grouper (Function' fr) -> Map Name (Function' fr))
+functionCall	:: Resolver fr (Function' fr)
 functionCall	= ("the function", get langFunctions, get grouperDict)
 
 
+relationCall	:: Resolver fr Relation
 relationCall	= ("the relation", get langRelations, get grouperDict)
 
-ruleCall	:: (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper Rule), Grouper Rule -> Map Name Rule)
+ruleCall	:: Resolver fr Rule
 ruleCall	= ("the rule", get langRules, get grouperDict)
 
 
-resolveGlobal	:: LangDefs -> (String, LanguageDef -> Maybe a, a -> Map Name b) -> FQName -> Either String (FQName, b)
+resolveGlobal	:: Eq x => LangDefs -> (String, LanguageDef -> Maybe (Grouper x), (Grouper x) -> Map Name x) -> FQName -> Either String (FQName, x)
 resolveGlobal lds entity fqname
 	= do	ld	<- checkExistsSugg show (fst fqname) (lds & get langdefs) ("Namespace "++ dots (fst fqname) ++ " was not found")
 		resolve' ld entity fqname
 
-resolve	:: LDScope' fr -> (String, LanguageDef' ResolvedImport fr -> Maybe a, a -> Map Name b) -> FQName -> Either String FQName
-resolve	scope entity name
-	= resolve' scope entity name |> fst
+resolve	:: Eq x => LDScope' fr -> Resolver fr x-> FQName -> Either String FQName
+resolve	scope resolver fqn
+	= resolve' scope resolver fqn |> fst
 
-resolve'	:: LDScope' fr ->  (String, LanguageDef' ResolvedImport fr -> Maybe a, a -> Map Name b) -> FQName -> Either String (FQName, b)
-resolve' scope (entity, getWhole, getPart) ([], name)
-	-- the localscope/direct import case
-	= do	let getDict ld	= ld & getWhole & maybe M.empty getPart
-		let getKnown ld	= getDict ld & keys	:: [Name]
-		let ld		= scope & get (ldScope . payload)
-		if name `elem` getKnown ld then
-			-- we found it locally
-			return ((get (ldScope . scopeName) scope, name), getDict ld ! name)
-		else do
-			-- Lets take a look at the imports
-			let foundNSes	= 
-				_implicitImports scope |> getKnown	-- { [Name] (path) --> [Name] (known syntactic forms, of which we search one }
-					& M.filter (name `elem`)	-- Name is an element of the knownNames
-			let validNSes	= foundNSes & M.keys		-- These namespaces export an element called `name`
-			assert (length validNSes < 2) $
-				["Multiple namespaces export "++entity++" "++show name++", namely: "
-				, validNSes |> intercalate "." & unlines & indent
-				, "Add a prefix to disambiguate the exact object you want"
-				] & unlines
-			assert (not $ L.null validNSes) $ uppercase entity ++" "++ show name ++ " was not found. It is not defined in the current namespace, nor imported"
-			let validNS	= head validNSes
-			(fqname, ld, ())	<- _explicitImport scope validNS
-			return ((fqname, name), getDict ld ! name)
-resolve' scope (entity, getWhole, getPart) (ns, name)
-	= do	(fqname, a, ())	<- _explicitImport scope ns
-		let known	= a & getWhole & maybe M.empty getPart
-		assert (name `M.member` known) $ uppercase entity ++" "++ show name++" was not found within "++dots ns++" (which resolves to "++dots fqname++")"
-		return ((fqname, name), known ! name)
-
-
-_explicitImport ldscope
-	= explicitImport dots dots (get environment ldscope) (get ldScope ldscope)
-
+resolve'	:: Eq x => LDScope' fr ->  Resolver fr x -> FQName -> Either String (FQName, x)
+resolve' scope resolver fqn
+	= do	let resDict	= resolutionMap scope resolver
+		let name	= over _head toUpper (fst3 resolver) ++ " " ++ show (showFQ fqn)
+		results	<- checkExists fqn resDict (name ++ " was not found.")
+		assert (length results == 1) $ name ++ " could resolve to multiple entities:\n"++(results |> fst |> showFQ & unlines & indent)
+		return $ head results
 		
--- Gets the imports that are available without explicit qualification (thus "bool" instead of "Langs.STFL.bool"), based on the import flags
--- TODO for now, import flags don't do anything. Fix it!
-_implicitImports :: LDScope' a -> Map [Name] (LanguageDef' ResolvedImport a)
-_implicitImports (LDScope scope env)
-	= importsFromEnv env scope
+{- Creates a dict {this local name --> these possible entities} -}
+resolutionMap	:: Eq x => LDScope' fr -> Resolver fr x -> Map FQName [(FQName, x)]
+resolutionMap scope resolver
+	= let	preDict	= allKnowns scope resolver |> (\(entity, knownAs, x) -> [(ka, (entity, x)) | ka <- knownAs] )
+				& concat
+				-- :: [ (FQName, ((FQName, Bool), x))]
+		in
+		preDict & merge & M.fromList |> pickPriority |> nub
+
+pickPriority	:: [((a, Bool), b)] -> [(a, b)]
+pickPriority list
+	= let	(prior, nonPrior)	= list |> unmerge3l & L.partition snd3
+		in
+		(if L.null prior then nonPrior else prior) |> dropSnd3
+
+{- | Gives all items that are known for a certain resolver (e.g. all available syntaxCalls etc...
+The returning format is: fully qualified name, locally known as names, actual entity 
+Each fqname should also occur under the 'known as'
+
+-}
+allKnowns	:: LDScope' fr -> Resolver fr x -> [((FQName, Bool), [FQName], x)]
+allKnowns scope resolver	
+	= let	-- The imports contain the local scope as well, so we don't need _allKnownLocally here
+		imports		= get (ldScope . imported) scope & M.toList		:: [([Name], ImportFlags)]
+		mergedImports	= imports |> _mergeImport (get environment scope) resolver
+		-- TODO extra, renamed imports 
+		-- TODO include re-exports
+		in
+		concat mergedImports
 
 
+_mergeImport	:: Map [Name] (LanguageDef' ResolvedImport fr) -> Resolver fr b -> ([Name], ImportFlags) -> [((FQName, Bool), [FQName], b)] 
+_mergeImport scopes resolver (fq, ImportFlags _ isSelf knownNames)
+	= let	ld	= scopes ! fq
+		found	= _allKnownLocally (fq, ld) resolver 
+		in
+		found |> (\(fqn, b) -> ((fqn, isSelf), knownNames |> flip (,) (snd fqn), b))
+
+
+_allKnownLocally	:: ([Name], LanguageDef' ResolvedImport fr) -> Resolver fr b -> [(FQName, b)]
+_allKnownLocally (fq, ld) (_, getWhole, _)
+	= let	dict	= ld 	& getWhole |> get grouperDict
+				& maybe [] M.toList
+		in
+		dict |> first ((,) fq)
+		
 	
 {- |
 >>> import LanguageDef.API

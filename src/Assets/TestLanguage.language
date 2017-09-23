@@ -22,7 +22,7 @@ tuple	::= expr expr
 Functions
 =========
 
-
+# Inverts a boolean
 not		: bool -> bool
 not("True")	= "False"
 not("False")	= "True"

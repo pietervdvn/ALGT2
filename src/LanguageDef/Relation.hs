@@ -169,7 +169,7 @@ rules	= _rules |||>>> const () |> asGrouper ("rule", "rules") (get ruleName)
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty/Relations" ["UnknownTypeRelation"]
-Left "The syntactic form \"x\" was not found. It is not defined in the current namespace, nor imported"
+Left "The syntactic form \"x\" was not found."
 >>> loadAssetLangDef "Faulty/Relations" ["DuplicateRelation"]
 Left "The relation \"~\" is defined multiple times"
 >>> loadAssetLangDef "Faulty/Relations" ["AllOutRel"]
@@ -189,7 +189,7 @@ Left "This rule has no name. Add a name after the line, in square brackets\n\n p
 >>> loadAssetLangDef "Faulty/Relations" ["NotDeclared"]
 Left "When rules are defined, a relation declaration section should be present"
 >>> loadAssetLangDef "Faulty/Relations" ["NotLocal"]
-Left "The relation \"~\" was not found. It is not defined in the current namespace, nor imported"
+Left "The relation \"~\" was not found."
 -}
 instance Checkable' (Grouper Relation) (Rule' a) where
 	check' relations rule
@@ -222,6 +222,7 @@ instance ToString Mode where
 
 
 
-
+instance Infoable Relation where
+	getInfo r	= AllInfo (get relSymbol r) "Relation" (get relDocs r) (toParsable r)
 
 

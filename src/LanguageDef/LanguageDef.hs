@@ -55,6 +55,7 @@ data LanguageDef' imported funcResolution
 		{ _langTitle	:: Name		-- title of the language
 		, _langImports	:: [Import imported]
 		, _langMeta	:: [String]	-- The comments just under the title
+		, _langLocation	:: LocationInfo
 		, _langSyntax		:: Maybe (Grouper SyntacticForm)	-- The syntax of the language, aka the BNF
 		, _langSupertypes	:: Lattice FQName	-- The global supertype relationship; is filled in later on by the langdefs-fixes
 		, _langFunctions	:: Maybe (Grouper (Function' funcResolution))
@@ -84,7 +85,7 @@ Left "While checking function \"not\":\n  Some clauses have a different name. Th
 -}
 
 instance Checkable' (FQName -> Either String FQName, FQName -> FQName -> Bool, [Name]) (LanguageDef' ResolvedImport SyntFormIndex) where
-	check' extras (LanguageDef title imports meta syntax superTypes functions rels rules)
+	check' extras (LanguageDef title imports meta li syntax superTypes functions rels rules)
 		= do	assert (title /= "") "The title of a language should not be empty"
 			checkM' extras syntax
 			checkM functions
@@ -140,11 +141,14 @@ parseFullFile	:: [Name] -> FilePath -> String -> Either String (LanguageDef' () 
 parseFullFile _ fp contents
 	= inMsg ("While parsing "++show fp) $
 	  do	pt	<- parse fp (metaSyntaxes, ["ALGT"]) "langDef" contents
-		((title, meta, imports), (syntax, (funcs, (rels, rules))))	<- interpret (parseLangDef _fullFileCombiner) pt
+		
+		(li, langDef)	<- interpret (parseLangDef _fullFileCombiner & withLocation (,)) pt
+		let ((title, meta, imports), (syntax, (funcs, (rels, rules))))	= langDef	
 		return $ LanguageDef
 			title
 			imports
 			meta
+			li
 			syntax
 			(emptyLattice ([], "B") ([], "T"))	-- filled later on
 			funcs
@@ -154,7 +158,7 @@ parseFullFile _ fp contents
 
 -- | Converts the modules from parsetree into all the needed parts
 _fullFileCombiner	:: Combiner 
-				(Maybe Syntax,
+				(Maybe (Grouper SyntacticForm),
 				(Maybe (Grouper (Function' ())),
 				(Maybe (Grouper Relation),
 				Maybe (Grouper Rule)
@@ -420,9 +424,14 @@ parseLangDef parseModules
 		[_titleCombiner <+> parseModules]
 
 
+instance Infoable (LanguageDef' a b) where
+	getInfo ld
+		= let	mi	= MetaInfo (get langLocation ld) (get langMeta ld & unlines)
+			in
+			AllInfo (get langTitle ld) "Language Definition" mi (toParsable ld)
 
 instance ToString (LanguageDef' a b) where
-	toParsable (LanguageDef title imports langMeta syntax _ functions rels rules)
+	toParsable (LanguageDef title imports langMeta langLoc syntax _ functions rels rules)
 		= let mayb header	= maybe "" (inHeader' header . toParsable) in
 		  (imports |> toParsable & unlines) ++
 		  inHeader "" title '*' (unlines (

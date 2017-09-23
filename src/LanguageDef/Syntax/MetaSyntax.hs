@@ -91,10 +91,10 @@ choice' doc bnfs
 
 syntForm	:: Name -> Doc -> [(BNF, Doc)] -> SyntacticForm
 syntForm name information choices
-	= SyntacticForm name (choices |> fst) (choices |> snd |> asInfo) (asInfo information)
+	= SyntacticForm name (choices |> fst) (choices |> snd |> asInfo) (asInfo information) 
 
 
 asInfo	:: Doc -> MetaInfo
 asInfo doc
 	= let i	= (-1) in
-		MetaInfo (LocationInfo i i i i "MetaSyntax of BNF") doc
+		MetaInfo (LocationInfo i i i i "MetaSyntax of BNF") doc 

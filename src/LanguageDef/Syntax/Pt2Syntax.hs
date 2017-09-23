@@ -85,7 +85,7 @@ assign	= choices' "assign"
 bnfDecl	:: Combiner SyntacticForm
 bnfDecl
 	= choices' "bnfDecl"
-		[ cmb (,) (nls |> concat & withLocation MetaInfo) 
+		[ cmb (,) (nls |> concat & withLocation MetaInfo)
 			(cmb (,) capture {-Identifier: name-}
 			(cmb (over (mapped . _1)) assign 
 				bnfchoices'))

@@ -32,16 +32,16 @@ import Data.Maybe
 ------------------------------- TYPING -------------------------------
 
 
-typeAllFunctionsLD	:: Map [Name] (LDScope' x) -> Either String (Map [Name] LDScope)
+typeAllFunctionsLD	:: Eq fr => Map [Name] (LDScope' fr) -> Either String (Map [Name] LDScope)
 typeAllFunctionsLD lds
 	= do	typed	<- lds & M.toList ||>> typeScope |> sndEffect & allRight' |> M.fromList
-				:: Either String (Map [Name] (Scope [Name] [Name] LanguageDef () ()))
+				:: Either String (Map [Name] (Scope [Name] [Name] LanguageDef ImportFlags ()))
 		let env	= typed |> get payload
 		let scopes	= typed |> flip LDScope env	:: Map [Name] LDScope
 		return scopes
 
 
-typeScope	:: LDScope' x -> Either String (Scope [Name] [Name] LanguageDef () ())
+typeScope	:: Eq fr =>  LDScope' fr -> Either String (Scope [Name] [Name] LanguageDef ImportFlags ())
 typeScope scope
 	= do	let langDef	= get (ldScope . payload) scope
 		langDef'	<- typeAllFunctions scope langDef
@@ -49,7 +49,7 @@ typeScope scope
 		return scope'
 
 
-typeAllFunctions	:: LDScope' fr -> LanguageDef' ResolvedImport x -> Either String LanguageDef
+typeAllFunctions	:: Eq fr => LDScope' fr -> LanguageDef' ResolvedImport x -> Either String LanguageDef
 typeAllFunctions ld langDef
  | isNothing (get langFunctions langDef)
 	= langDef & set langFunctions Nothing & return
@@ -66,7 +66,7 @@ typeAllFunctions ld langDef
 		
 
 
-typeFunction	:: LDScope' fr -> Lattice FQName -> Function' x -> Either String Function
+typeFunction	:: Eq fr => LDScope' fr -> Lattice FQName -> Function' x -> Either String Function
 typeFunction ld supers f
 	= inMsg ("While typing "++ get funcName f) $
 	  do	let clauses	= get funcClauses f
@@ -88,7 +88,7 @@ Left "While typing f:\n  While typing clause f.0:\n    The variable \"y\" was no
 
 -}
 
-typeClause	:: LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause x) -> Either String (FunctionClause SyntFormIndex)
+typeClause	:: Eq fr => LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause x) -> Either String (FunctionClause SyntFormIndex)
 typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc nm)
  | length patExps /= length pats
 	= Left $ "Expected "++show (length patExps)++" patterns for function "++show nm++", but got "++show (length pats)++" patterns instead"
@@ -121,7 +121,7 @@ typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc 
 
 
 
-typePattern	:: String -> LDScope' fr -> Lattice FQName -> FQName -> Expression x  -> Either String (Expression SyntFormIndex)
+typePattern	:: Eq fr => String -> LDScope' fr -> Lattice FQName -> FQName -> Expression x  -> Either String (Expression SyntFormIndex)
 typePattern msg ld supers exp pat
 	= inMsg ("While typing "++msg++", namely "++toParsable pat) $ do
 		pat'	<- typeExpression ld exp pat ||>> snd
@@ -141,7 +141,7 @@ Right (ParseTree {_expPT = Literal {_ptToken = "True", ...}, _expAnnot = ((),Syn
 >>> typeExpression testLDScope (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") ()) (DontCare ()) ())
 Right (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0})}, _exp2 = DontCare {_expAnnot = ((),NoIndex (["TestLanguage"],"bool"))}, _expAnnot = ((),NoIndex (["TestLanguage"],"bool"))})
  -}
-typeExpression	:: LDScope' fr -> SyntForm -> Expression a -> Either String (Expression (a, SyntFormIndex)) 
+typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Either String (Expression (a, SyntFormIndex)) 
 typeExpression _ expectation (Var nm a)
 	= return $ Var nm (a, NoIndex expectation)
 typeExpression _ expectation  (DontCare a)
@@ -180,7 +180,7 @@ typeExpression ld expectation (SeqExp exprs a)
 		return $ SeqExp exprs' (a, subtype)
 
 {-Search for a choice matching the expressions -}
-typeExpressionIndexed	:: LDScope' fr -> SyntForm -> [Expression a] -> Either String ([Expression (a, SyntFormIndex)], SyntFormIndex)
+typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> Either String ([Expression (a, SyntFormIndex)], SyntFormIndex)
 typeExpressionIndexed ld syntForm exprs
 	= do	(fqname, choices)	<- resolve' ld syntaxCall syntForm ||>> get syntChoices
 		let tries	= choices |> BNF.removeWS |> BNF.unsequence	-- prepare individual choices
@@ -196,7 +196,7 @@ typeExpressionIndexed ld syntForm exprs
 		(foundExprs, SyntFormIndex fqname foundInd Nothing) & return
 
 
-typeExpressionIndexed'	:: LDScope' fr -> SyntForm -> [Expression a] -> (Int, [BNF]) -> Either String [Expression (a, SyntFormIndex)]
+typeExpressionIndexed'	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> (Int, [BNF]) -> Either String [Expression (a, SyntFormIndex)]
 typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
  | length choiceElems == 1 && length exprs /= 1 && BNF.isRuleCall (head choiceElems) 
 	= do	let [BNF.RuleCall fqname]	= choiceElems
@@ -208,7 +208,7 @@ typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
 	= zip (mapi choiceElems) exprs |+> uncurry (typeExprBNF ld (syntForm, choiceIndex))
 
 
-typeExprBNF		:: LDScope' fr -> (SyntForm, Int) -> (Int, BNF) -> Expression a -> Either String (Expression (a, SyntFormIndex))
+typeExprBNF		:: Eq fr => LDScope' fr -> (SyntForm, Int) -> (Int, BNF) -> Expression a -> Either String (Expression (a, SyntFormIndex))
 typeExprBNF ldscope (form, choiceInd) (seqIndex, BNF.RuleCall fqname) expr
 	= typeExpression ldscope fqname expr
 typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr

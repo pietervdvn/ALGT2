@@ -34,6 +34,7 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("Faulty/LeftRecursiveSyntax.language", _Faulty_LeftRecursiveSyntax_language)
 			, ("Faulty/FunctionDuplicateNameTest.language", _Faulty_FunctionDuplicateNameTest_language)
 			, ("Faulty/TestShadowing.language", _Faulty_TestShadowing_language)
+			, ("Faulty/SyntaxUndeclared.language", _Faulty_SyntaxUndeclared_language)
 			, ("Faulty/FunctionIncorrectNameTest.language", _Faulty_FunctionIncorrectNameTest_language)
 			, ("Faulty/FunctionTyperTest.language", _Faulty_FunctionTyperTest_language)
 			, ("Faulty/VariableTypingErrors.language", _Faulty_VariableTypingErrors_language)
@@ -112,6 +113,10 @@ _Faulty_FunctionDuplicateNameTest_language
 {-# NOINLINE _Faulty_TestShadowing_language #-}
 _Faulty_TestShadowing_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/TestShadowing.language" in seq str str
+
+{-# NOINLINE _Faulty_SyntaxUndeclared_language #-}
+_Faulty_SyntaxUndeclared_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/SyntaxUndeclared.language" in seq str str
 
 {-# NOINLINE _Faulty_FunctionIncorrectNameTest_language #-}
 _Faulty_FunctionIncorrectNameTest_language

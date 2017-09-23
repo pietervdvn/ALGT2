@@ -88,16 +88,20 @@ createSupertypingRelationship lds
 
 _scopeFor	:: Map [Name] (LanguageDef' ResolvedImport fr) -> ([Name], LanguageDef' ResolvedImport fr) -> Either String (LDScope' fr)
 _scopeFor ldefs (fqname, ld)
-	= do	let imports	= fqname : (ld & get langImports |> get importName)	:: [ [Name] ]
-		let units	= repeat ()
-		imported	<- imports |+> (\k -> checkExists k ldefs ("Weird, import "++show k++" not found... Bug in LangDefs"))
+	= do	let file	= ld & get (langLocation . miFile)
+		let selfImport	= (fqname, ImportFlags file True (tails fqname))
+		let imports	= ld & get langImports |> (get importName &&& _importFlagFor)	:: [ ([Name], ImportFlags) ]
+		imported	<- imports |+> (\k -> checkExists (fst k) ldefs ("Weird, import "++show k++" not found... Bug in LangDefs"))
 		let scope	=  Scope
 			fqname
-			(zip imports units & M.fromList)	-- imported (+ self)
-			(zip imports imports & M.fromList)	-- internalView
-			ld					-- actual payload/exports; resolve will filter
-			M.empty					-- reExports
+			(M.fromList (selfImport:imports))	-- includes self as import
+			ld			-- actual payload/exports; resolve will filter
+			M.empty			-- reExports
 		return $ LDScope scope ldefs
+
+_importFlagFor	:: (Import ResolvedImport) -> ImportFlags
+_importFlagFor (Import name qualifiedOnly _ filePath)	-- name is the absolute path from the root directory here
+	= ImportFlags filePath False (if qualifiedOnly then [name] else tails name)
 
 -- Prepares the language definitions for production (e.g. resolves all calls to be fully qualified). The first argument should be a dict with all the fully fixed scopes
 fixScope	:: LDScope' fr -> Either String (LDScope' fr)

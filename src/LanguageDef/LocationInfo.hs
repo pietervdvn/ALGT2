@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, TemplateHaskell #-}
+{-# LANGUAGE RankNTypes, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 module LanguageDef.LocationInfo where
 
 {-Small helper data structure, containg start and end position of parsetrees, metainfo or fully qualified names etc-}
@@ -25,10 +25,31 @@ makeLenses ''LocationInfo
 
 data MetaInfo	=  MetaInfo
 	{ _miLoc	:: LocationInfo
-	, _miDoc	:: Doc}
+	, _miDoc	:: Doc
+	}
 	deriving (Show, Ord, Eq)
 makeLenses ''MetaInfo
 
+
+data AllInfo	= AllInfo
+	{ _allInfName	:: Name
+	, _allInfType	:: Name
+	, _allInfMI	:: MetaInfo
+	, _allInfRepr	:: String
+	} deriving (Show, Ord, Eq)
+makeLenses ''AllInfo
+
+class Infoable a where
+	getInfo		:: a -> AllInfo
+
+instance ToString' FQName AllInfo where
+	toParsable' fqn (AllInfo nm tp mi repr)
+		= inHeader' (showFQ fqn ++ " " ++ inParens tp) $
+			toParsable mi ++ repr
+
+	toCoParsable'	= toParsable'
+	debug'		= toParsable'
+	show'		= toParsable'
 
 instance ToString MetaInfo where
 	toParsable meta

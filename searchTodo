@@ -3,7 +3,7 @@ cd src/
 
 for CODE in "TODO" "FIXME"
 do
-	../search $CODE
+	../search $CODE | sed "/.Utils.hs:todo/d"
 	echo -e "\nTOTAL $CODE: "
 	FOUND=`../search $CODE | wc -l`
 	echo $FOUND

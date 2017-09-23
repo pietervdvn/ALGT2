@@ -44,11 +44,12 @@ data SyntacticForm
 		, _syntChoiceMeta	:: [MetaInfo]	-- meta info of a choice
 		, _syntMeta		:: MetaInfo	-- meta info of the entire rule
 		} deriving (Show, Eq)
-	-- TODO further port this refactoring
 
 makeLenses ''SyntacticForm
 
--- TODO deprecate syntax
+instance Infoable SyntacticForm where
+	getInfo sf	= AllInfo (get syntName sf) "Syntactic Form" (get syntMeta sf) (toParsable sf)
+
 type Syntax = Grouper SyntacticForm
 
 {-data Syntax = Syntax
@@ -217,22 +218,6 @@ leftRecursiveCalls fq syntax
 			& M.fromList
 				:: Map FQName (Set FQName)
 	in cleanCycles syntax'
-
-
--------------------------------- TOOLS -------------------------------------
-
-
-{- TODO what is this? Is this needed?
--- | All Fully Qualified calls, with the first param the namespace for local calls. Metainfo is the choice in which the call is made, name is the declaration for which the call is made
-syntaxRuleCalls	:: [Name] -> Syntax -> [((MetaInfo, Name), FQName)]
-syntaxRuleCalls localScope s
-	= let	synt	= s & get syntax	:: Map Name [(BNF, MetaInfo)]
-		in
-		synt & M.toList & unmerge
-			|> (\(name, (bnf, mi)) -> ((mi, name), L.nub $ getRuleCalls bnf))
-			& unmerge
-
--}
 
 
 
