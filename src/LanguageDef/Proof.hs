@@ -7,7 +7,7 @@ import Utils.All
 
 import LanguageDef.Relation
 import LanguageDef.Rule
-import LanguageDef.MetaExpression
+import LanguageDef.Expression
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax
 

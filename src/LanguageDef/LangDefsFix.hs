@@ -11,8 +11,8 @@ import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
 import LanguageDef.Scope
 import LanguageDef.LangDefs
-import LanguageDef.FunctionTyper
-import LanguageDef.MetaFunction
+import LanguageDef.Typer
+import LanguageDef.Function
 import LanguageDef.Grouper
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)
@@ -59,12 +59,10 @@ asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |+> 
 			let ld	= scopes' ||>> over (ldScope . payload) (set langSupertypes supertyping)
 						& M.fromList 
 						& knotScopes 
-			ld'	<- typeAllFunctionsLD ld |> LangDefs
+			ld'	<- typeLD ld |> LangDefs
 			check ld'
 			return ld'
 
-bottom	= ([], "⊥")
-top	= ([], "⊤")
 
 {- | Creates the lattice tracking the supertype relationship
 
@@ -79,7 +77,7 @@ createSupertypingRelationship lds
 					& M.fromList						:: Map FQName [BNF]
 		let supertypes	= fqsyntax ||>> getRuleCall |> catMaybes |> S.fromList		:: Map FQName (Set FQName)
 		let subtypes	= invertDict supertypes
-		makeLattice bottom top subtypes & first cycleMsg |> fst
+		makeLattice typeBottom typeTop subtypes & first cycleMsg |> fst
 		where	cycleMsg	:: [[FQName]] -> String
 			cycleMsg cycles
 				= "Cycles are detected in the supertype relationship of the syntaxes:"++
@@ -114,17 +112,12 @@ fixScope scopeToFix
 
 fixLD		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Either String (LanguageDef' ResolvedImport fr)
 fixLD scope ld
-	= ld	& fixLangdefGrouper langSyntax (fullyQualifySyntForm scope)
-		>>= fixLangdefGrouper langFunctions (fullyQualifyFunction scope)
-		>>= fixLangdefGrouper langRelations (fullyQualifyRelation scope)
-		>>= fixLangdefGrouper langRules (fullyQualifyRule scope)
+	= ld	& overGrouperLens langSyntax (fullyQualifySyntForm scope)
+		>>= overGrouperLens langFunctions (fullyQualifyFunction scope)
+		>>= overGrouperLens langRelations (fullyQualifyRelation scope)
+		>>= overGrouperLens langRules (fullyQualifyRule scope)
 
 
 
-fixLangdefGrouper	:: Monad m => Lens ld ld (Maybe (Grouper x)) (Maybe (Grouper x)) 
-				 -> (x -> m x) -> ld -> m ld
-fixLangdefGrouper lens fixer langDef
-	= do	let grouper	= get lens langDef
-		grouper'	<- grouper |> overGrouperM fixer & justEffect
-		return $ set lens grouper' langDef
+
 

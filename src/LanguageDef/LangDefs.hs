@@ -14,15 +14,15 @@ import Utils.All
 
 import LanguageDef.LanguageDef
 import LanguageDef.LocationInfo
+import LanguageDef.Grouper
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
 import LanguageDef.Scope
-import LanguageDef.MetaFunction
+import LanguageDef.Expression
+import LanguageDef.Function
 import LanguageDef.Rule
 import LanguageDef.Relation
-import LanguageDef.MetaExpression
 
-import LanguageDef.Grouper
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)
 
@@ -153,7 +153,7 @@ functionCall	= ("the function", get langFunctions, get grouperDict)
 relationCall	:: Resolver fr Relation
 relationCall	= ("the relation", get langRelations, get grouperDict)
 
-ruleCall	:: Resolver fr Rule
+ruleCall	:: Resolver fr (Rule' fr)
 ruleCall	= ("the rule", get langRules, get grouperDict)
 
 

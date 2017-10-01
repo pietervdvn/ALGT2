@@ -1,4 +1,4 @@
-module LanguageDef.FunctionInterpreter where
+module LanguageDef.Interpreter where
 
 {- Interprets functions -}
 
@@ -6,8 +6,8 @@ import Utils.All
 
 import LanguageDef.LanguageDef
 import LanguageDef.Syntax
-import LanguageDef.MetaFunction 
-import LanguageDef.MetaExpression 
+import LanguageDef.Function 
+import LanguageDef.Expression 
 import LanguageDef.LocationInfo
 
 import LanguageDef.LangDefs
@@ -123,7 +123,7 @@ runClause fb2a lds ld (i, FunctionClause pats result _ nm) args
 		constructParseTree fb2a lds store result
 
 
-------------------------- ABOUT PARSETREE CONSTRUCTION --------------------------------
+------------------------- ABOUT PARSETREE CONSTRUCTION/INTERPRETATION --------------------------------
 
 
 constructParseTree	:: (SyntFormIndex -> a) -> LangDefs -> VariableStore a -> Expression SyntFormIndex -> Either String (ParseTree a)

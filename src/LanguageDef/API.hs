@@ -1,11 +1,13 @@
 module LanguageDef.API 
 		(loadLangDef, loadLangDef', loadAssetLangDef, loadAssetLangDef'
-		, createParseTree, createExpression, createTypedExpression, resolveAndRun', parseTarget
+		, createParseTree, createExpression, createTypedExpression, parseTarget
 		, LangDefs.resolveGlobal, LangDefs.resolve, LangDefs.resolve', LangDefs.allKnowns
 		, LangDefs.syntaxCall, LangDefs.functionCall, LangDefs.ruleCall, LangDefs.relationCall
 		, resolveGlobal'
 		, infoAbout, inScope, infoImports
-		, testLanguage, testLanguage') where
+		, testLanguage, testLanguage'
+		, runFunction, runExpression, runExpression'
+		, typeTop, typeBottom) where
 
 {- 
 
@@ -21,22 +23,28 @@ import Utils.PureIO
 import AssetUtils
 
 import LanguageDef.LanguageDef
-import LanguageDef.Syntax.All as Syntax
 import LanguageDef.LocationInfo
-import LanguageDef.ModuleLoader
-import LanguageDef.MetaExpression
-import qualified LanguageDef.Syntax.Combiner as Combiner
-import LanguageDef.FunctionTyper
-import LanguageDef.MetaFunction
 import LanguageDef.Scope
 
-import LanguageDef.FunctionInterpreter
+import LanguageDef.Syntax.All as Syntax
+import qualified LanguageDef.Syntax.Combiner as Combiner
+
+import LanguageDef.Expression
+import LanguageDef.Function
+import LanguageDef.Rule
+import LanguageDef.Relation (predicate)
+import LanguageDef.Typer
+import LanguageDef.Interpreter (resolveAndRun', constructParseTree)
+
+import LanguageDef.LangDefs (LangDefs)
+import LanguageDef.ModuleLoader
 
 import LanguageDef.LangDefs as LangDefs
+import LanguageDef.LangDefsFix as LDF
 
 import Data.Maybe
 
-import Data.Map (Map, (!))
+import Data.Map (Map, (!), empty)
 
 {- Loads a language definition from the filesystem; use with 'runIO'-}
 loadLangDef :: FilePath -> [Name] -> PureIO LangDefs
@@ -129,17 +137,49 @@ infoImports scope
 	= scope & get (ldScope . imported)
 		
 
+resolveGlobal' lds entity fqn
+	= resolveGlobal lds entity fqn |> snd
 
-{- parseTarget: creates a parsetree based on the syntax of langdefs -}
 
+
+runFunction  	:: LangDefs -> FQName -> [ParseTree ()] -> Either String (ParseTree ())
+runFunction	= resolveAndRun'
+
+
+runExpression	:: LangDefs -> Expression SyntFormIndex -> Either String ParseTree'
+runExpression lds expr
+	= constructParseTree (const ()) lds empty expr
+
+runExpression'	:: LangDefs -> FilePath -> FQName -> String -> Either String ParseTree'
+runExpression' lds file expectedType input
+	= do	expr	<- createTypedExpression lds file input expectedType
+		let expr'	= expr |> snd
+		runExpression lds expr'
+
+
+
+{- | parseTarget: creates a parsetree based on the syntax of langdefs
+>>> createParseTree testLanguage (["TestLanguage"], "exprSum") "?" "True & True" |>  toParsable
+Right "True & True"
+ -}
 createParseTree		:: LangDefs -> FQName -> FilePath -> String -> Either String ParseTree'
 createParseTree
 	= parseTarget 
 
+{- | Creates an entire expression, which is untyped 
+>>> createExpression testLanguage "?" "and(\"True\", \"True\")" |> toParsable
+Right "and(\"True\", \"True\")"
+-}
 createExpression	:: LangDefs -> FilePath -> String -> Either String (Expression LocationInfo)
 createExpression ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Functions"]) "expression" str
 		Combiner.interpret expression pt
+
+{- | Creates an expression and types it 
+>>> createTypedExpression testLanguage "?" "and(\"True\",\"True\")" (["TestLanguage"],"bool") |> toParsable
+Right "TestLanguage.and(\"True\", \"True\")"
+
+-}
 
 createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Either String (Expression (LocationInfo, SyntFormIndex))
 createTypedExpression ld source str typ@(loc, nm)
@@ -148,6 +188,12 @@ createTypedExpression ld source str typ@(loc, nm)
 				("Module "++dots loc++ " not found")
 		typeExpression scope typ expr
 
-resolveGlobal' lds entity fqn
-	= resolveGlobal lds entity fqn |> snd
+
+
+createPredicate		:: LangDefs -> FilePath -> String -> Either String (Either (Conclusion LocationInfo) (Expression LocationInfo))
+
+createPredicate ld source str
+	= do	pt	<- parse source (metaSyntaxes, ["Relations"]) "predicate" str
+		Combiner.interpret predicate pt
+
 

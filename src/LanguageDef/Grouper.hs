@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, Rank2Types #-}
 module LanguageDef.Grouper where
 
 {- A 'Grouper' groups several name-indexed values in a certain order -}
@@ -9,6 +9,8 @@ import Data.Map as M
 import Data.List as L
 
 import Control.Arrow ((&&&))
+
+import Lens.Micro (Lens)
 
 data Grouper x	= Grouper
 		{ _grouperDict	:: Map Name x
@@ -27,10 +29,28 @@ asGrouper groupName getName as
 			(as |> getName)
 			groupName 
 
-overGrouperM	:: Monad m => (a -> m a) -> Grouper a -> m (Grouper a)
+overGrouperM	:: Monad m => (a -> m b) -> Grouper a -> m (Grouper b)
 overGrouperM fm (Grouper dict order name)
 	= do	dict'	<- dict & M.toList ||>> fm |+> sndEffect |> M.fromList
 		return $ Grouper dict' order name
+
+
+
+overGrouperM'	:: Monad m => (a -> m b) -> Maybe (Grouper a) -> m (Maybe (Grouper b))
+overGrouperM' _ Nothing
+		= return Nothing
+overGrouperM' f (Just grouper)
+		= overGrouperM f grouper |> Just
+
+
+overGrouperLens	:: Monad m => Lens ld ld (Maybe (Grouper x)) (Maybe (Grouper x)) 
+				 -> (x -> m x) -> ld -> m ld
+overGrouperLens lens fixer langDef
+	= do	let grouper	= get lens langDef
+		grouper'	<- grouper |> overGrouperM fixer & justEffect
+		return $ set lens grouper' langDef
+
+
 
 instance ToString a => ToString (Grouper a) where
 	toParsable (Grouper as order _)

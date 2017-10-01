@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.MetaExpression where
+module LanguageDef.Expression where
 
 {- 
 The metaExpressions contain the patterns and expressions that make up functions and natural deduction rules.

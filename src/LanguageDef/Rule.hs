@@ -6,13 +6,15 @@ import Utils.Utils
 import Utils.All
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax.All
-import LanguageDef.MetaExpression hiding (choices')
+import LanguageDef.Expression hiding (choices')
 import LanguageDef.Grouper
-
+	
 
 import Data.Map (Map, (!), filterWithKey)
 import qualified Data.Map as M
 
+type Predicate a
+	= Either (Conclusion a) (Expression a)
 
 data Conclusion a
 	= Conclusion
@@ -21,7 +23,7 @@ data Conclusion a
 		} deriving (Show, Eq, Functor)
 
 data Rule' a
-	= Rule	{ _rulePreds	:: [Either (Conclusion a) (Expression a)]
+	= Rule	{ _rulePreds	:: [Predicate a]
 		, _ruleConcl	:: Conclusion a
 		, _ruleName	:: Name
 		, _ruleDocs	:: MetaInfo
@@ -37,6 +39,7 @@ instance Functor Rule' where
 
 makeLenses ''Conclusion
 makeLenses ''Rule'
+
 
 type Rule	= Rule' ()
 

@@ -12,8 +12,8 @@ import Utils.All
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.All
 import LanguageDef.LocationInfo
-import LanguageDef.MetaExpression hiding (choices')
-import LanguageDef.MetaFunction hiding (choices')
+import LanguageDef.Expression hiding (choices')
+import LanguageDef.Function hiding (choices')
 import LanguageDef.Relation hiding (choices')
 import LanguageDef.Rule
 import qualified LanguageDef.Relation as Relations
@@ -60,12 +60,16 @@ data LanguageDef' imported funcResolution
 		, _langSupertypes	:: Lattice FQName	-- The global supertype relationship; is filled in later on by the langdefs-fixes
 		, _langFunctions	:: Maybe (Grouper (Function' funcResolution))
 		, _langRelations	:: Maybe (Grouper Relation)
-		, _langRules		:: Maybe (Grouper Rule)
+		, _langRules		:: Maybe (Grouper (Rule' funcResolution))
 			-- TODO typecheck the rules!
 		}
 	deriving (Show, Eq)
 makeLenses ''LanguageDef'
 
+
+updateFR	:: (Maybe (Grouper (Function' fr1)), Maybe (Grouper (Rule' fr1))) -> LanguageDef' imported fr0 -> LanguageDef' imported fr1
+updateFR (funcs, rules) (LanguageDef title imps meta loc synt supers _ rels _)
+	= LanguageDef title imps meta loc synt supers funcs rels rules
 
 type ResolvedImport	= FilePath
 type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
@@ -93,7 +97,8 @@ instance Checkable' (FQName -> Either String FQName, FQName -> FQName -> Bool, [
 			assert (isNothing rules || isJust rels) "When rules are defined, a relation declaration section should be present"
 			checkM' (fromJust rels) rules
 			
-
+typeBottom	= ([], "⊥")
+typeTop		= ([], "⊤")
 
 
 isSubtypeOf	:: LanguageDef' ResolvedImport fr -> FQName -> FQName -> Bool

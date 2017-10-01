@@ -6,7 +6,7 @@ import Utils.All
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax.All
 import LanguageDef.Rule
-import LanguageDef.MetaExpression hiding (choices')
+import LanguageDef.Expression hiding (choices')
 import LanguageDef.Grouper
 
 
@@ -29,6 +29,10 @@ data Relation	= Relation
 		, _relDocs	:: MetaInfo
 		} deriving (Show, Eq)
 makeLenses ''Relation
+
+
+
+
 
 
 
@@ -113,15 +117,14 @@ conclusion
 		]
 
 
-predicate	:: Combiner (Either (Conclusion LocationInfo) (Expression LocationInfo))
+predicate	:: Combiner (Predicate LocationInfo)
 predicate
 	= choices' "predicate"
 		[ conclusion |> Left
 		, expression |> Right
 		]
 
-type Predicates	= [Either (Conclusion LocationInfo) (Expression LocationInfo)]
-predicates	:: Combiner Predicates
+predicates	:: Combiner [Predicate LocationInfo]
 predicates
 	= choices' "predicates"
 		[ cmb (:) predicate (lit "\t" **> predicates)
@@ -149,7 +152,7 @@ rule	= choices' "rule"
 _asRule'	:: LocationInfo -> ([String], (Name, Conclusion LocationInfo)) -> Rule' LocationInfo
 _asRule' li (docs, (name, concl))
 	= _asRule li (docs, ([], (name, concl)))
-_asRule	:: LocationInfo -> ([String], (Predicates, (Name, Conclusion LocationInfo))) -> Rule' LocationInfo
+_asRule	:: LocationInfo -> ([String], ([Predicate LocationInfo], (Name, Conclusion LocationInfo))) -> Rule' LocationInfo
 _asRule li (docs, (preds, (name, conclusion)))
 	= Rule preds conclusion name $ MetaInfo li (unlines docs)
 

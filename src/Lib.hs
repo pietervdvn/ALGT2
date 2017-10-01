@@ -9,11 +9,11 @@ import AssetUtils
 
 import LanguageDef.LanguageDef
 import LanguageDef.ModuleLoader	
-import LanguageDef.MetaFunction
-import LanguageDef.MetaExpression 
+import LanguageDef.Function
+import LanguageDef.Expression 
 import LanguageDef.LocationInfo
 import LanguageDef.Scope
-import LanguageDef.FunctionInterpreter
+import LanguageDef.Interpreter
 import LanguageDef.Syntax
 
 

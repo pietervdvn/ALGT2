@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
-module LanguageDef.MetaFunction where
+module LanguageDef.Function where
 
 
 import Utils.All
 
-import LanguageDef.MetaExpression hiding (choices')
+import LanguageDef.Expression hiding (choices')
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax.All
 import LanguageDef.Grouper

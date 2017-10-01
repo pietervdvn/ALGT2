@@ -1,4 +1,4 @@
-module LanguageDef.FunctionTyper where
+module LanguageDef.Typer where
 
 {- Types expressions and functions -}
 
@@ -6,14 +6,19 @@ import Utils.All
 
 import LanguageDef.LanguageDef
 import LanguageDef.LocationInfo
-import LanguageDef.MetaExpression
-import LanguageDef.MetaFunction
-import LanguageDef.LangDefs
+import LanguageDef.Grouper
 import LanguageDef.Scope
+
 import LanguageDef.Syntax.BNF (BNF)
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax
-import LanguageDef.Grouper
+import LanguageDef.LangDefs
+
+import LanguageDef.Expression
+import LanguageDef.Function
+import LanguageDef.Rule
+import LanguageDef.Relation
+
 
 import Graphs.Lattice
 
@@ -29,11 +34,10 @@ import qualified Data.Set as S
 import Control.Monad
 import Data.Maybe
 
-------------------------------- TYPING -------------------------------
+-------------------- TYPING OF A LANGUAGEDEF -----------------------------------
 
-
-typeAllFunctionsLD	:: Eq fr => Map [Name] (LDScope' fr) -> Either String (Map [Name] LDScope)
-typeAllFunctionsLD lds
+typeLD		:: Eq fr => Map [Name] (LDScope' fr) -> Either String (Map [Name] LDScope)
+typeLD lds
 	= do	typed	<- lds & M.toList ||>> typeScope |> sndEffect & allRight' |> M.fromList
 				:: Either String (Map [Name] (Scope [Name] [Name] LanguageDef ImportFlags ()))
 		let env	= typed |> get payload
@@ -41,37 +45,63 @@ typeAllFunctionsLD lds
 		return scopes
 
 
+
 typeScope	:: Eq fr =>  LDScope' fr -> Either String (Scope [Name] [Name] LanguageDef ImportFlags ())
 typeScope scope
 	= do	let langDef	= get (ldScope . payload) scope
-		langDef'	<- typeAllFunctions scope langDef
+		langDef'	<- typeScope' scope langDef
 		let scope'	= scope & get ldScope & set payload langDef'
 		return scope'
 
 
-typeAllFunctions	:: Eq fr => LDScope' fr -> LanguageDef' ResolvedImport x -> Either String LanguageDef
-typeAllFunctions ld langDef
- | isNothing (get langFunctions langDef)
-	= langDef & set langFunctions Nothing & return
- | otherwise
-	= do	let supers	= get langSupertypes langDef
-		let funcs	= get langFunctions langDef & fromJust
-		let bareFunctions
-				= funcs & get grouperDict
-					& M.toList
-		bareFunctions'	<- bareFunctions ||>> typeFunction ld supers |> sndEffect & allRight'
-		let funcs'	= funcs & set grouperDict  (bareFunctions' & M.fromList)
-		let langDef'	= set langFunctions (Just funcs') langDef
-		return langDef'
+typeScope'	:: Eq fr => LDScope' fr -> LanguageDef' ResolvedImport fr
+			-> Either String (LanguageDef' ResolvedImport SyntFormIndex)
+typeScope' ld langDef
+	= do	langFuncs'	<- get langFunctions langDef & overGrouperM' (typeFunction ld)
+		langRules'	<- get langRules langDef & overGrouperM' (typeRule ld)
+		let langRules''	= langRules' |||>>> snd
+		return $ updateFR (langFuncs', langRules'') langDef
 		
 
 
-typeFunction	:: Eq fr => LDScope' fr -> Lattice FQName -> Function' x -> Either String Function
-typeFunction ld supers f
+-------------------- TYPING OF RULES/CONCLUSIONS/PREDICATES  ---------------------
+
+
+typeRule	:: Eq fr => LDScope' fr -> Rule' a -> Either String (Rule' (a, SyntFormIndex))
+typeRule lds (Rule preds concl n mi)
+	= do	preds'	<- preds |> typePredicate lds & allRight'
+		concl'	<- typeConclusion lds concl
+		return $ Rule preds' concl' n mi
+
+
+typePredicate	:: Eq fr => LDScope' fr -> Predicate a -> Either String (Predicate (a, SyntFormIndex))
+typePredicate lds (Left concl)
+ 	= do	concl'	<- typeConclusion lds concl
+		concl' & Left & return
+typePredicate lds (Right expr)
+	= do	expr'	<- typeExpressionFreely lds expr 
+		expr' & Right & return
+
+
+typeConclusion	:: Eq fr => LDScope' fr -> Conclusion a -> Either String (Conclusion (a, SyntFormIndex))
+typeConclusion lds (Conclusion rel args)
+	= do	(relFQn, relation)	<- resolve' lds relationCall rel
+		let types	= relation & get relTypes |> fst
+		args'		<- zip types args |> uncurry (typeExpression lds)
+					& allRight'
+		return $ Conclusion relFQn args'
+
+
+------------------------------ TYPING OF FUNCTIONS  ------------------------------
+
+
+
+typeFunction	:: Eq fr => LDScope' fr -> Function' x -> Either String Function
+typeFunction ld f
 	= inMsg ("While typing "++ get funcName f) $
 	  do	let clauses	= get funcClauses f
 		let tps		= (get funcArgTypes f, get funcRetType f)
-		clauses'	<- clauses & mapi |> typeClause ld supers tps & allRight'
+		clauses'	<- clauses & mapi |> typeClause ld (ld & get (ldScope . payload . langSupertypes)) tps & allRight'
 		f & set funcClauses clauses' & return
 		
 {- |
@@ -127,6 +157,19 @@ typePattern msg ld supers exp pat
 		pat'	<- typeExpression ld exp pat ||>> snd
 		mergeTypings' supers [pat']
 		return pat'
+
+
+
+------------------------------ TYPING OF EXPRESSIONS  ------------------------------
+
+
+{- | Same as 'typeExpression', but does not require a type expectation -}
+typeExpressionFreely	:: Eq fr => LDScope' fr -> Expression a -> Either String (Expression (a, SyntFormIndex))
+typeExpressionFreely lds expr
+	= typeExpression lds typeTop expr
+
+
+
 
 {- | Types an expression to the given expectation (and fully qualifies all calls and types in the mean time)
 
