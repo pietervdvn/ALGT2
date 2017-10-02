@@ -25,10 +25,10 @@ import Text.Parsec hiding (Error)
 import Control.Monad
 
 {- A combiner is a tree mimmicking the BNF structure, which converts a parsetree into a user chosen data structure -}
-data Combiner a	= LiteralC Doc (String -> Failable a)
+data Combiner a	= LiteralC Doc (ParseTree' -> String -> Failable a)
 		| forall b c . SeqC (Combiner b) (Combiner c) (b -> c -> a)
 		| forall b . MapC (Combiner b) (b -> a)
-		| IntC (Int -> Failable a)
+		| IntC (ParseTree' -> Int -> Failable a)
 		| Value a
 		| Annot FQName [Combiner a]	-- Enter a certain rule, with one combiner for each choice
 		| forall b . WithLocation (Combiner b) (LocationInfo -> b -> a)
@@ -156,9 +156,9 @@ interpret cmb pt
 
 _interpret	:: Combiner a -> ParseTree' -> Failable a
 _interpret (Debug f) pt
-	= _parseErr $ f pt
-_interpret (LiteralC _ fa) (Literal str' _ _ _)
- 	= fa str'
+	= _parseErr pt $ f pt
+_interpret (LiteralC _ fa) pt@(Literal str' _ _ _)
+ 	= fa pt str'
 _interpret combiner (Seq [pt] _ _)
 	= _interpret combiner pt
 _interpret (SeqC ac bc f) sq@(Seq (p:ptss) _ _)
@@ -168,38 +168,38 @@ _interpret (SeqC ac bc f) sq@(Seq (p:ptss) _ _)
 _interpret (MapC ca f) pt
 	= do	a	<- _interpret ca pt
 		return $ f a
-_interpret (IntC f) (Int i _ _)
-	= f i
+_interpret (IntC f) pt@(Int i _ _)
+	= f pt i
 _interpret (Value a) _
 	= return a
 _interpret (Annot ruleName cmber) (RuleEnter pt' ruleName' choice _ _)
 	= inMsg' ("While interpreting a combiner for "++showFQ ruleName) $
-          do	assert' (ruleName == ruleName') $ "Assertion failed: could not interpret, expected construction with "++show ruleName++" but got a "++show ruleName'
-		assert' (length cmber > choice) $ "Assertion failed: no choice with index "++show choice++" for the given combiner"
+          do	assert' pt' (ruleName == ruleName') $ "Assertion failed: could not interpret, expected construction with "++show ruleName++" but got a "++show ruleName'
+		assert' pt' (length cmber > choice) $ "Assertion failed: no choice with index "++show choice++" for the given combiner"
 		_interpret (cmber !! choice) pt'
 _interpret (WithLocation cb flib2a) pt
 	= do	let li	= get ptLocation pt
 		b	<- _interpret cb pt
 		return $ flib2a li b
 _interpret combiner parsetree
-	= _parseErr ("Could not interpret "++show combiner++" over "++debug parsetree)
+	= _parseErr parsetree ("Could not interpret "++show combiner++" over "++debug parsetree)
 
 
 capture	:: Combiner String
-capture = LiteralC "Capture" Success
+capture = LiteralC "Capture" (const Success)
 
 int	:: Combiner Int
-int	= IntC Success
+int	= IntC (const Success)
 
 lit	:: String -> Combiner String
 lit str	= LiteralC (show str) 
-			(\str' -> if str == str' then Success str else _parseErr ("Expected literal string "++show str++", but got "++show str'))
+			(\pt str' -> if str == str' then Success str else _parseErr pt  ("Expected literal string "++show str++", but got "++show str'))
 
 
-assert'		:: Bool -> String -> Failable ()
-assert' True _	= pass
-assert' False msg
-		= _parseErr msg
+assert'		:: ParseTree a -> Bool -> String -> Failable ()
+assert' _ True _= pass
+assert' pt False msg
+		= _parseErr pt msg
 
 
 assert'' True _	= pass
@@ -207,8 +207,8 @@ assert'' False msg
 		= _vErr msg
 
 
-_parseErr msg
-	= Failed $ ExceptionInfo msg Error Parsing unknownLocation Nothing
+_parseErr pt msg
+	= Failed $ ExceptionInfo msg Error Parsing (get ptLocation pt) Nothing
 
 _vErr msg
 	= Failed $ ExceptionInfo msg Error Validating unknownLocation Nothing

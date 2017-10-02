@@ -18,7 +18,7 @@ import LanguageDef.Syntax.Combiner as S
 
 
 {- | Converts a BNF into a syntax
->>> toParsable bnfSyntax == asSyntax "Syntax" (toParsable bnfSyntax) & either error toParsable 
+>>> toParsable bnfSyntax == asSyntax "Syntax" (toParsable bnfSyntax) & crash & toParsable
 True
 -}
 asSyntaxUnchecked	:: Name -> String -> Failable Syntax

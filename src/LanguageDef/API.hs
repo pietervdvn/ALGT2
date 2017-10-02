@@ -154,14 +154,13 @@ runExpression lds expr
 runExpression'	:: LangDefs -> FilePath -> FQName -> String -> Either String ParseTree'
 runExpression' lds file expectedType input
 	= do	expr	<- createTypedExpression lds file input expectedType
-		let expr'	= expr |> snd
-		runExpression lds expr'
+		runExpression lds expr
 
 
 
 {- | parseTarget: creates a parsetree based on the syntax of langdefs
 >>> createParseTree testLanguage (["TestLanguage"], "exprSum") "?" "True & True" |>  toParsable
-Right "True & True"
+Success ("True & True")
  -}
 createParseTree		:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
 createParseTree lds fq fp input
@@ -169,9 +168,9 @@ createParseTree lds fq fp input
 
 {- | Creates an entire expression, which is untyped 
 >>> createExpression testLanguage "?" "and(\"True\", \"True\")" |> toParsable
-Right "and(\"True\", \"True\")"
+Success ("and(\"True\", \"True\")")
 -}
-createExpression	:: LangDefs -> FilePath -> String -> Failable (Expression LocationInfo)
+createExpression	:: LangDefs -> FilePath -> String -> Failable (Expression ())
 createExpression ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Functions"]) "expression" str
 		Combiner.interpret expression pt
@@ -182,16 +181,16 @@ Right "TestLanguage.and(\"True\", \"True\")"
 
 -}
 
-createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Either String (Expression (LocationInfo, SyntFormIndex))
+createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Either String (Expression SyntFormIndex)
 createTypedExpression ld source str typ@(loc, nm)
 	= do	expr	<- legacy $ createExpression ld source str
 		scope	<- legacy $ checkExistsSugg' dots loc (get langdefs ld)
 				("Module "++dots loc++ " not found")	-- TODO make failable
-		typeExpression scope typ expr
+		typeExpression scope typ expr ||>> snd
 
 
 
-createPredicate		:: LangDefs -> FilePath -> String -> Failable (Either (Conclusion LocationInfo) (Expression LocationInfo))
+createPredicate		:: LangDefs -> FilePath -> String -> Failable (Either (Conclusion ()) (Expression ()))
 
 createPredicate ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Relations"]) "predicate" str

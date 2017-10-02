@@ -101,7 +101,7 @@ _relations	= choices' "relations"
 
 relations	= _relations |> asGrouper ("relation", "relations") (get relSymbol)
 
-commaSepExpr	:: Combiner [Expression LocationInfo]
+commaSepExpr	:: Combiner [Expression ()]
 commaSepExpr
 	= choices' "commaSepExpr"
 		[ cmb (:) expression (lit "," **> commaSepExpr)
@@ -109,7 +109,7 @@ commaSepExpr
 		]
 
 
-conclusion	:: Combiner (Conclusion LocationInfo)
+conclusion	:: Combiner (Conclusion ())
 conclusion
 	= choices' "conclusion"
 		[ (lit "(" **> relIdent <+> lit ")" **> commaSepExpr)
@@ -117,14 +117,14 @@ conclusion
 		]
 
 
-predicate	:: Combiner (Predicate LocationInfo)
+predicate	:: Combiner (Predicate ())
 predicate
 	= choices' "predicate"
 		[ conclusion |> Left
 		, expression |> Right
 		]
 
-predicates	:: Combiner [Predicate LocationInfo]
+predicates	:: Combiner [Predicate ()]
 predicates
 	= choices' "predicates"
 		[ cmb (:) predicate (lit "\t" **> predicates)
@@ -149,14 +149,15 @@ rule	= choices' "rule"
 			& withLocation _asRule'
 		]
 
-_asRule'	:: LocationInfo -> ([String], (Name, Conclusion LocationInfo)) -> Rule' LocationInfo
+_asRule'	:: LocationInfo -> ([String], (Name, Conclusion a)) -> Rule' a
 _asRule' li (docs, (name, concl))
 	= _asRule li (docs, ([], (name, concl)))
-_asRule	:: LocationInfo -> ([String], ([Predicate LocationInfo], (Name, Conclusion LocationInfo))) -> Rule' LocationInfo
+
+_asRule	:: LocationInfo -> ([String], ([Predicate a], (Name, Conclusion a))) -> Rule' a
 _asRule li (docs, (preds, (name, conclusion)))
 	= Rule preds conclusion name $ MetaInfo li (unlines docs)
 
-_rules	:: Combiner [Rule' LocationInfo]
+_rules	:: Combiner [Rule' ()]
 _rules	= choices' "rules"
 		[ cmb (:) rule _rules
 		, rule |> (:[])

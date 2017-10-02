@@ -131,6 +131,12 @@ showComma as	= as |> show & commas
 
 
 commas		= intercalate ", "
+commas' _ [value]
+		= value
+commas' lastSep stuff
+		= (init stuff & commas) ++ " " ++ lastSep ++ " " ++ last stuff
+
+
 dots		= intercalate "."
 
 

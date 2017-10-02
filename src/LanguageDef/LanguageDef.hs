@@ -141,7 +141,7 @@ _checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner) & either e
 -- >>> _checkCombiner
 -- ()
 -- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language 
--- Right ...
+-- Success ...
 parseFullFile	:: [Name] -> FilePath -> String -> Failable (LanguageDef' () ())
 parseFullFile _ fp contents
 	= do	pt	<- parse fp (metaSyntaxes, ["ALGT"]) "langDef" contents

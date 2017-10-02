@@ -10,14 +10,14 @@ import Text.PrettyPrint.ANSI.Leijen hiding (indent)
 
 import Data.Maybe (isJust)
 import Data.Map (Map, member, (!), keys)
-import Data.List (partition, sortOn)
+import Data.List (partition, sortOn, sort, nub)
 
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
 
 import Control.Arrow ((&&&))
 
-data Phase	= Loading | Parsing | Resolving | TypeChecking | Validating
+data Phase	= Loading | Parsing | Resolving | Typing | Validating
 	deriving (Show, Eq)
 
 data Severity	= Error | Warning
@@ -68,8 +68,7 @@ instance ToString Phase where
 {- | 
 >>> let ei	= ExceptionInfo "Something went wrong" Warning Resolving (LocationInfo 42 42 0 5 "SomeFile.language") (Just "Fix by x, y or z") 
 >>> ei & toParsable
-"\ESC[93mWarning\ESC[0m \ESC[32min \ESC[1m\ESC[92mSomeFile.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m42\ESC[0;32m\ESC[0m \ESC[32mwhile\ESC[0m resolving:\n  \8226 Something went wrong\n  \8226 Fix by x, y or z"
-
+"\ESC[93mWarning\ESC[0m\ESC[32m in \ESC[1m\ESC[92mSomeFile.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m42\ESC[0;32m\ESC[0m \ESC[32mwhile resolving:\ESC[0m\n  \8226 Something went wrong\n  \8226 Fix by x, y or z"
 -}
 instance ToString ExceptionInfo where
 	toParsable (ExceptionInfo errMsg severity phase location suggestion)
@@ -143,24 +142,40 @@ fromParseError (Left pe)
 		line	= pos & Parsec.sourceLine
 		col	= pos & Parsec.sourceColumn
 		li	= LocationInfo line line col col file
-		msg	= pe & Parsec.errorMessages |> _showMsg & chain
+		msg	= pe & Parsec.errorMessages & _showMsgs
 		in
 		ExceptionInfo "" Error Parsing li Nothing & msg & Failed
 		
 
-_showMsg	:: Parsec.Message -> ExceptionInfo -> ExceptionInfo
-_showMsg (Parsec.SysUnExpect unexp)
-		= _showMsg (Parsec.UnExpect unexp)
-_showMsg (Parsec.UnExpect unexp) 
-		= let 	msg	= "did not expect "++unexp++" here"
+_showMsgs	:: [Parsec.Message] -> ExceptionInfo -> ExceptionInfo
+_showMsgs parsecMsgs exc
+		= let	(unExp, exp, msgs)	= _sortMsgs parsecMsgs
+			prep list	= list & filter (not . null) & sort & nub
+			unExp'	= "Did not expect " ++ commas' "or" (prep unExp) ++ " here"
+			exp'	= "Expected "++commas' "or" (prep exp) ++" instead"
+			msgsConts	= msgs & prep & commas
+			msgs'	= if null msgsConts then "" else msgsConts ++ ": "
 			in
-			over errMsg (_chainMsg msg)
-_showMsg (Parsec.Expect exp)	
-		= let	msg	= "Expected "++exp++" instead"
+			exc & set errMsg (msgs' ++ unExp') & set (errSuggestion . mapped) exp'
+			
+
+
+
+_sortMsgs	:: [Parsec.Message] -> ([String], [String], [String])
+_sortMsgs []	= ([],[], [])
+_sortMsgs (Parsec.SysUnExpect unExp:rest)
+		= _sortMsgs (Parsec.UnExpect unExp:rest)
+_sortMsgs (Parsec.UnExpect unExp:rest)
+		= let	(unExps, expecteds, msgs)	= _sortMsgs rest
+			unExp'	= if null unExp then "empty string" else unExp
 			in
-			over errSuggestion (maybe (Just msg) (Just . (_chainMsg msg)))
-_showMsg (Parsec.Message msg)
-		= over errMsg (_chainMsg msg)
+			(unExp':unExps, expecteds, msgs)
+_sortMsgs (Parsec.Expect exp:rest)
+		= let	(unExps, expecteds, msgs)	= _sortMsgs rest in
+			(unExps, exp:expecteds, msgs)
+_sortMsgs (Parsec.Message msg:rest)
+		= let	(unExps, expecteds, msgs)	= _sortMsgs rest in
+			(unExps, expecteds, msg:msgs)
 
 
 _chainMsg msg ""

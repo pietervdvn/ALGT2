@@ -17,11 +17,11 @@ import Control.Monad
 
 {- A metafunction represents a function over parsetrees -}
 data Function' a	= Function
-	{ _funcName	:: Name
-	, _funcArgTypes	:: [FQName]
-	, _funcRetType	:: FQName
-	, _funcClauses	:: [FunctionClause a]
-	, _funcDoc	:: MetaInfo
+	{ _funcName		:: Name
+	, _funcArgTypes		:: [FQName]
+	, _funcRetType		:: FQName
+	, _funcClauses		:: [FunctionClause a]
+	, _funcDoc		:: MetaInfo
 	} deriving (Show, Eq, Functor)
 
 
@@ -76,7 +76,7 @@ instance Checkable (Function' a) where
 choices' nm	= choices (["Functions"], nm) 
 
 
-_functionsCmb	:: Combiner [Function' LocationInfo]
+_functionsCmb	:: Combiner [Function' ()]
 _functionsCmb = choices' "functions"
 		[ cmb (:) function _functionsCmb
 		, function |> (:[])
@@ -88,7 +88,7 @@ functionsCmb	= _functionsCmb ||>> (|> const ())
 
 
 
-function	:: Combiner (Function' LocationInfo)
+function	:: Combiner (Function' ())
 function = choices' "function"
 		[(nls <+> functionSignature <+> skip **> functionClauses)
 			& withLocation (,)
@@ -112,21 +112,21 @@ functionTypes
 		]
 
 
-functionClauses	:: Combiner [FunctionClause LocationInfo]
+functionClauses	:: Combiner [FunctionClause ()]
 functionClauses = choices' "funcClauses"
 			[ cmb (:) functionClause functionClauses
 			, functionClause |> (:[])
 			]
 
-functionClause	:: Combiner (FunctionClause LocationInfo)
+functionClause	:: Combiner (FunctionClause ())
 functionClause 	= choices' "funcClause"
 			[ (capture <+> lit "(" **> (arguments <+> lit ")" **> skip **> expression <+> nl))
 				& withLocation (,)
 				|> _funcClause
 			]
 
-_funcClause	:: (LocationInfo, (String, ([Expression LocationInfo], (Expression LocationInfo, Maybe String))))
-			-> FunctionClause LocationInfo
+_funcClause	:: (LocationInfo, (String, ([Expression a], (Expression a, Maybe String))))
+			-> FunctionClause a
 _funcClause (li, (nm, (pats, (result, comment))))
 	= FunctionClause pats result (MetaInfo li $ fromMaybe "" comment) nm
 		-- The name is kept for validation afterwards; the name should be the function name
