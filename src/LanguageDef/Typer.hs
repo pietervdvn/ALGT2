@@ -57,8 +57,8 @@ typeScope scope
 typeScope'	:: Eq fr => LDScope' fr -> LanguageDef' ResolvedImport fr
 			-> Either String (LanguageDef' ResolvedImport SyntFormIndex)
 typeScope' ld langDef
-	= do	langFuncs'	<- get langFunctions langDef & overGrouperM' (typeFunction ld)
-		langRules'	<- get langRules langDef & overGrouperM' (typeRule ld)
+	= do	langFuncs'	<- get langFunctions langDef & overGrouperMCmb' allRight' (typeFunction ld)
+		langRules'	<- get langRules langDef & overGrouperMCmb' allRight' (typeRule ld)
 		let langRules''	= langRules' |||>>> snd
 		return $ updateFR (langFuncs', langRules'') langDef
 		
@@ -66,11 +66,20 @@ typeScope' ld langDef
 
 -------------------- TYPING OF RULES/CONCLUSIONS/PREDICATES  ---------------------
 
+{- | Types a rule
 
+>>> import LanguageDef.API
+>>> loadAssetLangDef "Faulty/Relations" ["TypeErr"]
+Left "Could not type the sequence \"5\" as a TypeErr.bool:\n  While typing the expression \"5\" against \"True\"(TypeErr.bool:0.0):\n    Expected a literal \"True\" but got the token \"5\"\n  While typing the expression \"5\" against \"False\"(TypeErr.bool:1.0):\n    Expected a literal \"False\" but got the token \"5\"\n\n\n"
+
+
+-}
 typeRule	:: Eq fr => LDScope' fr -> Rule' a -> Either String (Rule' (a, SyntFormIndex))
 typeRule lds (Rule preds concl n mi)
 	= do	preds'	<- preds |> typePredicate lds & allRight'
 		concl'	<- typeConclusion lds concl
+		-- TODO crosscheck variables for common ground
+		-- TODO check introduction correctness from left to right
 		return $ Rule preds' concl' n mi
 
 

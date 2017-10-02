@@ -22,6 +22,7 @@ import Utils.PureIO
 
 import AssetUtils
 
+import LanguageDef.ExceptionInfo
 import LanguageDef.LanguageDef
 import LanguageDef.LocationInfo
 import LanguageDef.Scope
@@ -162,15 +163,15 @@ runExpression' lds file expectedType input
 >>> createParseTree testLanguage (["TestLanguage"], "exprSum") "?" "True & True" |>  toParsable
 Right "True & True"
  -}
-createParseTree		:: LangDefs -> FQName -> FilePath -> String -> Either String ParseTree'
-createParseTree
-	= parseTarget 
+createParseTree		:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
+createParseTree lds fq fp input
+	= parseTarget lds fq fp input
 
 {- | Creates an entire expression, which is untyped 
 >>> createExpression testLanguage "?" "and(\"True\", \"True\")" |> toParsable
 Right "and(\"True\", \"True\")"
 -}
-createExpression	:: LangDefs -> FilePath -> String -> Either String (Expression LocationInfo)
+createExpression	:: LangDefs -> FilePath -> String -> Failable (Expression LocationInfo)
 createExpression ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Functions"]) "expression" str
 		Combiner.interpret expression pt
@@ -183,14 +184,14 @@ Right "TestLanguage.and(\"True\", \"True\")"
 
 createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Either String (Expression (LocationInfo, SyntFormIndex))
 createTypedExpression ld source str typ@(loc, nm)
-	= do	expr	<- createExpression ld source str
-		scope	<- checkExists loc (get langdefs ld)
-				("Module "++dots loc++ " not found")
+	= do	expr	<- legacy $ createExpression ld source str
+		scope	<- legacy $ checkExistsSugg' dots loc (get langdefs ld)
+				("Module "++dots loc++ " not found")	-- TODO make failable
 		typeExpression scope typ expr
 
 
 
-createPredicate		:: LangDefs -> FilePath -> String -> Either String (Either (Conclusion LocationInfo) (Expression LocationInfo))
+createPredicate		:: LangDefs -> FilePath -> String -> Failable (Either (Conclusion LocationInfo) (Expression LocationInfo))
 
 createPredicate ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Relations"]) "predicate" str

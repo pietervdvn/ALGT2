@@ -5,7 +5,7 @@
 Syntax
 =======
 
-a	::= "a"
+a	::= "True"
 
  Relations
 ===========

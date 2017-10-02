@@ -8,6 +8,7 @@ The data structure representing a parsetree and related
 import Utils.All
 
 import qualified LanguageDef.Syntax.BNF as BNF
+import LanguageDef.ExceptionInfo
 import LanguageDef.Syntax.BNF (Parser, BNF, ParserMetaInfo (ParserMetaInfo), pmiColumn, pmiLine, pmiFile, biParse)
 import LanguageDef.Syntax.Syntax
 import LanguageDef.LocationInfo
@@ -131,14 +132,14 @@ simplePT string	= Literal string unknownLocation () False
 {- | Parses a file with the given syntax
 
 -}
-parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Either String ParseTree'
+parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Failable ParseTree'
 parse fileName syntax syntacticForm
 	= _runParser fileName (_parseRule syntax syntacticForm <* eof)
 
-_runParser	:: FilePath -> Parser a -> String -> Either String a
+_runParser	:: FilePath -> Parser a -> String -> Failable a
 _runParser fileName parser string
 	= runParser parser (ParserMetaInfo fileName 0 0) fileName string
-		& first show
+		& fromParseError
 
 
 _parseRule	:: (Syntaxes, [Name]) -> Name -> Parser ParseTree'

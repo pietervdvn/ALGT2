@@ -8,6 +8,7 @@ import Utils.All
 
 import Data.Map as M
 
+import LanguageDef.ExceptionInfo
 import LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.Syntax as S
 import LanguageDef.Syntax.ParseTree as S
@@ -20,10 +21,10 @@ import LanguageDef.Syntax.Combiner as S
 >>> toParsable bnfSyntax == asSyntax "Syntax" (toParsable bnfSyntax) & either error toParsable 
 True
 -}
-asSyntaxUnchecked	:: Name -> String -> Either String Syntax
+asSyntaxUnchecked	:: Name -> String -> Failable Syntax
 asSyntaxUnchecked syntaxName syntaxString
-	= inMsg "While parsing the syntax with asSyntaxUnchecked" $
-	  do	pt	<- parse ("Code: "++show syntaxName) (M.singleton ["Syntax"] bnfSyntax, ["Syntax"]) "syntax" syntaxString
+	= inMsg' ("Loading "++syntaxName++" as unchecked syntax") $
+	  do	pt	<- parse ("asSyntaxUnchecked: "++show syntaxName) (M.singleton ["Syntax"] bnfSyntax, ["Syntax"]) "syntax" syntaxString
 		let pt'	= removeHidden pt
 		syntax	<- interpret syntaxDecl' pt'
 		syntax & _patchFullQualifies [syntaxName] & return
@@ -37,12 +38,12 @@ _patchBNFName ns ([], name)	=  (ns, name)
 _patchBNFName _ fqname		= fqname
 
 asSyntaxUnchecked' nm str
-	= asSyntaxUnchecked nm str & either error id
+	= asSyntaxUnchecked nm str & crash
 
-asSyntax	:: Name -> String -> Either String Syntax
+asSyntax	:: Name -> String -> Failable Syntax
 asSyntax 	= asSyntaxUnchecked
 
 
 
 asSyntax' nm contents
-	= asSyntax nm contents & either error id
+	= asSyntax nm contents & crash

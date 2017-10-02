@@ -9,6 +9,7 @@ A language defintion builds on many language-definition aspects. Each language d
 
 import Utils.All
 
+import LanguageDef.ExceptionInfo
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.All
 import LanguageDef.LocationInfo
@@ -61,7 +62,6 @@ data LanguageDef' imported funcResolution
 		, _langFunctions	:: Maybe (Grouper (Function' funcResolution))
 		, _langRelations	:: Maybe (Grouper Relation)
 		, _langRules		:: Maybe (Grouper (Rule' funcResolution))
-			-- TODO typecheck the rules!
 		}
 	deriving (Show, Eq)
 makeLenses ''LanguageDef'
@@ -142,10 +142,9 @@ _checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner) & either e
 -- ()
 -- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language 
 -- Right ...
-parseFullFile	:: [Name] -> FilePath -> String -> Either String (LanguageDef' () ())
+parseFullFile	:: [Name] -> FilePath -> String -> Failable (LanguageDef' () ())
 parseFullFile _ fp contents
-	= inMsg ("While parsing "++show fp) $
-	  do	pt	<- parse fp (metaSyntaxes, ["ALGT"]) "langDef" contents
+	= do	pt	<- parse fp (metaSyntaxes, ["ALGT"]) "langDef" contents
 		
 		(li, langDef)	<- interpret (parseLangDef _fullFileCombiner & withLocation (,)) pt
 		let ((title, meta, imports), (syntax, (funcs, (rels, rules))))	= langDef	
@@ -269,8 +268,8 @@ testSyntax rule string
 		when (length found > 1) $ error $ "Rule "++rule ++" does exist in "++(found |> dots & commas)
 		let fqn	= found & head
 		putStrLn $ showFQ (fqn, rule)
-		let parsed	= parse "testSyntax" (metaSyntaxes, fqn) rule string
-					 & either error id
+		let parsed	=  parse "testSyntax" (metaSyntaxes, fqn) rule string
+					& legacy & either error id
 		printPars parsed
 
 ------------------------------------- EXTERNAL Definitions ----------------------------------------
@@ -299,7 +298,7 @@ relationSyntax
 _loadAssetsSyntax	:: Name -> String -> Syntax
 _loadAssetsSyntax title contents
 	= parseFullFile [title] ("Assets."++title++".language") contents
-		& either error id
+		& crash
 		& get langSyntax
 		& fromMaybe (error $ title ++ " asset does not contain syntax?")
 		& _patchFullQualifies [title]
@@ -345,7 +344,7 @@ mainSyntax subRules
 	++ ["modules    ::= "++subRules |> _titledModCall |> fst & allOptional & intercalate "\n\t|"]
 	++ [ "langDef      ::= title modules"
 	]
-	)  & unlines & asSyntaxUnchecked "ALGT" & either error id
+	)  & unlines & asSyntaxUnchecked "ALGT" & crash
 
 
 

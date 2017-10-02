@@ -30,17 +30,23 @@ asGrouper groupName getName as
 			groupName 
 
 overGrouperM	:: Monad m => (a -> m b) -> Grouper a -> m (Grouper b)
-overGrouperM fm (Grouper dict order name)
-	= do	dict'	<- dict & M.toList ||>> fm |+> sndEffect |> M.fromList
+overGrouperM
+	= overGrouperMCmb sequence
+
+overGrouperMCmb	:: Monad m => ([m (Name, b)] -> m [(Name, b)]) -> (a -> m b) -> Grouper a -> m (Grouper b)
+overGrouperMCmb sequence fm (Grouper dict order name)
+	=  do	dict'	<- dict & M.toList ||>> fm |> sndEffect & sequence |> M.fromList
 		return $ Grouper dict' order name
 
-
+overGrouperMCmb'	:: Monad m => ([m (Name, b)] -> m [(Name, b)]) -> (a -> m b) -> Maybe (Grouper a) -> m (Maybe (Grouper b))
+overGrouperMCmb' _ _ Nothing
+		= return Nothing
+overGrouperMCmb' cmb f (Just grouper)
+		= overGrouperMCmb cmb f grouper |> Just
 
 overGrouperM'	:: Monad m => (a -> m b) -> Maybe (Grouper a) -> m (Maybe (Grouper b))
-overGrouperM' _ Nothing
-		= return Nothing
-overGrouperM' f (Just grouper)
-		= overGrouperM f grouper |> Just
+overGrouperM'	= overGrouperMCmb' sequence
+
 
 
 overGrouperLens	:: Monad m => Lens ld ld (Maybe (Grouper x)) (Maybe (Grouper x)) 

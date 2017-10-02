@@ -8,6 +8,7 @@ import Prelude hiding (putStr, putStrLn, readFile, putStrLn, fail)
 import Utils.All
 import Utils.PureIO
 
+import LanguageDef.ExceptionInfo
 import LanguageDef.LanguageDef
 import LanguageDef.LangDefs
 import LanguageDef.LangDefsFix
@@ -85,7 +86,7 @@ _loadAll ls toLoad
 		contents	<- readFile path
 		-- Language def with unresolved inputs
 		let absName	= get rootModule ls ++ toLoad
-		ld	<- parseFullFile absName path contents & either fail return
+		ld	<- parseFullFile absName path contents & handleFailure (\e -> toParsable e & fail) return
 		let ld'	= ld & resolveLocalImports (get rootModule ls, init toLoad)
 		let ls'	= ls & over currentlyKnown (M.insert absName (path, ld'))
 		

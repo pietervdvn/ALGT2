@@ -2,9 +2,9 @@
 module LanguageDef.Syntax.Combiner where
 
 
-import Utils.All
+import Utils.All hiding (assert)
 
-
+import LanguageDef.ExceptionInfo
 import LanguageDef.Syntax.Syntax
 import LanguageDef.LocationInfo
 import LanguageDef.Grouper
@@ -20,15 +20,15 @@ import Data.Maybe
 import Data.Either
 import Data.Bifunctor
 
-import Text.Parsec
+import Text.Parsec hiding (Error)
 
 import Control.Monad
 
 {- A combiner is a tree mimmicking the BNF structure, which converts a parsetree into a user chosen data structure -}
-data Combiner a	= LiteralC Doc (String -> Either String a)
+data Combiner a	= LiteralC Doc (String -> Failable a)
 		| forall b c . SeqC (Combiner b) (Combiner c) (b -> c -> a)
 		| forall b . MapC (Combiner b) (b -> a)
-		| IntC (Int -> Either String a)
+		| IntC (Int -> Failable a)
 		| Value a
 		| Annot FQName [Combiner a]	-- Enter a certain rule, with one combiner for each choice
 		| forall b . WithLocation (Combiner b) (LocationInfo -> b -> a)
@@ -39,8 +39,8 @@ data Combiner a	= LiteralC Doc (String -> Either String a)
 
 
 instance Checkable' Syntaxes (Combiner a) where
-	check' syntaxes
-		= _check syntaxes S.empty
+	check' syntaxes cmb
+		= _check syntaxes S.empty cmb & legacy
 
 
 {-
@@ -53,46 +53,49 @@ This check checks combiners against the syntax, so that:
 This does the call check; not that the given rule should be in the current namespace
 To prevent loops, already checked is a blacklist
 -}
-_check	:: Syntaxes -> Set FQName -> Combiner a -> Check
+_check	:: Syntaxes -> Set FQName -> Combiner a -> Failable ()
 _check synts ac (MapC c _)
 	= _check synts ac c
 _check synts _ (Value a)
-	= Right ()
+	= pass
 _check synts ac (WithLocation cmb _)
 	= _check synts ac cmb
 _check synts _ (Debug _)
-	= Left "Debug value found"
-_check synts ac (Annot fqname@(ns, rule) choices)
- | (ns, rule) `S.member` ac
-	= Right ()	-- Already checked
+	= _vErr "Debug value found"
+_check synts ac (Annot fqname@(ns, syntForm) choices)
+ | (ns, syntForm) `S.member` ac
+	= pass	-- Already checked
  | otherwise
-	= do	synt		<- checkExists ns synts ("No namespace found: "++ (if null ns then "(empty namespace)" else show $ intercalate "." ns)++" (it should have contained: "++show rule)
-		choices'	<- checkExistsSugg show rule (synt & get grouperDict) ("Syntactic form "++show rule++" not found within "++intercalate "." ns)
+	= do	let noNSMsg	= "No namespace found: "++ (if null ns then "(empty namespace)" else show $ dots ns)++" (it should have contained: "++show syntForm
+		syntax		<- checkExistsSuggDist' (dots, \nms nms' -> levenshtein (last nms) (last nms') ) ns synts noNSMsg
+
+		let noSFMsg	= "Syntactic form "++show syntForm++" not found within "++intercalate "." ns
+		choices'	<- checkExistsSuggDist' (show, levenshtein) syntForm (syntax & get grouperDict) noSFMsg
 					|> get syntChoices ||>> removeWS -- Remove injected WS builtin
 		let ac'	= S.insert fqname ac
 		let recCheck	= zip choices choices'	|> uncurry (_checkBNF (synts, ac'))
-		let choiceIndicator	= (recCheck |> either (const "✘ ") (const "✓ ")) ++ repeat "  "
-		let sameLength	= assert (length choices == length choices') $ unlines
+		let choiceIndicator	= (recCheck |> handleFailure (const "✘ ") (const "✓ ")) ++ repeat "  "
+		let sameLength	= assert'' (length choices == length choices') $ unlines
 			[ "Only "++show (length choices)++" choices provided in combiner for "++showFQ fqname
 			, "Choices that should be accounted for are:\n"++indent (choices' |> toParsable & zipWith (++) choiceIndicator & unlines)
 			]
-		inMsg ("While checking the combiner for "++showFQ fqname) $ 
-			allRight_ (sameLength:recCheck)
+		inMsg' ("While checking the combiner for "++showFQ fqname) $ 
+			allGood (sameLength:recCheck)
 		pass
 
 _check _ _ cmbr
-	= Left $ "Could not check a combiner without top-level annotation element: "++show cmbr
+	= _vErr $ "Could not check a combiner without top-level annotation element: "++show cmbr
 
 
-_checkBNF	:: (Syntaxes, Set FQName) -> Combiner a -> BNF -> Check
+_checkBNF	:: (Syntaxes, Set FQName) -> Combiner a -> BNF -> Failable ()
 _checkBNF synts (MapC c _) bnf
 	= _checkBNF synts c bnf
 _checkBNF synts (Value a) _
-	= Right ()
+	= pass
 _checkBNF synts (WithLocation cmb _) bnf
 	= _checkBNF synts cmb bnf
 _checkBNF synts (Debug _) _
-	= Left "Debug value found"
+	= _vErr "Debug value found"
 _checkBNF synts cmb (BNF.Seq [bnf])
 	= _checkBNF synts cmb bnf
 _checkBNF synts (SeqC cmbb cmbc _) (BNF.Seq (bnf:bnfs))
@@ -101,21 +104,21 @@ _checkBNF synts (SeqC cmbb cmbc _) (BNF.Seq (bnf:bnfs))
 _checkBNF (synts, ac) annot@Annot{} (RuleCall _)
 	= _check synts ac annot
 _checkBNF synts annot@(Annot nm _) bnf
-	= Left $ "Could not match "++show (toParsable bnf)++" against the combiner expecting a "++showFQ nm
+	= _vErr $ "Could not match "++show (toParsable bnf)++" against the combiner expecting a "++showFQ nm
 _checkBNF synts (LiteralC _ _) (Group _)
-	= Right ()
+	= pass
 _checkBNF synts (LiteralC _ _) (BNF.Literal _)
-	= Right ()
+	= pass
 _checkBNF synts (LiteralC _ _) builtin@(BNF.BuiltIn _ _)
-	= Right ()
+	= pass
 _checkBNF synts (IntC _) builtin@(BNF.BuiltIn _ bi)
  | get biName bi `elem` ["Number", "Integer"] 
-	= Right ()
+	= pass
  | otherwise
-	= Left "Can not capture a integer/number, use the builtin Number or Integer"
+	= _vErr "Can not capture a integer/number, use the builtin Number or Integer"
 
 _checkBNF synts comb bnf
-	= Left $ "Could not match "++show (toParsable bnf) ++" against combiner "++show comb
+	= _vErr $ "Could not match "++show (toParsable bnf) ++" against combiner "++show comb
 
 
 instance Show  (Combiner a) where
@@ -151,9 +154,9 @@ instance Functor Combiner where
 interpret cmb pt
 	= pt & removeHidden & _interpret cmb
 
-_interpret	:: Combiner a -> ParseTree' -> Either String a
+_interpret	:: Combiner a -> ParseTree' -> Failable a
 _interpret (Debug f) pt
-	= Left $ f pt
+	= _parseErr $ f pt
 _interpret (LiteralC _ fa) (Literal str' _ _ _)
  	= fa str'
 _interpret combiner (Seq [pt] _ _)
@@ -170,26 +173,46 @@ _interpret (IntC f) (Int i _ _)
 _interpret (Value a) _
 	= return a
 _interpret (Annot ruleName cmber) (RuleEnter pt' ruleName' choice _ _)
-	= inMsg ("While interpreting a combiner for "++showFQ ruleName) $
-          do	assert (ruleName == ruleName') $ "Assertion failed: could not interpret, expected construction with "++show ruleName++" but got a "++show ruleName'
-		assert (length cmber > choice) $ "Assertion failed: no choice with index "++show choice++" for the given combiner"
+	= inMsg' ("While interpreting a combiner for "++showFQ ruleName) $
+          do	assert' (ruleName == ruleName') $ "Assertion failed: could not interpret, expected construction with "++show ruleName++" but got a "++show ruleName'
+		assert' (length cmber > choice) $ "Assertion failed: no choice with index "++show choice++" for the given combiner"
 		_interpret (cmber !! choice) pt'
 _interpret (WithLocation cb flib2a) pt
 	= do	let li	= get ptLocation pt
 		b	<- _interpret cb pt
 		return $ flib2a li b
 _interpret combiner parsetree
-	= Left $ "Could not interpret "++show combiner++" over "++debug parsetree
+	= _parseErr ("Could not interpret "++show combiner++" over "++debug parsetree)
 
 
 capture	:: Combiner String
-capture = LiteralC "Capture" Right
+capture = LiteralC "Capture" Success
 
 int	:: Combiner Int
-int	= IntC Right
+int	= IntC Success
 
 lit	:: String -> Combiner String
-lit str	= LiteralC (show str) (\str' -> if str == str' then Right str else Left $ "Expected literal string "++show str++", but got "++show str')
+lit str	= LiteralC (show str) 
+			(\str' -> if str == str' then Success str else _parseErr ("Expected literal string "++show str++", but got "++show str'))
+
+
+assert'		:: Bool -> String -> Failable ()
+assert' True _	= pass
+assert' False msg
+		= _parseErr msg
+
+
+assert'' True _	= pass
+assert'' False msg
+		= _vErr msg
+
+
+_parseErr msg
+	= Failed $ ExceptionInfo msg Error Parsing unknownLocation Nothing
+
+_vErr msg
+	= Failed $ ExceptionInfo msg Error Validating unknownLocation Nothing
+
 
 cmb	:: (b -> c -> a) -> Combiner b -> Combiner c -> Combiner a
 cmb f cb cc

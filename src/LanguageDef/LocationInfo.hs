@@ -11,6 +11,10 @@ showFQ (ns, nm)
 		= (ns ++ [nm]) & dots
 
 
+distFQ
+	= (showFQ, \ref fq -> levenshtein (snd ref) (snd fq))
+
+
 
 data LocationInfo	= LocationInfo
 	{ _liStartLine	:: Int

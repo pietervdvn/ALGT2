@@ -11,7 +11,7 @@ See also: LanguageDef.LangDefsFix
 
 import Utils.All
 
-
+import LanguageDef.ExceptionInfo
 import LanguageDef.LanguageDef
 import LanguageDef.LocationInfo
 import LanguageDef.Grouper
@@ -72,14 +72,13 @@ knotScopes lds
 
 >>> import AssetUtils
 >>> parseTarget testLangDefs (["TestLanguage"], "bool") "?"  "True"
-Right (RuleEnter {_pt = Literal {_ptToken = "True", ...}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...)
+Success (RuleEnter {_pt = Literal {_ptToken = "True", ...}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...)
 
 
 -}
-parseTarget	:: LangDefs -> FQName -> FilePath -> String -> Either String ParseTree'
+parseTarget	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
 parseTarget langs (startModule, startRule) file contents
-	= let	syntaxes	= langs & get langdefs |> get (ldScope . payload) |> get langSyntax |> fromMaybe emptySyntax
-		in
+	= do	let syntaxes	= langs & get langdefs |> get (ldScope . payload) |> get langSyntax |> fromMaybe emptySyntax
 		parse file (syntaxes, startModule) startRule contents
 
 
@@ -119,10 +118,10 @@ fullyQualifyRelation scope rel
 
 
 
-fullyQualifyRule	:: LDScope' fr -> Rule -> Either String Rule
+fullyQualifyRule	:: LDScope' fr -> Rule' fr -> Either String (Rule' fr)
 fullyQualifyRule scope (Rule preds concl name docs)
 	= do	concl'	<- fullyQualifyConcl scope concl
-		preds'	<- preds |> fullyQualifyPred scope & allRight
+		preds'	<- preds |> fullyQualifyPred scope & allRight'
 		return $ Rule preds' concl' name docs
 
 

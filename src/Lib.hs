@@ -2,7 +2,7 @@ module Lib
     ( someFunc
     ) where
 
-import Utils.Utils
+import Utils.All
 
 import Assets
 import AssetUtils

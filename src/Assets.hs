@@ -45,6 +45,7 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("Faulty/Relations/AllOutRel.language", _Faulty_Relations_AllOutRel_language)
 			, ("Faulty/Relations/NotDeclared.language", _Faulty_Relations_NotDeclared_language)
 			, ("Faulty/Relations/Relation.language", _Faulty_Relations_Relation_language)
+			, ("Faulty/Relations/TypeErr.language", _Faulty_Relations_TypeErr_language)
 			, ("Faulty/Relations/UnkownTypeRelation.language", _Faulty_Relations_UnkownTypeRelation_language)
 			, ("MetaSyntax/Syntax.language", _MetaSyntax_Syntax_language)
 			, ("MetaSyntax/Functions.language", _MetaSyntax_Functions_language)
@@ -157,6 +158,10 @@ _Faulty_Relations_NotDeclared_language
 {-# NOINLINE _Faulty_Relations_Relation_language #-}
 _Faulty_Relations_Relation_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/Relation.language" in seq str str
+
+{-# NOINLINE _Faulty_Relations_TypeErr_language #-}
+_Faulty_Relations_TypeErr_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/TypeErr.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_UnkownTypeRelation_language #-}
 _Faulty_Relations_UnkownTypeRelation_language

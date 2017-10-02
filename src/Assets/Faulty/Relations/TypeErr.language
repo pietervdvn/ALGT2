@@ -1,0 +1,25 @@
+
+ Type Err
+**********
+
+ Syntax
+========
+
+
+bool	::= "True" | "False"
+
+
+int	::= Number
+
+ Relations
+===========
+
+(!)	: bool (in)	; Pronounced as "not"
+
+
+ Rules
+=======
+
+
+------------ [not]
+ (!) "5"
