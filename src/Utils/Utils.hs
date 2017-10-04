@@ -187,20 +187,6 @@ ifJust		:: (a -> IO ()) -> Maybe a -> IO ()
 ifJust _ Nothing	= return ()
 ifJust f (Just a)	= f a
 
-firstJusts	:: [Maybe a] -> Maybe a
-firstJusts maybes
-	= let	as	= catMaybes maybes in
-		if null as then Nothing else Just $ head as
-
-
--- Gives the first right value. If none of the values is Right, concats the 'error messages' (with newlines and indentation)
-firstRight	:: [Either String b] -> Either String b
-firstRight vals	= let r	= rights vals in
-			if null r then 
-				Left (pack $ lefts vals) else 
-				Right (head r)
-		  where pack vals	= vals |> lines ||>> ("  "++) |> unlines & unlines
-
 
 -- Checks wether all are right, and returns those. Gives messages for failed values
 allRight	:: Show b => [Either String b] -> Either String [b]
@@ -212,13 +198,11 @@ allRight eithers
 allRight_	:: [Either String ()] -> Either String ()
 allRight_ eithers
 		= eithers & filter isLeft & allRight >> return ()
-
 allRight'	:: [Either String b] -> Either String [b]
 allRight' eithers
 		= do	let failed = lefts eithers
 			unless (null failed) $ Left $ unlines failed
 			return $ rights eithers
-
 
 indent		= indentWith "  "
 
@@ -535,18 +519,19 @@ perTwo _ []	= []
 
 
 -- calculate levenshtein distance between two strings
-levenshtein::[Char] -> [Char] -> Int
+levenshtein	:: String -> String -> Int
+levenshtein "" "" = 0
 -- this part is mostly a speed optimiziation
 levenshtein s1 s2
-  | length s1 > length s2 = levenshtein s2 s1
-  | length s1 < length s2 =
-    let d = length s2 - length s1
-    in d + levenshtein s1 (take (length s2 - d) s2)
+ | length s1 > length s2 = levenshtein s2 s1
+ | length s1 < length s2 
+	= let 	d 	= length s2 - length s1
+		s2'	= s2 & take (length s1) in
+		d + levenshtein s1 s2'
 -- the meat of the algorithm
-levenshtein "" "" = 0
-levenshtein s1 s2
-  | last s1 == last s2 = levenshtein (init s1) (init s2)
-  | otherwise = minimum [1 + levenshtein (init s1) s2,
-                         1 + levenshtein s1 (init s2),
-                         1 + levenshtein (init s1) (init s2)]
+levenshtein s1@(a:s1') s2@(b:s2')
+  | a == b	= levenshtein s1' s2'
+  | otherwise	= minimum [1 + levenshtein s1' s2  ,
+                           1 + levenshtein s1  s2' ,
+                           1 + levenshtein s1' s2' ]
 

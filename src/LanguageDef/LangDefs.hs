@@ -79,7 +79,7 @@ Success (RuleEnter {_pt = Literal {_ptToken = "True", ...}, _ptUsedRule = (["Tes
 parseTarget	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
 parseTarget langs (startModule, startRule) file contents
 	= do	let syntaxes	= langs & get langdefs |> get (ldScope . payload) |> get langSyntax |> fromMaybe emptySyntax
-		parse file (syntaxes, startModule) startRule contents
+		parse file (syntaxes, startModule) startRule contents 
 
 
 
@@ -156,7 +156,7 @@ ruleCall	:: Resolver fr (Rule' fr)
 ruleCall	= ("the rule", get langRules, get grouperDict)
 
 
-resolveGlobal	:: Eq x => LangDefs -> (String, LanguageDef -> Maybe (Grouper x), (Grouper x) -> Map Name x) -> FQName -> Either String (FQName, x)
+resolveGlobal	:: Eq x => LangDefs -> (String, LanguageDef -> Maybe (Grouper x), Grouper x -> Map Name x) -> FQName -> Either String (FQName, x)
 resolveGlobal lds entity fqname
 	= do	ld	<- checkExistsSugg show (fst fqname) (lds & get langdefs) ("Namespace "++ dots (fst fqname) ++ " was not found")
 		resolve' ld entity fqname
@@ -229,8 +229,6 @@ instance Checkable LangDefs where
 	check lds@(LangDefs defs)
 		= defs & M.toList |> _checkOne & allRight_
 	
-
--- Check' (FQName -> Either String FQName, [Name] -> FQName -> FQName -> Bool, [Name])
 
 _checkOne	:: ([Name], LDScope) -> Check
 _checkOne (fq, ldscope)

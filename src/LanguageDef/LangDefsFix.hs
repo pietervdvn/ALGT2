@@ -7,6 +7,7 @@ import Utils.All
 
 import LanguageDef.LanguageDef
 import LanguageDef.LocationInfo
+import LanguageDef.ExceptionInfo
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
 import LanguageDef.Scope
@@ -59,7 +60,7 @@ asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |+> 
 			let ld	= scopes' ||>> over (ldScope . payload) (set langSupertypes supertyping)
 						& M.fromList 
 						& knotScopes 
-			ld'	<- typeLD ld |> LangDefs
+			ld'	<- typeLD ld & legacy |> LangDefs	-- TODO refactor further
 			check ld'
 			return ld'
 
@@ -97,7 +98,7 @@ _scopeFor ldefs (fqname, ld)
 			M.empty			-- reExports
 		return $ LDScope scope ldefs
 
-_importFlagFor	:: (Import ResolvedImport) -> ImportFlags
+_importFlagFor	:: Import ResolvedImport -> ImportFlags
 _importFlagFor (Import name qualifiedOnly _ filePath)	-- name is the absolute path from the root directory here
 	= ImportFlags filePath False (if qualifiedOnly then [name] else tails name)
 

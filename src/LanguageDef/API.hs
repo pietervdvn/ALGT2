@@ -94,7 +94,7 @@ _testLanguage loadWith
 infoAbout	:: LangDefs -> [Name] -> [(FQName, AllInfo)]
 infoAbout langDefs names
 	= let	fqn	= (init names, last names)
-		ld	= langDef langDefs names |> getInfo |> ((,) fqn)
+		ld	= langDef langDefs names |> getInfo |> (,) fqn
 		search x	= resolveGlobal langDefs x fqn & either (const Nothing)  (\(fqn, e) -> Just (fqn, getInfo e))
 		in
 		catMaybes [ld, search syntaxCall, search functionCall, search relationCall, search ruleCall]
@@ -143,28 +143,27 @@ resolveGlobal' lds entity fqn
 
 
 
-runFunction  	:: LangDefs -> FQName -> [ParseTree ()] -> Either String (ParseTree ())
+runFunction  	:: LangDefs -> FQName -> [ParseTree ()] -> Failable (ParseTree ())
 runFunction	= resolveAndRun'
 
 
-runExpression	:: LangDefs -> Expression SyntFormIndex -> Either String ParseTree'
-runExpression lds expr
-	= constructParseTree (const ()) lds empty expr
+runExpression	:: LangDefs -> Expression SyntFormIndex -> Failable ParseTree'
+runExpression lds
+	= constructParseTree (const ()) lds empty
 
-runExpression'	:: LangDefs -> FilePath -> FQName -> String -> Either String ParseTree'
+runExpression'	:: LangDefs -> FilePath -> FQName -> String -> Failable ParseTree'
 runExpression' lds file expectedType input
 	= do	expr	<- createTypedExpression lds file input expectedType
 		runExpression lds expr
 
 
 
-{- | parseTarget: creates a parsetree based on the syntax of langdefs
+{- | createParseTree: creates a parsetree based on the syntax of langdefs
 >>> createParseTree testLanguage (["TestLanguage"], "exprSum") "?" "True & True" |>  toParsable
 Success ("True & True")
  -}
-createParseTree		:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
-createParseTree lds fq fp input
-	= parseTarget lds fq fp input
+createParseTree	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
+createParseTree	= parseTarget
 
 {- | Creates an entire expression, which is untyped 
 >>> createExpression testLanguage "?" "and(\"True\", \"True\")" |> toParsable
@@ -177,14 +176,14 @@ createExpression ld source str
 
 {- | Creates an expression and types it 
 >>> createTypedExpression testLanguage "?" "and(\"True\",\"True\")" (["TestLanguage"],"bool") |> toParsable
-Right "TestLanguage.and(\"True\", \"True\")"
+Success ("TestLanguage.and(\"True\", \"True\")")
 
 -}
 
-createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Either String (Expression SyntFormIndex)
+createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Failable (Expression SyntFormIndex)
 createTypedExpression ld source str typ@(loc, nm)
-	= do	expr	<- legacy $ createExpression ld source str
-		scope	<- legacy $ checkExistsSugg' dots loc (get langdefs ld)
+	= do	expr	<- createExpression ld source str
+		scope	<- checkExistsSugg' dots loc (get langdefs ld)
 				("Module "++dots loc++ " not found")	-- TODO make failable
 		typeExpression scope typ expr ||>> snd
 

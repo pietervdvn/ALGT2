@@ -10,6 +10,7 @@ import LanguageDef.Rule
 import LanguageDef.Expression
 import LanguageDef.LocationInfo
 import LanguageDef.Syntax
+import LanguageDef.ExceptionInfo
 
 
 {-
@@ -88,10 +89,8 @@ showProofWith opts (Proof concl proverRule predicates)
 
 
 
-showProofWithDepth		:: String -> Name -> ProofOptions-> Either String (Proof a) -> String
-showProofWithDepth input relation _ (Left str)	
-	= ["# Could not apply relation "++relation++" to the input "++show input++", because:",str] & unlines
-showProofWithDepth input relation options (Right proof)
+showProofWithDepth		:: String -> Name -> ProofOptions-> Proof a -> String
+showProofWithDepth input relation options proof
 	= ["# "++input++" applied to "++relation
 		,"# Proof weight: "++show (weight proof)++", proof depth: "++ show (depth proof) 
 		, ""

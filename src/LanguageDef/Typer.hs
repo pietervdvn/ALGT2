@@ -12,7 +12,7 @@ import LanguageDef.ExceptionInfo
 
 import LanguageDef.Syntax.BNF (BNF)
 import qualified LanguageDef.Syntax.BNF as BNF
-import LanguageDef.Syntax
+import LanguageDef.Syntax hiding (assert')
 import LanguageDef.LangDefs
 
 import LanguageDef.Expression
@@ -37,17 +37,17 @@ import Data.Maybe
 
 -------------------- TYPING OF A LANGUAGEDEF -----------------------------------
 
-typeLD		:: Eq fr => Map [Name] (LDScope' fr) -> Either String (Map [Name] LDScope)
+typeLD		:: Eq fr => Map [Name] (LDScope' fr) -> Failable (Map [Name] LDScope)
 typeLD lds
-	= do	typed	<- lds & M.toList ||>> typeScope |> sndEffect & allRight' |> M.fromList
-				:: Either String (Map [Name] (Scope [Name] [Name] LanguageDef ImportFlags ()))
+	= do	typed	<- lds & M.toList ||>> typeScope |> sndEffect & allGood |> M.fromList
+				:: Failable (Map [Name] (Scope [Name] [Name] LanguageDef ImportFlags ()))
 		let env	= typed |> get payload
 		let scopes	= typed |> flip LDScope env	:: Map [Name] LDScope
 		return scopes
 
 
 
-typeScope	:: Eq fr =>  LDScope' fr -> Either String (Scope [Name] [Name] LanguageDef ImportFlags ())
+typeScope	:: Eq fr =>  LDScope' fr -> Failable (Scope [Name] [Name] LanguageDef ImportFlags ())
 typeScope scope
 	= do	let langDef	= get (ldScope . payload) scope
 		langDef'	<- typeScope' scope langDef
@@ -56,10 +56,10 @@ typeScope scope
 
 
 typeScope'	:: Eq fr => LDScope' fr -> LanguageDef' ResolvedImport fr
-			-> Either String (LanguageDef' ResolvedImport SyntFormIndex)
+			-> Failable (LanguageDef' ResolvedImport SyntFormIndex)
 typeScope' ld langDef
-	= do	langFuncs'	<- get langFunctions langDef & overGrouperMCmb' allRight' (typeFunction ld)
-		langRules'	<- get langRules langDef & overGrouperMCmb' allRight' (typeRule ld)
+	= do	langFuncs'	<- get langFunctions langDef & overGrouperMCmb' allGood (typeFunction ld)
+		langRules'	<- get langRules langDef & overGrouperMCmb' allGood (typeRule ld)
 		let langRules''	= langRules' |||>>> snd
 		return $ updateFR (langFuncs', langRules'') langDef
 		
@@ -71,20 +71,20 @@ typeScope' ld langDef
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty/Relations" ["TypeErr"]
-Left "Could not type the sequence \"5\" as a TypeErr.bool:\n  While typing the expression \"5\" against \"True\"(TypeErr.bool:0.0):\n    Expected a literal \"True\" but got the token \"5\"\n  While typing the expression \"5\" against \"False\"(TypeErr.bool:1.0):\n    Expected a literal \"False\" but got the token \"5\"\n\n\n"
+Left "\ESC[91mError\ESC[0m\ESC[32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing the expression \"5\" against \"True\"(TypeErr.bool:0.0)Expected a literal \"True\" but got the token \"5\"\n\ESC[91mError\ESC[0m\ESC[32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing the expression \"5\" against \"False\"(TypeErr.bool:1.0)Expected a literal \"False\" but got the token \"5\""
 
 
 -}
-typeRule	:: Eq fr => LDScope' fr -> Rule' a -> Either String (Rule' (a, SyntFormIndex))
+typeRule	:: Eq fr => LDScope' fr -> Rule' a -> Failable (Rule' (a, SyntFormIndex))
 typeRule lds (Rule preds concl n mi)
-	= do	preds'	<- preds |> typePredicate lds & allRight'
+	= do	preds'	<- preds |> typePredicate lds & allGood
 		concl'	<- typeConclusion lds concl
 		-- TODO crosscheck variables for common ground
 		-- TODO check introduction correctness from left to right
 		return $ Rule preds' concl' n mi
 
 
-typePredicate	:: Eq fr => LDScope' fr -> Predicate a -> Either String (Predicate (a, SyntFormIndex))
+typePredicate	:: Eq fr => LDScope' fr -> Predicate a -> Failable (Predicate (a, SyntFormIndex))
 typePredicate lds (Left concl)
  	= do	concl'	<- typeConclusion lds concl
 		concl' & Left & return
@@ -93,12 +93,12 @@ typePredicate lds (Right expr)
 		expr' & Right & return
 
 
-typeConclusion	:: Eq fr => LDScope' fr -> Conclusion a -> Either String (Conclusion (a, SyntFormIndex))
+typeConclusion	:: Eq fr => LDScope' fr -> Conclusion a -> Failable (Conclusion (a, SyntFormIndex))
 typeConclusion lds (Conclusion rel args)
-	= do	(relFQn, relation)	<- resolve' lds relationCall rel
+	= do	(relFQn, relation)	<- _resolve' lds relationCall rel
 		let types	= relation & get relTypes |> fst
 		args'		<- zip types args |> uncurry (typeExpression lds)
-					& allRight'
+					& allGood
 		return $ Conclusion relFQn args'
 
 
@@ -106,12 +106,12 @@ typeConclusion lds (Conclusion rel args)
 
 
 
-typeFunction	:: Eq fr => LDScope' fr -> Function' x -> Either String Function
+typeFunction	:: Eq fr => LDScope' fr -> Function' x -> Failable Function
 typeFunction ld f
-	= inMsg ("While typing "++ get funcName f) $
+	= inMsg' ("While typing "++ get funcName f) $
 	  do	let clauses	= get funcClauses f
 		let tps		= (get funcArgTypes f, get funcRetType f)
-		clauses'	<- clauses & mapi |> typeClause ld (ld & get (ldScope . payload . langSupertypes)) tps & allRight'
+		clauses'	<- clauses & mapi |> typeClause ld (ld & get (ldScope . payload . langSupertypes)) tps & allGood
 		f & set funcClauses clauses' & return
 		
 {- |
@@ -124,30 +124,37 @@ Typing of the clause. Checks for:
 
 >>> import AssetUtils
 >>> getLangDefs' ["Faulty","FunctionTyperTest"]
-Left "While typing f:\n  While typing clause f.0:\n    The variable \"y\" was not defined\nWhile typing g:\n  While typing clause g.0:\n    While typing return expression, namely not(x):\n      No common ground: expected some intersection between Faulty.FunctionTyperTest.int and Faulty.FunctionTyperTest.bool\nWhile typing h:\n  While typing clause h.0:\n    The variable \"bool\" was not defined\n  While typing clause h.1:\n      The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader\n\n"
-
+Left "\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m25\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing clause f.0The variable \"y\" was not defined\n\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m28\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing return expression, namely not(x)No common ground: expected some intersection between Faulty.FunctionTyperTest.int and Faulty.FunctionTyperTest.bool\n\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m31\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing clause h.0The variable \"bool\" was not defined\n\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m32\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing clause h.1  The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader"
 -}
 
-typeClause	:: Eq fr => LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause x) -> Either String (FunctionClause SyntFormIndex)
-typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc nm)
+typeClause scope supers expectations (i, clause)
+	= inContext ("While typing clause "++get clauseFuncName clause ++ "." ++show i, Typing, get (clauseDoc . miLoc) clause) $ _typeClause scope supers expectations (i, clause)
+
+_typeClause	:: Eq fr => LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause x) -> Failable (FunctionClause SyntFormIndex)
+_typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc nm)
  | length patExps /= length pats
-	= Left $ "Expected "++show (length patExps)++" patterns for function "++show nm++", but got "++show (length pats)++" patterns instead"
+	= inLocation (get miLoc doc) $ fail $ 
+		"Expected "++show (length patExps)++" patterns for function "++show nm++", but got "++show (length pats)++" patterns instead"
  | otherwise
-	= inMsg ("While typing clause "++nm++"."++show i) $ do
+	= inMsg' ("While typing clause "++nm++"."++show i) $ inLocation (get miLoc doc) $ do
+		let li	= get miLoc doc
 		pats'	<- zip patExps pats & mapi |> (\(i, (patExp, pat)) -> typePattern ("pattern "++show i) scope supertypings patExp pat)
-				& allRight'
+				& allGood
 		ret'	<- typePattern "return expression" scope supertypings retExp ret	-- typing of the main return expression
 
 		-- Patterns, such as `f((x:expr), (x:int))` will get the intersection
-		patternTypes	<- inMsg "While checking for conflicting variable usage between patterns" $ mergeTypings' supertypings pats'
+		patternTypes	<- inMsg' "While checking for conflicting variable usage between patterns" $
+					mergeTypings' li supertypings pats'
 		-- The usage in the return expression should be smaller, but never bigger: `f((x:expr)) = !plus((x:int), 5)` implies a type error
-		exprTypes	<- inMsg "While checking for conflicting variable in the clause body" $ mergeTypings' supertypings [ret']
-		inMsg "While checking for conflicting variable usage between patterns and the clause body" $ mergeTypings' supertypings (ret':pats')
+		exprTypes	<- inMsg' "While checking for conflicting variable in the clause body" $ 
+					mergeTypings' li supertypings [ret']
+		inMsg' "While checking for conflicting variable usage between patterns and the clause body" $ 
+			mergeTypings' li  supertypings (ret':pats')
 		
 		-- check that each variable exists
 		exprTypes & M.keys & filter (not . (`M.member` patternTypes))
 			|> (\k -> "The variable "++show k++" was not defined")
-			|> Left & allRight_
+			|> fail & allGood
 
 		-- check that usage of each variable is a supertype of what the patterns generate (what a pattern gives is a subtype of what is needed)
 		let notSubset	= M.intersectionWith (,) patternTypes exprTypes	
@@ -155,17 +162,17 @@ typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc 
 					& M.filter (\(decl, usage) -> not $ isSubsetOf supertypings decl usage) :: Map Name (SyntForm, SyntForm)
 		let notSubsetMsg (nm, (patT, exprT))
 				= "The variable "++show nm++" is used as a "++showFQ exprT++", but could be a "++showFQ patT++" which is broader"
-		unless (null notSubset) $ Left $ notSubset & M.toList |> notSubsetMsg & unlines & indent
+		assert' (null notSubset) (notSubset & M.toList |> notSubsetMsg & unlines & indent)
 
 		return $ FunctionClause pats' ret' doc nm
 
 
 
-typePattern	:: Eq fr => String -> LDScope' fr -> Lattice FQName -> FQName -> Expression x  -> Either String (Expression SyntFormIndex)
+typePattern	:: Eq fr => String -> LDScope' fr -> Lattice FQName -> FQName -> Expression x  -> Failable (Expression SyntFormIndex)
 typePattern msg ld supers exp pat
-	= inMsg ("While typing "++msg++", namely "++toParsable pat) $ do
+	= inMsg' ("While typing "++msg++", namely "++toParsable pat) $ do
 		pat'	<- typeExpression ld exp pat ||>> snd
-		mergeTypings' supers [pat']
+		mergeTypings' (get expLocation pat) supers [pat']
 		return pat'
 
 
@@ -174,9 +181,9 @@ typePattern msg ld supers exp pat
 
 
 {- | Same as 'typeExpression', but does not require a type expectation -}
-typeExpressionFreely	:: Eq fr => LDScope' fr -> Expression a -> Either String (Expression (a, SyntFormIndex))
-typeExpressionFreely lds expr
-	= typeExpression lds typeTop expr
+typeExpressionFreely	:: Eq fr => LDScope' fr -> Expression a -> Failable (Expression (a, SyntFormIndex))
+typeExpressionFreely lds
+	= typeExpression lds typeTop
 
 
 
@@ -186,114 +193,142 @@ typeExpressionFreely lds expr
 >>> import AssetUtils
 
 >>> typeExpression (error "") (["A"], "b") (DontCare () unknownLocation)
-Right (DontCare {_expAnnot = ((),NoIndex (["A"],"b")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
+Success (DontCare {_expAnnot = ((),NoIndex (["A"],"b")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
 >>> typeExpression testLDScope (["TestLanguage"], "bool") (Var "x" () unknownLocation)
-Right (Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...})
+Success (Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...})
 >>> typeExpression testLDScope (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
-Right (ParseTree {_expPT = Literal {_ptToken = "True", ...}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = ...})
+Success (ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
 >>> typeExpression testLDScope (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
-Right (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
+Success (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
  -}
-typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Either String (Expression (a, SyntFormIndex)) 
-typeExpression _ expectation (Var nm a li)
+typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Failable (Expression (a, SyntFormIndex)) 
+typeExpression lds expectation expr
+	= inContext ("While typing "++toParsable expr, Typing, get expLocation expr) $ 
+		_typeExpression lds expectation expr
+
+
+_typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Failable (Expression (a, SyntFormIndex)) 
+_typeExpression _ expectation (Var nm a li)
 	= return $ Var nm (a, NoIndex expectation) li
-typeExpression _ expectation  (DontCare a li)
+_typeExpression _ expectation  (DontCare a li)
 	= return $ DontCare (a, NoIndex expectation) li
-typeExpression ld expectation (FuncCall funcNm args a li)
-	= do	(fqname, function)	<- resolve' ld functionCall funcNm
-		argTypes		<- get funcArgTypes function |+> resolve ld syntaxCall
+_typeExpression ld expectation (FuncCall funcNm args a li)
+	= do	(fqname, function)	<- _resolve' ld functionCall funcNm
+		argTypes		<- get funcArgTypes function |> _resolve ld syntaxCall & allGood
 		args'			<- zip argTypes args |+> uncurry (typeExpression ld)
+
+		let argSugg	= "Give "++ show (length argTypes) ++" arguments, of types "++(argTypes |> showFQ & commas)
+		assertSugg' (length argTypes >= length args)
+			("Too little arguments given, namely "++show (length args), argSugg)
+		assertSugg' (length argTypes <= length args)
+			("Too much arguments given, namely "++show (length args), argSugg)
+
+
 		let ld'			= get (ldScope . payload) ld
-		ftype	<- get funcRetType function & resolve ld syntaxCall
-		assert (isSubtypeOf ld' ftype expectation || isSubtypeOf ld' expectation ftype)
+		ftype	<- get funcRetType function & _resolve ld syntaxCall
+		assert' (isSubtypeOf ld' ftype expectation || isSubtypeOf ld' expectation ftype)
 			("No common ground: expected some intersection between "++showFQ expectation++" and "++ showFQ ftype)
 		return (FuncCall fqname args' (a, NoIndex ftype) li)
-typeExpression ld expectation (Ascription expr name a li)
-	= do	name'	<- resolve ld syntaxCall name
+_typeExpression ld expectation (Ascription expr name a li)
+	= do	name'	<- _resolve ld syntaxCall name
 		expr'	<- typeExpression ld name' expr
-		assert (isSubtypeOf (get (ldScope . payload) ld) name' expectation)
+		assert' (isSubtypeOf (get (ldScope . payload) ld) name' expectation)
 			$ "The ascription of "++toParsable expr++" as a "++showFQ name++" is not a subtype of "++showFQ expectation
 		return $ Ascription expr' name' (a, NoIndex name') li
-typeExpression ld expectation (Split e1 e2 a li)
+_typeExpression ld expectation (Split e1 e2 a li)
 	= do	e1'	<- typeExpression ld expectation e1
 		e2'	<- typeExpression ld expectation e2
 		let t e	= get expAnnot e & snd & removeIndex'
 		let t1	= t e1'
 		let t2	= t e2'
 		let msg	e	= toParsable e ++ "\t: " ++toParsable (t e)
-		assert (t1 == t2) $ "Types of arguments in a split should be the same, but the types are different:" ++
+		assert' (t1 == t2) $ "Types of arguments in a split should be the same, but the types are different:" ++
 			indent (unlines [msg e1', msg e2'])
 		return $ Split e1' e2' (a, t1) li
-typeExpression ld expectation pt@ParseTree{}
+_typeExpression ld expectation pt@ParseTree{}
 	= do	(expr', _)	<- typeExpressionIndexed ld expectation [pt]
-		assert (length expr' == 1) "Huh, this is weird. Bug in typeExpression"
+		assert' (length expr' == 1) "Huh, this is weird. Bug in typeExpression: multiple possible expressions for a parsetree"
 		return $ head expr'
-typeExpression ld expectation (SeqExp exprs a li)
+_typeExpression ld expectation (SeqExp exprs a li)
 	= do	(exprs', subtype)	<- typeExpressionIndexed ld expectation exprs
 		return $ SeqExp exprs' (a, subtype) li
 
-{-Search for a choice matching the expressions -}
-typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> Either String ([Expression (a, SyntFormIndex)], SyntFormIndex)
+{-Search for a choice from the syntactic forms matching the expressions -}
+typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> Failable ([Expression (a, SyntFormIndex)], SyntFormIndex)
 typeExpressionIndexed ld syntForm exprs
-	= do	(fqname, choices)	<- resolve' ld syntaxCall syntForm ||>> get syntChoices
+	= do	(fqname, choices)	<- inMsg' ("While typing "++ exprs |> toParsable & commas) 
+						$ _resolve' ld syntaxCall syntForm ||>> get syntChoices
 		let tries	= choices |> BNF.removeWS |> BNF.unsequence	-- prepare individual choices
 					& mapi 					-- Number the choices
 					|> typeExpressionIndexed' ld syntForm exprs	-- Actually type them
 					& mapi |> sndEffect				-- and number it again
-		let successfull	= rights tries		--	:: [(Int, [Expression (a, SyntFormIndex)])]
-		assert (not $ null successfull) $ "Could not type the sequence "++ unwords (exprs |> toParsable)++" as a "++showFQ syntForm++":\n"
-			++ lefts tries & unlines & indent
-		assert (length successfull < 2) $ "The sequence "++ unwords (exprs |> toParsable)++" could be typed in multiple ways, namely as:\n"
+		let successfull	= successess tries		--	:: [(Int, [Expression (a, SyntFormIndex)])]
+		let li		= exprs & head & get expLocation
+		when (null successfull) $ 
+			fails tries & Aggregate & Failed & inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as a "++showFQ syntForm)
+
+		assert' (length successfull < 2) $ "The sequence "++ unwords (exprs |> toParsable)++" could be typed in multiple ways, namely as:\n"
 			++ (successfull |> (\(i, exprs) -> "Via choice "++show i) & unlines & indent)
 		let (foundInd, foundExprs)	= head successfull
 		(foundExprs, SyntFormIndex fqname foundInd Nothing) & return
 
 
-typeExpressionIndexed'	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> (Int, [BNF]) -> Either String [Expression (a, SyntFormIndex)]
+typeExpressionIndexed'	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> (Int, [BNF]) -> Failable [Expression (a, SyntFormIndex)]
 typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
  | length choiceElems == 1 && length exprs /= 1 && BNF.isRuleCall (head choiceElems) 
 	= do	let [BNF.RuleCall fqname]	= choiceElems
 		typeExpressionIndexed ld fqname exprs |> fst 
  | length exprs /= length choiceElems
-	= Left $ "Can not match choice "++show choiceIndex++": this choice has "++show (length choiceElems) ++ 
-			" elements, whereas the expression has "++show (length exprs)
+	= fail $"Can not match choice "++show choiceIndex++": this choice has "++show (length choiceElems) ++ 
+		" elements, whereas the expression has "++show (length exprs)
  | otherwise
-	= zip (mapi choiceElems) exprs |+> uncurry (typeExprBNF ld (syntForm, choiceIndex))
+	= zip (mapi choiceElems) exprs |> uncurry (typeExprBNF ld (syntForm, choiceIndex)) & allGood
 
 
-typeExprBNF		:: Eq fr => LDScope' fr -> (SyntForm, Int) -> (Int, BNF) -> Expression a -> Either String (Expression (a, SyntFormIndex))
+typeExprBNF		:: Eq fr => LDScope' fr -> (SyntForm, Int) -> (Int, BNF) -> Expression a -> Failable (Expression (a, SyntFormIndex))
 typeExprBNF ldscope (form, choiceInd) (seqIndex, BNF.RuleCall fqname) expr
 	= typeExpression ldscope fqname expr
 typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
 	-- At this point, the bnf can not be: RuleCall (prev. case), Seq (BNF.unsequence was run in typeExpressionIndexed)
 	-- Still resting: Literal, Builtin, Group -- which all should have a matching parsetree (or dontcare)
 	= let	fi	= SyntFormIndex form choiceInd (Just seqIndex) in 
-	  inMsg ("While typing the expression "++ toParsable expr++ " against "++toParsable bnf ++ inParens (toParsable fi)) $
 	  case expr of
 		(ParseTree pt a li)	-> _compareBNFPT bnf pt >> return (ParseTree pt (a, fi) li)
 		(DontCare a li)		-> return (DontCare (a, fi) li)
 		(Var nm a li)		-> return (Var nm (a, fi) li)
-		a@Ascription{}		-> Left $ "Found ascription "++toParsable a++" where a literal value of the form "++toParsable bnf++
-							" was expected; ascriptions can only match rulecalls"
-		s@SeqExp{}		-> Left $ "Found a sequence "++toParsable s++" where a literal value of the form "++toParsable bnf++
-							" was expected; ascriptions can only match rulecalls"
+		a@Ascription{}		-> fail $
+						"Found ascription "++toParsable a++" where a literal value of the form "++toParsable bnf++
+						" was expected; ascriptions can only match rulecalls"
+		s@SeqExp{}		-> fail $
+						"Found a sequence "++toParsable s++" where a literal value of the form "++toParsable bnf++
+						" was expected; ascriptions can only match rulecalls"
+-- TODO remove when the time is right
+_resolve'	:: Eq x => LDScope' fr ->  Resolver fr x -> FQName -> Failable (FQName, x)
+_resolve' lds resolver fq
+		= resolve' lds resolver fq & either error return
 
-_compareBNFPT	:: BNF -> ParseTree a -> Check
-_compareBNFPT (BNF.Literal str) (Literal token  _ _ _)
-	= assert (str == token) $ "Expected a literal "++show str++" but got the token "++show token
-_compareBNFPT (BNF.Literal str) (Int token  _ _)
-	= assert (str == show token) $ "Expected a literal "++show str++" but got the int "++show token
-_compareBNFPT (BNF.BuiltIn _ builtin) (Literal token _ _ _)
-	= assert (token `BNF.isElementOf` builtin) $ "Expected a "++get BNF.biName builtin++", but got "++show token
-_compareBNFPT (BNF.BuiltIn _ builtin) (Int token _ _)
- 	= assert (builtin `elem` [BNF.intBI, BNF.numberBI]) $ "Expected a "++get BNF.biName builtin++", but got the int"++show token
+-- TODO Remove when the time is right
+_resolve lds resolver fq
+		= resolve lds resolver fq & either error return
+
+_compareBNFPT	:: BNF -> ParseTree a -> Failable ()
+_compareBNFPT (BNF.Literal str) (Literal token li _ _)
+	= assertSugg' (str == token) ("Unexpected literal "++show token, "Expected literal "++show str)
+_compareBNFPT (BNF.Literal str) (Int token li _)
+	= assertSugg' (str == show token) ("Unexpected int "++show token, "Expected literal "++show str)
+_compareBNFPT (BNF.BuiltIn _ builtin) (Literal token li _ _)
+	= assertSugg' (token `BNF.isElementOf` builtin) ("Unexpected "++show token, "Expected a "++get BNF.biName builtin)
+_compareBNFPT (BNF.BuiltIn _ builtin) (Int token li _)
+ 	= assertSugg' (builtin `elem` [BNF.intBI, BNF.numberBI]) ("Unexpected int "++show int, "Expected a "++get BNF.biName builtin)
 _compareBNFPT (BNF.RuleCall name) re@RuleEnter{}
 	= let	actRule = get ptUsedRule re in
-		assert (name == actRule) $ "Expected the rule "++showFQ name++", but got a parsetree constructed with "++showFQ actRule++": "++toParsable re
+		assertSugg' (name == actRule)
+			("Unexpected parsetree contstructed with "++ showFQ actRule++": "++toParsable re
+			, "Expected a parsetree constructed with the syntactic form "++showFQ name)
 _compareBNFPT (BNF.Group bnf) pt
 	= _compareBNFPT bnf pt
 _compareBNFPT (BNF.Seq bnf) pt
-	= error "Bug: sequence should not be reachable here"
+	= fail "Bug: sequence should not be reachable here"
 
 
 
@@ -324,28 +359,23 @@ _typingTable (SeqExp exprs _ _)
 	= exprs |> _typingTable & M.unionsWith S.union
 
 
-_tErr	:: LocationInfo -> String -> Failable a
-_tErr li msg
-	= Failed $ ExceptionInfo msg Error Typing li Nothing
-
-
-_tErr' mi
-	= _tErr (get miLoc mi)
-
 {- | checks that no two typings do conflict (thus that no two typings result in an empty set for the variables). The typingtable is used for this
 
 >>> import AssetUtils
->>> let (Right boolVar) = typeExpression testLDScope (["TestLanguage"], "bool") (Var "x" () unknownLocation)
+>>> let (Success boolVar) = typeExpression testLDScope (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 >>> boolVar
 Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...}
->>> let (Right intVar)  = typeExpression testLDScope (["TestLanguage"], "int") (Var "x" () unknownLocation)
+>>> let (Success intVar)  = typeExpression testLDScope (["TestLanguage"], "int") (Var "x" () unknownLocation)
 >>> intVar
 Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"int")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
 >>> let supertypings = testLangDefs & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)
 >>> [boolVar, intVar] ||>> snd & mergeTypings supertypings
 Left [("x",fromList [(["TestLanguage"],"bool"),(["TestLanguage"],"int")])]
->>> [boolVar, intVar] ||>> snd & mergeTypings' supertypings
-Left "While checking for conflicting variable usage:\n    x\tis used as TestLanguage.bool, TestLanguage.int"
+>>> [boolVar, intVar] ||>> snd & mergeTypings' unknownLocation supertypings & handleFailure toCoParsable show
+"fromList *** Exception: \ESC[91mError\ESC[0m while typing:"
+"  \8226 While checking for conflicting variable usage  x\tis used as TestLanguage.bool, TestLanguage.int"
+"CallStack (from HasCallStack):"
+"  error, called at /home/pietervdvn/git/ALGT2/src/LanguageDef/ExceptionInfo.hs:266:19 in main:LanguageDef.ExceptionInfo"
 -}
 mergeTypings	:: Lattice FQName -> [Expression SyntFormIndex] -> Either [(String, Set SyntForm)] (Map Name SyntForm)
 mergeTypings supertyping exprs
@@ -360,10 +390,12 @@ mergeTypings supertyping exprs
 		return (typings |> snd)
 
 -- Same as mergeTypings, but with an error message
-mergeTypings' st exprs
+mergeTypings'	:: LocationInfo -> Lattice FQName -> [Expression SyntFormIndex] -> Failable (Map Name SyntForm)
+mergeTypings' li st exprs
 	= let	showEntry (nm, tps)	= nm++"\tis used as "++ (tps & S.toList |> showFQ & commas)
 		in
-		inMsg "While checking for conflicting variable usage" $
+		inMsg' "While checking for conflicting variable usage" $
 			mergeTypings st exprs & first (\msgs -> msgs |> showEntry & unlines & indent)
+				& either fail return 
 
 

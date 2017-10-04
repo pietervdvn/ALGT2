@@ -4,6 +4,7 @@ module LanguageDef.LocationInfo where
 {-Small helper data structure, containg start and end position of parsetrees, metainfo or fully qualified names etc-}
 
 import Utils.All
+import Data.Function (on)
 
 type FQName	= ([Name], Name)
 
@@ -12,7 +13,7 @@ showFQ (ns, nm)
 
 
 distFQ
-	= (showFQ, \ref fq -> levenshtein (snd ref) (snd fq))
+	= (showFQ, \ref fq -> levenshtein `on` snd)
 
 
 
@@ -62,11 +63,6 @@ instance ToString MetaInfo where
 		= if null $ get miDoc meta then "" else meta & get miDoc & lines & concat & ("\t # "++)
 
 
-
-
-atLocation	:: LocationInfo -> Either String a -> Either String a
-atLocation
-	= inMsg . toParsable
 
 unknownLocation	:: LocationInfo
 unknownLocation 

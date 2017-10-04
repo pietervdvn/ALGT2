@@ -20,8 +20,8 @@ data Grouper x	= Grouper
 makeLenses ''Grouper
 
 emptyGrouper	:: (Name, Name) -> Grouper a
-emptyGrouper nm
-	= Grouper M.empty [] nm
+emptyGrouper
+	= Grouper M.empty []
 
 asGrouper	:: (Name, Name) -> (a -> Name) -> [a] -> Grouper a
 asGrouper groupName getName as

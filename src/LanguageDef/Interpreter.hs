@@ -5,7 +5,7 @@ module LanguageDef.Interpreter where
 import Utils.All
 
 import LanguageDef.LanguageDef
-import LanguageDef.Syntax
+import LanguageDef.Syntax hiding (assert')
 import LanguageDef.Function 
 import LanguageDef.Expression 
 import LanguageDef.LocationInfo
@@ -27,31 +27,31 @@ import Data.Map (Map)
 >>> import LanguageDef.LangDefs
 
 
->>> let createPT tp p = createParseTree testLangDefs (testType tp) "?" p & crash & removeHidden
->>> let createExp tp e = createTypedExpression testLangDefs "?" e (testType tp) & either error id
+>>> let createPT tp p = createParseTree testLangDefs (testType tp) "?" p & crash' & removeHidden
+>>> let createExp tp e = createTypedExpression testLangDefs "?" e (testType tp) & crash'
 >>> let ld = AssetUtils.testLDScope & get (ldScope . payload)
 
 >>> let t te e tpt pt = patternMatch (const (), testLangDefs) M.empty ld (createExp te e) (createPT tpt pt)
 >>> t "bool" "\"True\"" "bool" "True"
-Right (fromList [])
+Success (fromList [])
 >>> t "bool" "\"True\"" "bool" "False"
 Left "Argument does not match expected token\nExpected: True\nGot: False\n"
 >>> t "bool" "x" "bool" "True"
-Right (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", _ptLocation = ..., _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, _ptLocation = ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", _ptLocation = ..., _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, _ptLocation = ..., _ptA = ()})])
 >>> t "bool" "_" "bool" "True"
-Right (fromList [])
+Success (fromList [])
 >>> t "bool" "(x:bool)" "bool" "True"
-Right (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", _ptLocation = ...}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...})])
+Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", _ptLocation = ...}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...})])
 >>> t "bool" "(x:bool)" "int" "5"
 Left "Ascription failed\nExpected something of type TestLanguage.bool\nbut got a parsetree of the form TestLanguage.int\n"
 >>> t "bool" "(x:bool)" "expr" "True"
-Right (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 0, ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 0, ..., _ptA = ()})])
 >>> t "bool" "(x:bool)" "expr" "5"
 Left "Ascription failed\nExpected something of type TestLanguage.bool\nbut got a parsetree of the form TestLanguage.int\n"
 >>> t "bool" "x&(y:bool)" "bool" "True"
-Right (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()}),("y",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()}),("y",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()})])
 >>> t "exprSum" "x \"+\" y" "exprSum" "5 + 6 + 7"
-Right (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()}),("y",RuleEnter {_pt = Seq {_pts = [RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 6, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()},RuleEnter {_pt = Literal {_ptToken = "+", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"op"), _ptUsedIndex = 1, ..., _ptA = ()},RuleEnter {_pt = RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 7, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 1, ..., _ptA = ()}], ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 0, ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()}),("y",RuleEnter {_pt = Seq {_pts = [RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 6, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()},RuleEnter {_pt = Literal {_ptToken = "+", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"op"), _ptUsedIndex = 1, ..., _ptA = ()},RuleEnter {_pt = RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 7, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 1, ..., _ptA = ()}], ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 0, ..., _ptA = ()})])
 
 
 
@@ -93,33 +93,35 @@ type VariableStore a
 -------------------------- ABOUT RUNNING A FUNCTION ------------------------------------
 
 
-resolveAndRun'	:: LangDefs -> FQName -> [ParseTree ()] -> Either String (ParseTree ())
+resolveAndRun'	:: LangDefs -> FQName -> [ParseTree ()] -> Failable (ParseTree ())
 resolveAndRun'
 	= resolveAndRun (const ())
 
 {- | Resolves the function, executes it. The first arguments adds an annotation to the parsetree, based on the type of the parsetree
 
 -}
-resolveAndRun	:: (SyntFormIndex -> a) -> LangDefs -> FQName -> [ParseTree a] -> Either String (ParseTree a)
+resolveAndRun	:: (SyntFormIndex -> a) -> LangDefs -> FQName -> [ParseTree a] -> Failable (ParseTree a)
 resolveAndRun fb2a lds (targetLD, name) args
-	= do	ld	<- checkExistsSugg dots targetLD (get langdefs lds) ("The module "++dots targetLD++" was not found")
+	= do	ld	<- checkExistsSugg' dots targetLD (get langdefs lds) ("The module "++dots targetLD++" was not found")
 		let ld'	= ld & get (ldScope . payload) 	:: LanguageDef
-		funcs	<- ld' & get langFunctions |> Right
-				& fromMaybe (Left $ "The module "++dots targetLD++" does not have a function section and thus does not define "++name)
+		let msg	= "The module "++dots targetLD++" does not have a function section and thus does not define "++name
+		funcs	<- ld' & get langFunctions 
+				& maybe (fail msg) return
 
-		func	<- checkExistsSugg show name (get grouperDict funcs) ("The module "++dots targetLD++" does not define the function "++show name)
+		func	<- checkExistsSuggDist' (show, levenshtein) name (get grouperDict funcs) 
+				$ "The module "++dots targetLD++" does not define the function "++show name
 		runFunction fb2a lds ld' func args 
 
-runFunction	::  (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> Function -> [ParseTree a] -> Either String (ParseTree a)
+runFunction	::  (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> Function -> [ParseTree a] -> Failable (ParseTree a)
 runFunction fb2a lds ld func args
-	= inMsg ("While executing the function "++get funcName func) $ 
+	= inMsg' ("While executing the function "++get funcName func) $ inLocation (get (funcDoc . miLoc) func) $ 
 		do	let clauses	= func & get funcClauses
-			clauses & mapi |> flip (runClause fb2a lds ld) args & firstRight			
+			clauses & mapi |> flip (runClause fb2a lds ld) args & firstSuccess			
 
 
-runClause	:: (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> (Int, FunctionClause SyntFormIndex) -> [ParseTree a] -> Either String (ParseTree a)
-runClause fb2a lds ld (i, FunctionClause pats result _ nm) args
-	= inMsg ("While trying clause "++ nm ++ "." ++ show i) $
+runClause	:: (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> (Int, FunctionClause SyntFormIndex) -> [ParseTree a] -> Failable (ParseTree a)
+runClause fb2a lds ld (i, FunctionClause pats result doc nm) args
+	= inMsg' ("While trying clause "++ nm ++ "." ++ show i) $ inLocation (get miLoc doc) $
 	  do	store	<- patternMatchAll (fb2a, lds) M.empty ld pats args
 		constructParseTree fb2a lds store result
 
@@ -127,11 +129,11 @@ runClause fb2a lds ld (i, FunctionClause pats result _ nm) args
 ------------------------- ABOUT PARSETREE CONSTRUCTION/INTERPRETATION --------------------------------
 
 
-constructParseTree	:: (SyntFormIndex -> a) -> LangDefs -> VariableStore a -> Expression SyntFormIndex -> Either String (ParseTree a)
+constructParseTree	:: (SyntFormIndex -> a) -> LangDefs -> VariableStore a -> Expression SyntFormIndex -> Failable (ParseTree a)
 constructParseTree _ _ vars (Var nm _ _)
-	= checkExistsSugg id nm vars ("The variable "++show nm++" was not defined by the pattern")
-constructParseTree _ _ _ (DontCare _ _)
-	= Left "Found a wildcard (_) in an expression context. Only use these as patterns!"
+	= checkExistsSuggDist' (show, levenshtein) nm vars ("The variable "++show nm++" was not defined by the pattern")
+constructParseTree _ _ _ DontCare{}
+	= fail "Found a wildcard (_) in an expression context. Only use these as patterns!"
 constructParseTree fb2a _ _ (ParseTree pt b _)
 	= do	let a	= fb2a b
 		pt |> const a & return
@@ -145,7 +147,7 @@ constructParseTree fb2a lds vars (Split exp1 exp2 _ _)
 		pt2	<- constructParseTree fb2a lds vars exp2
 		let pt1'	= bareInformation pt1		
 		let pt2'	= bareInformation pt2
-		assert (pt1' == pt2') $ unlines
+		assert' (pt1' == pt2') $ unlines
 			["When a split is used in an expression context, both generated results should be the same"
 			, "First result: "++toParsable pt1'
 			,"Generated by: "++toParsable exp1
@@ -153,17 +155,18 @@ constructParseTree fb2a lds vars (Split exp1 exp2 _ _)
 			, "Generated by: "++toParsable exp2]
 		return pt1
 constructParseTree fb2a lds vars (SeqExp exprs b _)
-	= do	pts	<- exprs |> constructParseTree fb2a lds vars & allRight'
+	= do	pts	<- exprs |> constructParseTree fb2a lds vars & allGood
 		return $ Seq pts unknownLocation (fb2a b)
 
 ------------------------ ABOUT PATTERN MATCHING ---------------------------------------
 
 
-patternMatchAll	:: (SyntFormIndex -> a, LangDefs) -> VariableStore a -> LanguageDef -> [Expression SyntFormIndex] -> [ParseTree a]  -> Either String (VariableStore a)
+patternMatchAll	:: (SyntFormIndex -> a, LangDefs) -> VariableStore a -> LanguageDef -> [Expression SyntFormIndex] -> [ParseTree a]  -> Failable (VariableStore a)
 patternMatchAll lds store ld [] []
 	= return store
 patternMatchAll lds store ld (expr:exprs) (arg:args)
-	= do	assert (length exprs == length args)
+	= inLocation (get expLocation expr) $ do
+		assert' (length exprs == length args)
 			$ "Number of arguments is incorrect: got "++show (length args)++" patterns, but got "++show (length exprs)++" arguments"
 		store'	<- patternMatch lds store ld expr arg
 		mergedStores	<- mergeStores [store, store']
@@ -175,7 +178,7 @@ patternMatchAll lds store ld (expr:exprs) (arg:args)
 
 
 patternMatch	:: (SyntFormIndex -> a, LangDefs) -> VariableStore a -> LanguageDef -> 
-			Expression SyntFormIndex -> ParseTree a -> Either String (VariableStore a)
+			Expression SyntFormIndex -> ParseTree a -> Failable (VariableStore a)
 patternMatch _ _ _ (Var nm _ _) pt
 	= return $ M.singleton nm pt
 patternMatch _ _ _ (DontCare _ _) _
@@ -183,19 +186,19 @@ patternMatch _ _ _ (DontCare _ _) _
 patternMatch _ _ _ (ParseTree expectedPT _ _) actPt
  	= do	let exp	= expectedPT & bareInformation
 		let act	= actPt & bareInformation
-		assert (exp == act) $ unlines 
+		assert' (exp == act) $ unlines 
 			["Argument does not match expected token"
 			, "Expected: "++toParsable exp
 			, "Got: "++toParsable act]
 		return M.empty
 patternMatch context@(fb2a, lds) vars ld (FuncCall funcName args b _) arg
-	= inMsg ("While running a function within a pattern, namely "++showFQ funcName)  $
+	= inMsg' ("While running a function within a pattern, namely "++showFQ funcName) $
 	  do	argsPt		<- args |+> constructParseTree fb2a lds vars
 		expectedPT	<- resolveAndRun fb2a lds funcName argsPt |> deAnnot
 		patternMatch context vars ld (ParseTree expectedPT b unknownLocation) arg
 patternMatch lds vars ld (Ascription expr expType _ _) re@RuleEnter{}
 	= do	let actType	= re & mostSpecificRuleEnter & get ptUsedRule
-		assert (isSubtypeOf ld actType expType) $ unlines
+		assert' (isSubtypeOf ld actType expType) $ unlines
 			["Ascription failed"
 			, "Expected something of type "++showFQ expType
 			, "but got a parsetree of the form "++showFQ actType]
@@ -211,22 +214,22 @@ patternMatch lds vars ld expr (RuleEnter pt _ _ _ _)
 	= patternMatch lds vars ld expr pt
 
 patternMatch _ _ _ expr pt
-	= Left $ "Could not match "++toParsable expr++" with "++toParsable pt
+	= fail $ "Could not match "++toParsable expr++" with "++toParsable pt
 
 
-mergeStores	:: [VariableStore b] -> Either String (VariableStore b)
+mergeStores	:: [VariableStore b] -> Failable (VariableStore b)
 mergeStores stores
- 	= do	let stores'	= stores ||>> Right & M.unionsWith sameBareInfo
+ 	= do	let stores'	= stores ||>> return & M.unionsWith sameBareInfo
 		stores' & M.toList 
-			|> sndEffect & allRight'
+			|> sndEffect & allGood
 			|> M.fromList
 
 
-sameBareInfo	:: Either String (ParseTree a) -> Either String (ParseTree a) -> Either String (ParseTree a)
+sameBareInfo	:: Failable (ParseTree a) -> Failable (ParseTree a) -> Failable (ParseTree a)
 sameBareInfo expectedPt actPt
 	= do	exp	<- expectedPt |> bareInformation
 		act	<- actPt |> bareInformation
-		assert (exp == act) $ unlines 
+		assert' (exp == act) $ unlines 
 			["Variable store elements are not the same:"
 			, "First instance: "++toParsable exp
 			, "Other instance: "++toParsable act]
