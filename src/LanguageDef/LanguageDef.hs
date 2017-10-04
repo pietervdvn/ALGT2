@@ -9,16 +9,16 @@ A language defintion builds on many language-definition aspects. Each language d
 
 import Utils.All
 
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.ExceptionInfo
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.All
-import LanguageDef.LocationInfo
+import LanguageDef.Tools.LocationInfo
 import LanguageDef.Expression hiding (choices')
 import LanguageDef.Function hiding (choices')
 import LanguageDef.Relation hiding (choices')
 import LanguageDef.Rule
 import qualified LanguageDef.Relation as Relations
-import LanguageDef.Grouper
+import LanguageDef.Tools.Grouper
 
 import Graphs.Lattice
 
@@ -80,15 +80,12 @@ type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
 
 
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty" ["FunctionDuplicateNameTest"]
-Left "The function \"not\" is defined multiple times"
-
->>> loadAssetLangDef "Faulty" ["FunctionIncorrectNameTest"]
-Left "While checking function \"not\":\n  Some clauses have a different name. The function name is \"not\", but a clause is named f"
+>>> loadAssetLangDef "Faulty" ["FunctionDuplicateNameTest"] & toCoParsable
+>>> loadAssetLangDef "Faulty" ["FunctionIncorrectNameTest"] & toCoParsable
 
 -}
 
-instance Checkable' (FQName -> Either String FQName, FQName -> FQName -> Bool, [Name]) (LanguageDef' ResolvedImport SyntFormIndex) where
+instance Checkable' (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name]) (LanguageDef' ResolvedImport SyntFormIndex) where
 	check' extras (LanguageDef title imports meta li syntax superTypes functions rels rules)
 		= do	assert (title /= "") "The title of a language should not be empty"
 			checkM' extras syntax
@@ -211,7 +208,7 @@ _optionalOrder plus a as
 
 {- | All the syntaxes needed to parse a language definition file
 
->>> let resolve		= Right	:: FQName -> Either String FQName
+>>> let resolve		= Success	:: FQName -> Failable FQName
 >>> let subtypeStub	= (==) :: FQName -> FQName -> Bool
 >>> metaSyntaxes & M.toList |> (\(fq, s) -> check' (resolve, subtypeStub, fq) s) & allRight_ 
 Right ()

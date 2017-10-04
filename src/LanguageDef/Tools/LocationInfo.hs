@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.LocationInfo where
+module LanguageDef.Tools.LocationInfo where
 
 {-Small helper data structure, containg start and end position of parsetrees, metainfo or fully qualified names etc-}
 
@@ -12,8 +12,9 @@ showFQ (ns, nm)
 		= (ns ++ [nm]) & dots
 
 
+distFQ	:: (FQName -> String, FQName -> FQName -> Int)
 distFQ
-	= (showFQ, \ref fq -> levenshtein `on` snd)
+	= (showFQ, levenshtein `on` snd)
 
 
 

@@ -8,7 +8,7 @@ module Utils.PureIO (PureIO', PureIO
 
 import Utils.All
 
-import Prelude hiding (writeFile, putStrLn, readFile, readLine, getLine, putStr, fail)
+import Prelude hiding (writeFile, putStrLn, readFile, readLine, getLine, putStr)
 import qualified Prelude as IO
 import Data.Map as M
 
@@ -186,9 +186,7 @@ instance Monad PureIO where
 	return a
 		= ApplicIO $ Value a
 	(>>=)	= Bind
-
-
-fail	= ApplicIO . Fail
+	fail	= ApplicIO . Fail
 
 -- | Checks that a PureIO only uses applicative properties, so that automatic reasoning can be used
 -- >>> isApplicative $ putStr "Hi"

@@ -9,7 +9,6 @@ import Data.Map as M
 
 import LanguageDef.ModuleLoader
 import LanguageDef.LangDefs
-import LanguageDef.LocationInfo
 
 
 allAssets'
@@ -18,16 +17,16 @@ allAssets'
 		([], M.union noPrefix slashPrefix)
 
 
+{-
+testType	:: Name -> FQName
+testType t	= (["TestLanguage"], t)
+
+testLDScope
+	= getScope ["TestLanguage"]
 -- Test language as LangDefs
 testLangDefs	:: LangDefs
 testLangDefs
 	= getLangDefs ["TestLanguage"]
-
-testLDScope
-	= getScope ["TestLanguage"]
-
-testType	:: Name -> FQName
-testType t	= (["TestLanguage"], t)
 
 getScope	:: [Name] -> LDScope
 getScope nm
@@ -39,3 +38,5 @@ getLangDefs' nm
 
 getLangDefs nm
 	= getLangDefs' nm & either error id
+-}
+

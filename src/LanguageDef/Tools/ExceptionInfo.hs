@@ -1,11 +1,11 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.ExceptionInfo where
+module LanguageDef.Tools.ExceptionInfo where
 
 {- Gives more information about what goes wrong; with pretty colors -}
 
 import Utils.All hiding (Doc, (<>))
 
-import LanguageDef.LocationInfo
+import LanguageDef.Tools.LocationInfo
 import Text.PrettyPrint.ANSI.Leijen hiding (indent)
 import qualified Text.PrettyPrint.ANSI.Leijen as ANSI
 
@@ -40,7 +40,7 @@ data ExceptionInfo = ExceptionInfo
 
 makeLenses ''ExceptionInfo
 
-
+-- FIXME TODO what is broken in the case of: Aggregate [ Exception , Aggregate [ Excp, Excp]]?
 fromAggregate	:: ExceptionInfo -> [ExceptionInfo]
 fromAggregate (Aggregate exps)	= exps
 fromAggregate exp	= [exp]
@@ -83,10 +83,12 @@ instance ToString Phase where
 {- | 
 
 >>> let li	= LocationInfo 42 42 0 5 "SomeFile.language"
->>> let ei	= Withing Nothing (Just Resolving) (Just li) $ ExceptionInfo "Something went wrong" Warning (Just "Fix by x, y or z") 
+>>> let ei	= Within Nothing (Just Resolving) (Just li) $ ExceptionInfo "Something went wrong" Warning (Just "Fix by x, y or z") 
 >>> ei & toParsable
 "\ESC[93mWarning\ESC[0m\ESC[32m in \ESC[1m\ESC[92mSomeFile.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m42\ESC[0;32m\ESC[0m \ESC[32mwhile resolving:\ESC[0m\n  \8226 Something went wrong\n  \8226 Fix by x, y or z"
 >>> ei & toCoParsable
+"\ESC[93m| \ESC[0mWhile  while resolving \ESC[32min \ESC[92m\ESC[1mSomeFile.language\ESC[0;92m\ESC[0;32m at line \ESC[1m42\ESC[0;32m, columns 0 - 5\ESC[0m\n\ESC[93mWarning: \ESC[0m\n  \8226 Something went wrong\n  \8226 Fix by x, y or z"
+
 -}
 instance ToString ExceptionInfo where
 	toParsable e	= e & normalize & _fancy         & show
@@ -95,7 +97,7 @@ instance ToString ExceptionInfo where
 
 _fancy	:: ExceptionInfo -> ANSI.Doc
 _fancy (ExceptionInfo errMsg severity suggestion)
-	      =  let 	meta	= severity & toParsable' ":" & text
+	      =  let 	meta	= severity & toCoParsable' ": " & text & colorFor severity
 			msg	= errMsg      & ("• " ++)  & indent  & text 
 			sugg	= suggestion |> ("• " ++) |> indent |> text
 			in vsep ([meta, msg] ++ maybeToList sugg)
@@ -144,10 +146,7 @@ severityOf (Aggregate errs)
 
 
 data Failable a	= Failed ExceptionInfo | Success a
-
-instance Show a => Show (Failable a) where
-	show (Success a)	= "Success "++ inParens (show a)
-	show (Failed e)		= toParsable e
+	deriving (Show)
 
 instance Functor Failable where
 	fmap _ (Failed e)	= Failed e
@@ -173,15 +172,35 @@ instance Monad Failable where
 	fail msg
 		= Failed $ ExceptionInfo msg Error Nothing
 
+instance ToString a => ToString (Failable a) where
+	toParsable (Success a)	= toParsable a
+	toParsable (Failed (Aggregate errs))
+				= _showLined toParsable errs
+	toParsable (Failed e)	= toParsable e
+
+	toCoParsable (Success a)= toCoParsable a
+	toCoParsable (Failed (Aggregate errs))
+				= _showLined toCoParsable errs
+	toCoParsable (Failed e)	= toCoParsable e
+	
+	debug (Success a)	= debug a
+	debug (Failed (Aggregate errs))
+				= _showLined debug errs 
+	debug (Failed e)	= debug e
+
+
+_showLined s errs
+	= Aggregate errs & normalize & fromAggregate |> s & intercalate "\n"
+
 
 fromFailable	:: Failable a -> Maybe a
 fromFailable (Success a)	= Just a
 fromFailable _			= Nothing
 
 
-fromFailableExc	:: Failable a -> Maybe ExceptionInfo
-fromFailableExc (Failed e)	= Just e
-fromFailableExc _		= Nothing
+fromFailed	:: Failable a -> Maybe ExceptionInfo
+fromFailed (Failed e)	= Just e
+fromFailed _		= Nothing
 
 
 legacy	:: Failable a -> Either String a
@@ -322,7 +341,7 @@ successess failables
 
 fails		:: [Failable a] -> [ExceptionInfo]
 fails failables
-	= failables |> fromFailableExc & catMaybes
+	= failables |> fromFailed & catMaybes
 
 
 firstSuccess	:: [Failable a] -> Failable a

@@ -6,15 +6,15 @@ module LanguageDef.LangDefsFix where
 import Utils.All
 
 import LanguageDef.LanguageDef
-import LanguageDef.LocationInfo
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.LocationInfo
+import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Tools.Scope
+import LanguageDef.Tools.Grouper
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
-import LanguageDef.Scope
 import LanguageDef.LangDefs
 import LanguageDef.Typer
 import LanguageDef.Function
-import LanguageDef.Grouper
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)
 
@@ -33,7 +33,8 @@ import Lens.Micro (Lens)
 
 
 >>> import AssetUtils
->>>  let supertypings = testLangDefs & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)
+>>> import LanguageDef.API
+>>> let supertypings = testLanguage' & get (ldScope . payload . langSupertypes)
 >>> debugLattice showFQ supertypings & putStr
 ⊤ has following subtypes:  TestLanguage.exprSum
 ⊥ has following subtypes:<no subs>
@@ -53,22 +54,22 @@ TestLanguage.int has following subtypes:  ⊥
 >>> infimums supertypings [(["TestLanguage"], "bool"), (["TestLanguage"], "int")]
 ([],"\8869")
  -}
-asLangDefs		:: Map [Name] (LanguageDef' ResolvedImport ()) -> Either String LangDefs
-asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |+> sndEffect
-			scopes'		<- scopes ||>> fixScope |+> sndEffect	:: Either String [([Name], LDScope' ())]
+asLangDefs		:: Map [Name] (LanguageDef' ResolvedImport ()) -> Failable LangDefs
+asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |> sndEffect & allGood
+			scopes'		<- scopes ||>> fixScope |+> sndEffect	:: Failable [([Name], LDScope' ())]
 			supertyping	<- createSupertypingRelationship (scopes' ||>> get (ldScope . payload))
 			let ld	= scopes' ||>> over (ldScope . payload) (set langSupertypes supertyping)
 						& M.fromList 
 						& knotScopes 
-			ld'	<- typeLD ld & legacy |> LangDefs	-- TODO refactor further
-			check ld'
+			ld'	<- typeLD ld |> LangDefs
+			check ld' & either error return -- TODO fixme: checks should become failable and not either String
 			return ld'
 
 
 {- | Creates the lattice tracking the supertype relationship
 
 -}
-createSupertypingRelationship	:: [([Name], LanguageDef' ResolvedImport a)] -> Either String (Lattice FQName)
+createSupertypingRelationship	:: [([Name], LanguageDef' ResolvedImport a)] -> Failable (Lattice FQName)
 createSupertypingRelationship lds
 	= do	let syntaxes	= lds ||>> get langSyntax |> sndEffect & catMaybes 
 					||>> get grouperDict
@@ -78,19 +79,19 @@ createSupertypingRelationship lds
 					& M.fromList						:: Map FQName [BNF]
 		let supertypes	= fqsyntax ||>> getRuleCall |> catMaybes |> S.fromList		:: Map FQName (Set FQName)
 		let subtypes	= invertDict supertypes
-		makeLattice typeBottom typeTop subtypes & first cycleMsg |> fst
-		where	cycleMsg	:: [[FQName]] -> String
-			cycleMsg cycles
+		let cycleMsg cycles
 				= "Cycles are detected in the supertype relationship of the syntaxes:"++
 					cycles |> (\cycle -> cycle |> showFQ & intercalate " ⊃ ") & unlines & indent
+		makeLattice typeBottom typeTop subtypes & first cycleMsg |> fst
+			 & either fail return & inMsg' "While constructing the global supertyping relationship" & inPhase Typing
 	
 
-_scopeFor	:: Map [Name] (LanguageDef' ResolvedImport fr) -> ([Name], LanguageDef' ResolvedImport fr) -> Either String (LDScope' fr)
+_scopeFor	:: Map [Name] (LanguageDef' ResolvedImport fr) -> ([Name], LanguageDef' ResolvedImport fr) -> Failable (LDScope' fr)
 _scopeFor ldefs (fqname, ld)
 	= do	let file	= ld & get (langLocation . miFile)
 		let selfImport	= (fqname, ImportFlags file True (tails fqname))
 		let imports	= ld & get langImports |> (get importName &&& _importFlagFor)	:: [ ([Name], ImportFlags) ]
-		imported	<- imports |+> (\k -> checkExists (fst k) ldefs ("Weird, import "++show k++" not found... Bug in LangDefs"))
+		imported	<- imports |+> (\k -> checkExists' (fst k) ldefs ("Weird, import "++show k++" not found... Bug in LangDefs"))
 		let scope	=  Scope
 			fqname
 			(M.fromList (selfImport:imports))	-- includes self as import
@@ -103,7 +104,7 @@ _importFlagFor (Import name qualifiedOnly _ filePath)	-- name is the absolute pa
 	= ImportFlags filePath False (if qualifiedOnly then [name] else tails name)
 
 -- Prepares the language definitions for production (e.g. resolves all calls to be fully qualified). The first argument should be a dict with all the fully fixed scopes
-fixScope	:: LDScope' fr -> Either String (LDScope' fr)
+fixScope	:: LDScope' fr -> Failable (LDScope' fr)
 fixScope scopeToFix
 	= do	let ld	= get (ldScope . payload) scopeToFix
 		ld'	<- fixLD scopeToFix ld
@@ -111,7 +112,7 @@ fixScope scopeToFix
 				& return
 
 
-fixLD		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Either String (LanguageDef' ResolvedImport fr)
+fixLD		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Failable (LanguageDef' ResolvedImport fr)
 fixLD scope ld
 	= ld	& overGrouperLens langSyntax (fullyQualifySyntForm scope)
 		>>= overGrouperLens langFunctions (fullyQualifyFunction scope)

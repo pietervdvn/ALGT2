@@ -11,13 +11,13 @@ See also: LanguageDef.LangDefsFix
 
 import Utils.All
 
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.ExceptionInfo
 import LanguageDef.LanguageDef
-import LanguageDef.LocationInfo
-import LanguageDef.Grouper
+import LanguageDef.Tools.LocationInfo
+import LanguageDef.Tools.Grouper
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
-import LanguageDef.Scope
+import LanguageDef.Tools.Scope
 import LanguageDef.Expression
 import LanguageDef.Function
 import LanguageDef.Rule
@@ -28,6 +28,7 @@ import Graphs.Lattice (makeLattice, Lattice, debugLattice)
 
 import Control.Arrow ((&&&))
 import Data.Bifunctor (first)
+import Data.Function (on)
 
 import Data.Maybe
 import Data.Set as S
@@ -55,8 +56,8 @@ data LangDefs	= LangDefs {_langdefs	:: Map [Name] LDScope}
 	deriving (Show)
 makeLenses ''LangDefs
 
-langDef	:: LangDefs -> [Name] -> Maybe LanguageDef
-langDef defs fq
+getLangDef	:: LangDefs -> [Name] -> Maybe LanguageDef
+getLangDef defs fq
 	= do	def'	<- M.lookup fq (get langdefs defs)
 		def' & get (ldScope . payload) & return
 
@@ -84,57 +85,62 @@ parseTarget langs (startModule, startRule) file contents
 
 
 fullyQualifySyntForm
-			:: LDScope' fr -> SyntacticForm -> Either String SyntacticForm
+			:: LDScope' fr -> SyntacticForm -> Failable SyntacticForm
 fullyQualifySyntForm scope (SyntacticForm nm choices meta docs)
-	= inMsg ("In the definition of "++nm) $
-	   do	choices'	<- choices |> fullyQualifyBNF scope & allRight'
+	= inMsg' ("While fully qualifiying the syntactic form "++show nm) $ inLocation (get miLoc docs) $
+	  do	choices'	<- choices |> fullyQualifyBNF scope & allGood
 		return $ SyntacticForm nm choices' meta docs
 
 
-fullyQualifyBNF	:: LDScope' fr -> BNF -> Either String BNF
+fullyQualifyBNF	:: LDScope' fr -> BNF -> Failable BNF
 fullyQualifyBNF scope bnf
-	= bnf & overRuleCall' (resolve scope syntaxCall)
+	= inMsg' ("While fully qualifiying the BNF "++toParsable bnf) $
+		bnf & overRuleCall' (resolve scope syntaxCall)
 
 
 -- Qualifies all function types absolutely
-fullyQualifyFunction	:: LDScope' fr -> Function' a -> Either String (Function' a)
+fullyQualifyFunction	:: LDScope' fr -> Function' a -> Failable (Function' a)
 fullyQualifyFunction scope (Function nm argTps retType clauses docs)
-	= do	argTps'	<- argTps |> resolve scope syntaxCall & allRight'
+	= inMsg' ("While fully qualifiying the function "++show nm) $ inLocation (get miLoc docs) $ 
+	  do	argTps'	<- argTps |> resolve scope syntaxCall & allGood
 		retType'	<- retType & resolve scope syntaxCall
-		clauses'	<- clauses |> fullyQualifyClause scope & allRight'
+		clauses'	<- clauses |> fullyQualifyClause scope & allGood
 		return $ Function nm argTps' retType' clauses' docs
 
 
-fullyQualifyClause	:: LDScope' fr -> FunctionClause a -> Either String (FunctionClause a)
+fullyQualifyClause	:: LDScope' fr -> FunctionClause a -> Failable (FunctionClause a)
 fullyQualifyClause _	= return	-- full qualification happens by the typer
 
 
 
-fullyQualifyRelation	:: LDScope' fr -> Relation -> Either String Relation
+fullyQualifyRelation	:: LDScope' fr -> Relation -> Failable Relation
 fullyQualifyRelation scope rel
-	= do	let tps	= get relTypes rel
+	= inMsg' ("While fully qualifiying the relation form "++show (get relSymbol rel)) $ inLocation (get (relDocs . miLoc) rel) $ 
+	  do	let tps	= get relTypes rel
 		tps'	<- tps |> first (resolve scope syntaxCall) |+> fstEffect
 		return $ set relTypes tps' rel
 
 
 
-fullyQualifyRule	:: LDScope' fr -> Rule' fr -> Either String (Rule' fr)
+fullyQualifyRule	:: LDScope' fr -> Rule' fr -> Failable (Rule' fr)
 fullyQualifyRule scope (Rule preds concl name docs)
-	= do	concl'	<- fullyQualifyConcl scope concl
-		preds'	<- preds |> fullyQualifyPred scope & allRight'
+	= inMsg' ("While fully qualifiying the rule "++show name) $ inLocation (get miLoc docs) $ 
+	  do	concl'	<- fullyQualifyConcl scope concl
+		preds'	<- preds |> fullyQualifyPred scope & allGood
 		return $ Rule preds' concl' name docs
 
 
-fullyQualifyPred	:: LDScope' fr -> Either (Conclusion a) (Expression a) -> Either String (Either (Conclusion a) (Expression a))
+fullyQualifyPred	:: LDScope' fr -> Either (Conclusion a) (Expression a) -> Failable (Either (Conclusion a) (Expression a))
 fullyQualifyPred scope (Left concl)
 	= fullyQualifyConcl scope concl |> Left
 fullyQualifyPred scope (Right expr)
 	= return $ Right expr	-- should be typechecked
 
 
-fullyQualifyConcl	:: LDScope' fr -> Conclusion a -> Either String (Conclusion a)
+fullyQualifyConcl	:: LDScope' fr -> Conclusion a -> Failable (Conclusion a)
 fullyQualifyConcl scope (Conclusion relName args)
-	= do	let args'	= args	-- qualification of expressions is done by the typechecker
+	= inMsg' ("While fully qualifiying a conclusion using "++show relName) $ inLocation (get expLocation $ head args ) $ 
+	  do	let args'	= args	-- qualification of expressions is done by the typechecker
 		relName'	<- resolve scope relationCall relName
 		return $ Conclusion relName' args'
 
@@ -156,21 +162,23 @@ ruleCall	:: Resolver fr (Rule' fr)
 ruleCall	= ("the rule", get langRules, get grouperDict)
 
 
-resolveGlobal	:: Eq x => LangDefs -> (String, LanguageDef -> Maybe (Grouper x), Grouper x -> Map Name x) -> FQName -> Either String (FQName, x)
+resolveGlobal	:: Eq x => LangDefs -> (String, LanguageDef -> Maybe (Grouper x), Grouper x -> Map Name x) -> FQName -> Failable (FQName, x)
 resolveGlobal lds entity fqname
-	= do	ld	<- checkExistsSugg show (fst fqname) (lds & get langdefs) ("Namespace "++ dots (fst fqname) ++ " was not found")
+	= do	let path	= fst fqname
+		ld	<- checkExistsSuggDist' (dots, levenshtein `on` last) path (get langdefs lds) 
+				("Namespace "++ dots path ++ " was not found")
 		resolve' ld entity fqname
 
-resolve	:: Eq x => LDScope' fr -> Resolver fr x-> FQName -> Either String FQName
+resolve	:: Eq x => LDScope' fr -> Resolver fr x-> FQName -> Failable FQName
 resolve	scope resolver fqn
 	= resolve' scope resolver fqn |> fst
 
-resolve'	:: Eq x => LDScope' fr ->  Resolver fr x -> FQName -> Either String (FQName, x)
+resolve'	:: Eq x => LDScope' fr ->  Resolver fr x -> FQName -> Failable (FQName, x)
 resolve' scope resolver fqn
 	= do	let resDict	= resolutionMap scope resolver
 		let name	= over _head toUpper (fst3 resolver) ++ " " ++ show (showFQ fqn)
-		results	<- checkExists fqn resDict (name ++ " was not found.")
-		assert (length results == 1) $ name ++ " could resolve to multiple entities:\n"++(results |> fst |> showFQ & unlines & indent)
+		results	<- checkExistsSuggDist' distFQ fqn resDict (name ++ " was not found within the namespace "++dots (fst fqn))
+		assert' (length results == 1) $ name ++ " could resolve to multiple entities:\n"++(results |> fst |> showFQ & unlines & indent)
 		return $ head results
 		
 {- Creates a dict {this local name --> these possible entities} -}
@@ -222,7 +230,7 @@ _allKnownLocally (fq, ld) (_, getWhole, _)
 	
 {- |
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty" ["TitleMismatch"]
+>>> loadAssetLangDef "Faulty" ["TitleMismatch"] & toCoParsable
 Left "The module in file TitleMismatch is titled \"Some Other Title\". Retitle them to be the same (whitespace insensitive)"
 -}
 instance Checkable LangDefs where
@@ -235,7 +243,7 @@ _checkOne (fq, ldscope)
 	= do	let ld		= get (ldScope . payload) ldscope
 		let isSubtype	= ld & isSubtypeOf
 		let resolveSF	= resolve ldscope syntaxCall
-		let extras	= (resolveSF , isSubtype, fq)	:: (FQName -> Either String FQName, FQName -> FQName -> Bool, [Name])
+		let extras	= (resolveSF , isSubtype, fq)	:: (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name])
 		check' extras ld <> _checkSameTitle fq ld
 
 _checkSameTitle	:: [Name] -> LanguageDef -> Check

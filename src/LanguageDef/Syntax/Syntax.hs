@@ -15,9 +15,10 @@ The defintion of
 
 import Utils.All
 
-import LanguageDef.LocationInfo
+import LanguageDef.Tools.LocationInfo
 import LanguageDef.Syntax.BNF
-import LanguageDef.Grouper
+import LanguageDef.Tools.Grouper
+import LanguageDef.Tools.ExceptionInfo
 
 import Data.Maybe
 import qualified Data.Map as M
@@ -85,10 +86,10 @@ createSyntax
 
 
 
-instance Checkable' (FQName -> Either String FQName, FQName -> FQName -> Bool, [Name]) SyntacticForm where
+instance Checkable' (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name]) SyntacticForm where
 	check' (resolve, isSubtypeOf, fqname) sf
 		= allRight_ 
-			[ _checkAllIdentsExist resolve sf
+			[ _checkAllIdentsExist resolve sf & legacy
 			, _checkNoTrivial sf
 			, _checkDeadClauses isSubtypeOf fqname sf] 
 
@@ -102,11 +103,11 @@ instance Checkable' (FQName -> Either String FQName, FQName -> FQName -> Bool, [
 -- >>> _checkAllIdentsExist (asSyntaxes' ["Tests"] syntax2) (syntax2, ["Tests"])
 -- Right ...
 -}
-_checkAllIdentsExist	:: (FQName -> Either String FQName) -> SyntacticForm -> Check
+_checkAllIdentsExist	:: (FQName -> Failable FQName) -> SyntacticForm -> Failable ()
 _checkAllIdentsExist resolve sf
-	= inMsg ("While resolving all calls in "++get syntName sf) $
+	= inMsg' ("While resolving all calls in "++get syntName sf) $
 		do	let allCalls	= sf & get syntChoices >>= getRuleCalls
-			allCalls |> resolve & allRight'
+			allCalls |> resolve & allGood
 			pass
 
 {- | Rules are not trivial (= one choice with only the rulecall)
@@ -181,7 +182,7 @@ deadChoices isSubtypeOf sf
 >>> import Data.Maybe (fromJust)
 >>> import LanguageDef.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
->>> let unit = loadAssetLangDef "Faulty" fqname & either error (flip langDef fqname) & fromJust
+>>> let unit = loadAssetLangDef "Faulty" fqname & crash' & (`getLangDef` fqname) & fromJust
 >>> let synt = unit & get langSyntax & fromJust
 >>> _checkLeftRecursion fqname synt
 Left "Left recursive calls detected:\nLeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b\n\n"
@@ -202,7 +203,7 @@ _checkLeftRecursion fq s
 >>> import Data.Maybe (fromJust)
 >>> import LanguageDef.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
->>> let unit = loadAssetLangDef "Faulty" fqname & either error (flip langDef fqname) & fromJust
+>>> let unit = loadAssetLangDef "Faulty" fqname & crash' & (`getLangDef` fqname) & fromJust
 >>> let synt = unit & get langSyntax & fromJust
 >>> leftRecursiveCalls fqname synt ||>> showFQ |> commas
 ["LeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b"]

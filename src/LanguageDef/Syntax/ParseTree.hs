@@ -8,11 +8,11 @@ The data structure representing a parsetree and related
 import Utils.All
 
 import qualified LanguageDef.Syntax.BNF as BNF
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.ExceptionInfo
 import LanguageDef.Syntax.BNF (Parser, BNF, ParserMetaInfo (ParserMetaInfo), pmiColumn, pmiLine, pmiFile, biParse)
 import LanguageDef.Syntax.Syntax
-import LanguageDef.LocationInfo
-import LanguageDef.Grouper
+import LanguageDef.Tools.LocationInfo
+import LanguageDef.Tools.Grouper
 
 import qualified Data.Map as M
 import Data.Map (Map)

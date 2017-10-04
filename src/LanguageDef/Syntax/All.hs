@@ -8,7 +8,7 @@ import Utils.All
 
 import Data.Map as M
 
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.ExceptionInfo
 import LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.Syntax as S
 import LanguageDef.Syntax.ParseTree as S

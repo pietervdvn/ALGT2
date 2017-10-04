@@ -4,10 +4,10 @@ module LanguageDef.Syntax.Combiner where
 
 import Utils.All hiding (assert)
 
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Tools.LocationInfo
+import LanguageDef.Tools.Grouper
 import LanguageDef.Syntax.Syntax
-import LanguageDef.LocationInfo
-import LanguageDef.Grouper
 import LanguageDef.Syntax.BNF hiding (Literal, Seq, string)
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.ParseTree

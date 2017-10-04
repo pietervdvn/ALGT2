@@ -9,7 +9,7 @@ import LanguageDef.Syntax.BNF as BNF
 
 import LanguageDef.Syntax.Combiner
 import qualified LanguageDef.Syntax.Combiner as CMB
-import LanguageDef.LocationInfo
+import LanguageDef.Tools.LocationInfo
 
 import Data.Maybe
 

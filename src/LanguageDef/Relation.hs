@@ -3,11 +3,11 @@ module LanguageDef.Relation where
 
 
 import Utils.All
-import LanguageDef.LocationInfo
+import LanguageDef.Tools.LocationInfo
 import LanguageDef.Syntax.All
 import LanguageDef.Rule
 import LanguageDef.Expression hiding (choices')
-import LanguageDef.Grouper
+import LanguageDef.Tools.Grouper
 
 
 import Data.Map (Map, (!), filterWithKey)
@@ -172,11 +172,11 @@ rules	= _rules |||>>> const () |> asGrouper ("rule", "rules") (get ruleName)
 {- | Checks the relation. Duplicate relation check is done by the grouper; unknown type check is done by the qualfier
 
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty/Relations" ["UnknownTypeRelation"]
+>>> loadAssetLangDef "Faulty/Relations" ["UnknownTypeRelation"] & toCoParsable
 Left "The syntactic form \"x\" was not found."
->>> loadAssetLangDef "Faulty/Relations" ["DuplicateRelation"]
+>>> loadAssetLangDef "Faulty/Relations" ["DuplicateRelation"] & toCoParsable
 Left "The relation \"~\" is defined multiple times"
->>> loadAssetLangDef "Faulty/Relations" ["AllOutRel"]
+>>> loadAssetLangDef "Faulty/Relations" ["AllOutRel"] & toCoParsable
 Left "Relation (~) should have at least one input type"
 
 -}

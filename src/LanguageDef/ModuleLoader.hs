@@ -8,11 +8,11 @@ import Prelude hiding (putStr, putStrLn, readFile, putStrLn, fail)
 import Utils.All
 import Utils.PureIO
 
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.ExceptionInfo
 import LanguageDef.LanguageDef
 import LanguageDef.LangDefs
 import LanguageDef.LangDefsFix
-import LanguageDef.Scope
+import LanguageDef.Tools.Scope
 
 import Data.Map as M
 
@@ -40,25 +40,25 @@ makeLenses ''LoadingStatus
 
 >>> lds = runPure allAssets' (loadAll "" ["TestInput","Nested","L"]) |> fst
 >>> lds
-Right (LangDefs ...)
->>> Right (LangDefs langs) = lds
+Right (Success (LangDefs ...))
+>>> Right (Success (LangDefs langs)) = lds
 >>> langL = langs ! ["TestInput", "Nested", "L"]
 >>> (resolve langL syntaxCall) ([], "a")
-Right (["TestInput","Nested","L"],"a")
+Success (["TestInput","Nested","L"],"a")
 >>> (resolve langL syntaxCall) ([], "x")
-Right (["TestInput","Nested","X"],"x")
+Success ((["TestInput","Nested","X"],"x"))
 
->>> runPure allAssets' (loadAll "TestInput" ["LoopingSupertypes"]) |> fst
-Left "Cycles are detected in the supertype ..."
+>>> runPure allAssets' (loadAll "TestInput" ["LoopingSupertypes"]) & either error id & fst & toCoParsable
+"| While constructing the global supertyping relationship while typing \nError: \n  \8226 Cycles are detected in the supertype relationship of the syntaxes:  LoopingSupertypes.z \8835 LoopingSupertypes.y \8835 LoopingSupertypes.x \8835 LoopingSupertypes.z\n    LoopingSupertypes.bool \8835 LoopingSupertypes.bool"
 
 
 -}
 
 
-loadAll	:: FilePath -> [Name] -> PureIO LangDefs
+loadAll	:: FilePath -> [Name] -> PureIO (Failable LangDefs)
 loadAll fp plzLoad
 	= do	defs	<- _loadAll (LS [] fp M.empty) plzLoad |> get currentlyKnown |> _fixImports
-		asLangDefs defs & either fail return
+		asLangDefs defs & return
 		
 
 -- Adds the filepath to the imports, within the language def data

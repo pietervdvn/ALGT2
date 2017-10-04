@@ -5,9 +5,9 @@ module LanguageDef.Function where
 import Utils.All
 
 import LanguageDef.Expression hiding (choices')
-import LanguageDef.LocationInfo
+import LanguageDef.Tools.LocationInfo
 import LanguageDef.Syntax.All
-import LanguageDef.Grouper
+import LanguageDef.Tools.Grouper
 
 import Data.Maybe
 import Data.Map as M

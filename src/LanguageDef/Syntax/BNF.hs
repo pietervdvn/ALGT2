@@ -4,7 +4,7 @@ module LanguageDef.Syntax.BNF where
 
 import Utils.All
 
-import LanguageDef.LocationInfo
+import LanguageDef.Tools.LocationInfo
 import Data.Maybe
 import Data.Either
 import Control.Monad.Identity

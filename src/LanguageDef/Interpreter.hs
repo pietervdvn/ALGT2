@@ -8,12 +8,12 @@ import LanguageDef.LanguageDef
 import LanguageDef.Syntax hiding (assert')
 import LanguageDef.Function 
 import LanguageDef.Expression 
-import LanguageDef.LocationInfo
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.LocationInfo
+import LanguageDef.Tools.ExceptionInfo
 
 import LanguageDef.LangDefs
-import LanguageDef.Scope
-import LanguageDef.Grouper
+import LanguageDef.Tools.Scope
+import LanguageDef.Tools.Grouper
 
 import qualified Data.Map as M
 import Data.Map (Map)
@@ -22,8 +22,7 @@ import Data.Map (Map)
 {- | The type representing a variable store
 
 >>> import LanguageDef.API
->>> import AssetUtils
->>> import LanguageDef.Scope
+>>> import LanguageDef.Tools.Scope
 >>> import LanguageDef.LangDefs
 
 

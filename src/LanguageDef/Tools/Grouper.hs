@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, Rank2Types #-}
-module LanguageDef.Grouper where
+module LanguageDef.Tools.Grouper where
 
 {- A 'Grouper' groups several name-indexed values in a certain order -}
 

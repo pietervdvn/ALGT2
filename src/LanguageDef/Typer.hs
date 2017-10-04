@@ -5,10 +5,10 @@ module LanguageDef.Typer where
 import Utils.All
 
 import LanguageDef.LanguageDef
-import LanguageDef.LocationInfo
-import LanguageDef.Grouper
-import LanguageDef.Scope
-import LanguageDef.ExceptionInfo
+import LanguageDef.Tools.LocationInfo
+import LanguageDef.Tools.Grouper
+import LanguageDef.Tools.Scope
+import LanguageDef.Tools.ExceptionInfo
 
 import LanguageDef.Syntax.BNF (BNF)
 import qualified LanguageDef.Syntax.BNF as BNF
@@ -70,8 +70,8 @@ typeScope' ld langDef
 {- | Types a rule
 
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty/Relations" ["TypeErr"]
-Left "\ESC[91mError\ESC[0m\ESC[32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing the expression \"5\" against \"True\"(TypeErr.bool:0.0)Expected a literal \"True\" but got the token \"5\"\n\ESC[91mError\ESC[0m\ESC[32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing the expression \"5\" against \"False\"(TypeErr.bool:1.0)Expected a literal \"False\" but got the token \"5\""
+>>> loadAssetLangDef "Faulty/Relations" ["TypeErr"] & toCoParsable
+"| While typing \"5\" while typing in Faulty/Relations/TypeErr.language at line 24, columns 5 - 8\n| Could not type the sequence \"5\" as a TypeErr.bool \n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"True\"\n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"False\""
 
 
 -}
@@ -95,7 +95,7 @@ typePredicate lds (Right expr)
 
 typeConclusion	:: Eq fr => LDScope' fr -> Conclusion a -> Failable (Conclusion (a, SyntFormIndex))
 typeConclusion lds (Conclusion rel args)
-	= do	(relFQn, relation)	<- _resolve' lds relationCall rel
+	= do	(relFQn, relation)	<- resolve' lds relationCall rel
 		let types	= relation & get relTypes |> fst
 		args'		<- zip types args |> uncurry (typeExpression lds)
 					& allGood
@@ -122,13 +122,16 @@ Typing of the clause. Checks for:
 - Variable usage that is smaller then the possible input (e.g. f(x:expr) = intFunction(x))
 - Conflicting usage
 
->>> import AssetUtils
->>> getLangDefs' ["Faulty","FunctionTyperTest"]
-Left "\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m25\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing clause f.0The variable \"y\" was not defined\n\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m28\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing return expression, namely not(x)No common ground: expected some intersection between Faulty.FunctionTyperTest.int and Faulty.FunctionTyperTest.bool\n\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m31\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing clause h.0The variable \"bool\" was not defined\n\ESC[91mError\ESC[0m\ESC[32m in \ESC[1m\ESC[92m/Faulty/FunctionTyperTest.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m32\ESC[0;32m\ESC[0m \ESC[32mwhile typing:\ESC[0m\n  \8226 While typing clause h.1  The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader"
+>>> import LanguageDef.API
+>>> loadAssetLangDef "" ["Faulty","FunctionTyperTest"] & toCoParsable
+"| While typing f \n| While typing clause f.0 in /Faulty/FunctionTyperTest.language at lines 25 - 26\n| The clause is: (f(x)\t = y) \nError: \n  \8226 The variable \"y\" was not defined\n| While typing g \n| While typing clause g.0 in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| The clause is: (g(x)\t = not(x)) \n| While typing the return expression of the function, namely not(x) \n| While typing not(x) while typing in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\nError: \n  \8226 Unexpected type of 'not(x)', namely Faulty.FunctionTyperTest.bool\n  \8226 Use an expression which returns a Faulty.FunctionTyperTest.int (or a subset of that type)\n| While typing h \n  | While typing clause h.0 in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  | The clause is: (h(x:int)\t = bool) \n  Error: \n    \8226 The variable \"bool\" was not defined\n  | While typing clause h.1 in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  | The clause is: (h(x)\t = not(x)) \n  Error: \n    \8226   The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader"
+
 -}
 
 typeClause scope supers expectations (i, clause)
-	= inContext ("While typing clause "++get clauseFuncName clause ++ "." ++show i, Typing, get (clauseDoc . miLoc) clause) $ _typeClause scope supers expectations (i, clause)
+	=  inMsg' ("While typing clause "++get clauseFuncName clause ++"."++show i) $ inLocation (get (clauseDoc . miLoc) clause) $
+		inMsg' ("The clause is: "++inParens (toParsable clause)) $
+		_typeClause scope supers expectations (i, clause)
 
 _typeClause	:: Eq fr => LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause x) -> Failable (FunctionClause SyntFormIndex)
 _typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc nm)
@@ -136,11 +139,10 @@ _typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc
 	= inLocation (get miLoc doc) $ fail $ 
 		"Expected "++show (length patExps)++" patterns for function "++show nm++", but got "++show (length pats)++" patterns instead"
  | otherwise
-	= inMsg' ("While typing clause "++nm++"."++show i) $ inLocation (get miLoc doc) $ do
-		let li	= get miLoc doc
+	= do	let li	= get miLoc doc
 		pats'	<- zip patExps pats & mapi |> (\(i, (patExp, pat)) -> typePattern ("pattern "++show i) scope supertypings patExp pat)
 				& allGood
-		ret'	<- typePattern "return expression" scope supertypings retExp ret	-- typing of the main return expression
+		ret'	<- typePattern "the return expression of the function" scope supertypings retExp ret	-- typing of the main return expression
 
 		-- Patterns, such as `f((x:expr), (x:int))` will get the intersection
 		patternTypes	<- inMsg' "While checking for conflicting variable usage between patterns" $
@@ -190,15 +192,15 @@ typeExpressionFreely lds
 
 {- | Types an expression to the given expectation (and fully qualifies all calls and types in the mean time)
 
->>> import AssetUtils
+>>> import LanguageDef.API
 
 >>> typeExpression (error "") (["A"], "b") (DontCare () unknownLocation)
 Success (DontCare {_expAnnot = ((),NoIndex (["A"],"b")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
->>> typeExpression testLDScope (["TestLanguage"], "bool") (Var "x" () unknownLocation)
+>>> typeExpression testLangage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 Success (Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...})
->>> typeExpression testLDScope (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
+>>> typeExpression testLangage' (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
 Success (ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
->>> typeExpression testLDScope (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
+>>> typeExpression testLangage' (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
 Success (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
  -}
 typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Failable (Expression (a, SyntFormIndex)) 
@@ -212,9 +214,9 @@ _typeExpression _ expectation (Var nm a li)
 	= return $ Var nm (a, NoIndex expectation) li
 _typeExpression _ expectation  (DontCare a li)
 	= return $ DontCare (a, NoIndex expectation) li
-_typeExpression ld expectation (FuncCall funcNm args a li)
-	= do	(fqname, function)	<- _resolve' ld functionCall funcNm
-		argTypes		<- get funcArgTypes function |> _resolve ld syntaxCall & allGood
+_typeExpression ld expectation expr'@(FuncCall funcNm args a li)
+	= do	(fqname, function)	<- resolve' ld functionCall funcNm
+		argTypes		<- get funcArgTypes function |> resolve ld syntaxCall & allGood
 		args'			<- zip argTypes args |+> uncurry (typeExpression ld)
 
 		let argSugg	= "Give "++ show (length argTypes) ++" arguments, of types "++(argTypes |> showFQ & commas)
@@ -225,12 +227,12 @@ _typeExpression ld expectation (FuncCall funcNm args a li)
 
 
 		let ld'			= get (ldScope . payload) ld
-		ftype	<- get funcRetType function & _resolve ld syntaxCall
-		assert' (isSubtypeOf ld' ftype expectation || isSubtypeOf ld' expectation ftype)
-			("No common ground: expected some intersection between "++showFQ expectation++" and "++ showFQ ftype)
+		ftype	<- get funcRetType function & resolve ld syntaxCall
+		assertSugg' (isSubtypeOf ld' ftype expectation || isSubtypeOf ld' expectation ftype)
+			("Unexpected type of '"++ toParsable expr' ++"', namely "++ showFQ ftype, "Use an expression which returns a "++showFQ expectation++" (or a subset of that type)")
 		return (FuncCall fqname args' (a, NoIndex ftype) li)
 _typeExpression ld expectation (Ascription expr name a li)
-	= do	name'	<- _resolve ld syntaxCall name
+	= do	name'	<- resolve ld syntaxCall name
 		expr'	<- typeExpression ld name' expr
 		assert' (isSubtypeOf (get (ldScope . payload) ld) name' expectation)
 			$ "The ascription of "++toParsable expr++" as a "++showFQ name++" is not a subtype of "++showFQ expectation
@@ -257,7 +259,7 @@ _typeExpression ld expectation (SeqExp exprs a li)
 typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> Failable ([Expression (a, SyntFormIndex)], SyntFormIndex)
 typeExpressionIndexed ld syntForm exprs
 	= do	(fqname, choices)	<- inMsg' ("While typing "++ exprs |> toParsable & commas) 
-						$ _resolve' ld syntaxCall syntForm ||>> get syntChoices
+						$ resolve' ld syntaxCall syntForm ||>> get syntChoices
 		let tries	= choices |> BNF.removeWS |> BNF.unsequence	-- prepare individual choices
 					& mapi 					-- Number the choices
 					|> typeExpressionIndexed' ld syntForm exprs	-- Actually type them
@@ -302,14 +304,6 @@ typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
 		s@SeqExp{}		-> fail $
 						"Found a sequence "++toParsable s++" where a literal value of the form "++toParsable bnf++
 						" was expected; ascriptions can only match rulecalls"
--- TODO remove when the time is right
-_resolve'	:: Eq x => LDScope' fr ->  Resolver fr x -> FQName -> Failable (FQName, x)
-_resolve' lds resolver fq
-		= resolve' lds resolver fq & either error return
-
--- TODO Remove when the time is right
-_resolve lds resolver fq
-		= resolve lds resolver fq & either error return
 
 _compareBNFPT	:: BNF -> ParseTree a -> Failable ()
 _compareBNFPT (BNF.Literal str) (Literal token li _ _)
@@ -362,10 +356,10 @@ _typingTable (SeqExp exprs _ _)
 {- | checks that no two typings do conflict (thus that no two typings result in an empty set for the variables). The typingtable is used for this
 
 >>> import AssetUtils
->>> let (Success boolVar) = typeExpression testLDScope (["TestLanguage"], "bool") (Var "x" () unknownLocation)
+>>> let (Success boolVar) = typeExpression testLangage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 >>> boolVar
 Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...}
->>> let (Success intVar)  = typeExpression testLDScope (["TestLanguage"], "int") (Var "x" () unknownLocation)
+>>> let (Success intVar)  = typeExpression testLangage' (["TestLanguage"], "int") (Var "x" () unknownLocation)
 >>> intVar
 Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"int")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
 >>> let supertypings = testLangDefs & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)

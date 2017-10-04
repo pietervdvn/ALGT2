@@ -22,10 +22,10 @@ import Utils.PureIO
 
 import AssetUtils
 
-import LanguageDef.ExceptionInfo
 import LanguageDef.LanguageDef
-import LanguageDef.LocationInfo
-import LanguageDef.Scope
+import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Tools.LocationInfo
+import LanguageDef.Tools.Scope
 
 import LanguageDef.Syntax.All as Syntax
 import qualified LanguageDef.Syntax.Combiner as Combiner
@@ -48,19 +48,19 @@ import Data.Maybe
 import Data.Map (Map, (!), empty)
 
 {- Loads a language definition from the filesystem; use with 'runIO'-}
-loadLangDef :: FilePath -> [Name] -> PureIO LangDefs
+loadLangDef :: FilePath -> [Name] -> PureIO (Failable LangDefs)
 loadLangDef	= loadAll
 
-loadLangDef'	:: FilePath -> [Name] -> PureIO LDScope
+loadLangDef'	:: FilePath -> [Name] -> PureIO (Failable LDScope)
 loadLangDef' fp fq
-		= loadLangDef fp fq |> get langdefs |> (! fq)
+		= loadLangDef fp fq ||>> get langdefs ||>> (! fq)
 
 {- Loads a language definition directly from the assets; is Pure -}
-loadAssetLangDef	:: FilePath -> [Name] -> Either String LangDefs
+loadAssetLangDef	:: FilePath -> [Name] -> Failable LangDefs
 loadAssetLangDef fp names
-		= runPure allAssets' (loadLangDef fp names) |> fst
+		= runPure allAssets' (loadLangDef fp names) |> fst & either fail id
 
-loadAssetLangDef'	:: FilePath -> [Name] -> Either String LDScope
+loadAssetLangDef'	:: FilePath -> [Name] -> Failable LDScope
 loadAssetLangDef' fp names
 		= loadAssetLangDef fp names |> get langdefs |> (! names)
 
@@ -69,9 +69,9 @@ loadAssetLangDef' fp names
 testLanguage	= _testLanguage loadAssetLangDef
 testLanguage'	= _testLanguage loadAssetLangDef' 
 
-_testLanguage	:: (FilePath -> [Name] -> Either String a) -> a
+_testLanguage	:: (FilePath -> [Name] -> Failable a) -> a
 _testLanguage loadWith
-		= loadWith "" ["TestLanguage"] & either error id
+		= loadWith "" ["TestLanguage"] & crash'
 
 {- | Gives info about any entry, resolved globally
 >>> infoAbout testLanguage ["TestLanguage", "bool"] |> uncurry toParsable' & unlines
@@ -94,8 +94,8 @@ _testLanguage loadWith
 infoAbout	:: LangDefs -> [Name] -> [(FQName, AllInfo)]
 infoAbout langDefs names
 	= let	fqn	= (init names, last names)
-		ld	= langDef langDefs names |> getInfo |> (,) fqn
-		search x	= resolveGlobal langDefs x fqn & either (const Nothing)  (\(fqn, e) -> Just (fqn, getInfo e))
+		ld	= getLangDef langDefs names |> getInfo |> (,) fqn
+		search x	= resolveGlobal langDefs x fqn & fromFailable ||>> getInfo
 		in
 		catMaybes [ld, search syntaxCall, search functionCall, search relationCall, search ruleCall]
 
@@ -110,7 +110,7 @@ infoAbout langDefs names
 infoAbout'	:: LDScope -> [Name] -> [(FQName, AllInfo)]
 infoAbout' langDefs names
 	= let	fqn		= (init names, last names)
-		search x	= resolve' langDefs x fqn & either (const Nothing)  (\(fqn, e) -> Just (fqn, getInfo e))
+		search x	= resolve' langDefs x fqn & fromFailable ||>> getInfo
 		in
 		catMaybes [search syntaxCall, search functionCall, search relationCall, search ruleCall]
 
@@ -160,14 +160,14 @@ runExpression' lds file expectedType input
 
 {- | createParseTree: creates a parsetree based on the syntax of langdefs
 >>> createParseTree testLanguage (["TestLanguage"], "exprSum") "?" "True & True" |>  toParsable
-Success ("True & True")
+Success "True & True"
  -}
 createParseTree	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
 createParseTree	= parseTarget
 
 {- | Creates an entire expression, which is untyped 
 >>> createExpression testLanguage "?" "and(\"True\", \"True\")" |> toParsable
-Success ("and(\"True\", \"True\")")
+Success "and(\"True\", \"True\")"
 -}
 createExpression	:: LangDefs -> FilePath -> String -> Failable (Expression ())
 createExpression ld source str
@@ -176,7 +176,7 @@ createExpression ld source str
 
 {- | Creates an expression and types it 
 >>> createTypedExpression testLanguage "?" "and(\"True\",\"True\")" (["TestLanguage"],"bool") |> toParsable
-Success ("TestLanguage.and(\"True\", \"True\")")
+Success "TestLanguage.and(\"True\", \"True\")"
 
 -}
 
