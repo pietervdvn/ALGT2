@@ -26,11 +26,11 @@ import Data.Map (Map)
 >>> import LanguageDef.LangDefs
 
 
->>> let createPT tp p = createParseTree testLangDefs (testType tp) "?" p & crash' & removeHidden
->>> let createExp tp e = createTypedExpression testLangDefs "?" e (testType tp) & crash'
->>> let ld = AssetUtils.testLDScope & get (ldScope . payload)
+>>> let createPT tp p = createParseTree testLangage (testType tp) "?" p & crash' & removeHidden
+>>> let createExp tp e = createTypedExpression testLangage "?" e (testType tp) & crash'
+>>> let ld = testLangage' & get (ldScope . payload)
 
->>> let t te e tpt pt = patternMatch (const (), testLangDefs) M.empty ld (createExp te e) (createPT tpt pt)
+>>> let t te e tpt pt = patternMatch (const (), testLangage) M.empty ld (createExp te e) (createPT tpt pt)
 >>> t "bool" "\"True\"" "bool" "True"
 Success (fromList [])
 >>> t "bool" "\"True\"" "bool" "False"
@@ -56,13 +56,13 @@ Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ..., 
 
 
 
->>> tNot arg	= resolveAndRun (const ()) testLangDefs (["TestLanguage"], "not") [createPT "expr" arg] & either error toParsable
+>>> tNot arg	= resolveAndRun (const ()) testLangage (["TestLanguage"], "not") [createPT "expr" arg] & either error toParsable
 >>> tNot "True"
 "False"
 >>> tNot "False"
 "True"
 
->>> let tNand a b	= resolveAndRun (const ()) testLangDefs (["TestLanguage"], "nand") [createPT "expr" a, createPT "expr" b] & either error toParsable
+>>> let tNand a b	= resolveAndRun (const ()) testLangage (["TestLanguage"], "nand") [createPT "expr" a, createPT "expr" b] & either error toParsable
 >>> tNand "False" "False"
 "True"
 >>> tNand "True" "False"
@@ -72,7 +72,7 @@ Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ..., 
 >>> tNand "True" "True"
 "False"
 
->>> let tOr a b	= resolveAndRun (const ()) testLangDefs (["TestLanguage"], "or") [createPT "expr" a, createPT "expr" b] & either error toParsable
+>>> let tOr a b	= resolveAndRun (const ()) testLangage (["TestLanguage"], "or") [createPT "expr" a, createPT "expr" b] & either error toParsable
 >>> tOr "True" "True"
 "True"
 >>> tOr "True" "False"

@@ -196,11 +196,11 @@ typeExpressionFreely lds
 
 >>> typeExpression (error "") (["A"], "b") (DontCare () unknownLocation)
 Success (DontCare {_expAnnot = ((),NoIndex (["A"],"b")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
->>> typeExpression testLangage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
+>>> typeExpression testLanguage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 Success (Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...})
->>> typeExpression testLangage' (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
+>>> typeExpression testLanguage' (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
 Success (ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
->>> typeExpression testLangage' (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
+>>> typeExpression testLanguage' (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
 Success (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
  -}
 typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Failable (Expression (a, SyntFormIndex)) 
@@ -356,10 +356,10 @@ _typingTable (SeqExp exprs _ _)
 {- | checks that no two typings do conflict (thus that no two typings result in an empty set for the variables). The typingtable is used for this
 
 >>> import AssetUtils
->>> let (Success boolVar) = typeExpression testLangage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
+>>> let (Success boolVar) = typeExpression testLanguage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 >>> boolVar
 Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...}
->>> let (Success intVar)  = typeExpression testLangage' (["TestLanguage"], "int") (Var "x" () unknownLocation)
+>>> let (Success intVar)  = typeExpression testLanguage' (["TestLanguage"], "int") (Var "x" () unknownLocation)
 >>> intVar
 Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"int")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
 >>> let supertypings = testLangDefs & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)

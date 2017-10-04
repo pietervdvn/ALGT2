@@ -173,9 +173,9 @@ rules	= _rules |||>>> const () |> asGrouper ("rule", "rules") (get ruleName)
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty/Relations" ["UnknownTypeRelation"] & toCoParsable
-Left "The syntactic form \"x\" was not found."
+"| While fully qualifiying the relation form \"~\" in Faulty/Relations/UnknownTypeRelation.language at lines 11 - 13\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, UnknownTypeRelation.a\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, UnknownTypeRelation.a"
 >>> loadAssetLangDef "Faulty/Relations" ["DuplicateRelation"] & toCoParsable
-Left "The relation \"~\" is defined multiple times"
+
 >>> loadAssetLangDef "Faulty/Relations" ["AllOutRel"] & toCoParsable
 Left "Relation (~) should have at least one input type"
 
