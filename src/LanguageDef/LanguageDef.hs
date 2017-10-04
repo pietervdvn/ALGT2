@@ -9,16 +9,18 @@ A language defintion builds on many language-definition aspects. Each language d
 
 import Utils.All
 
-import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
+
 import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Syntax.All
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
 import LanguageDef.Expression hiding (choices')
 import LanguageDef.Function hiding (choices')
 import LanguageDef.Relation hiding (choices')
 import LanguageDef.Rule
 import qualified LanguageDef.Relation as Relations
-import LanguageDef.Tools.Grouper
+import LanguageDef.Utils.Grouper
 
 import Graphs.Lattice
 
@@ -81,21 +83,25 @@ type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty" ["FunctionDuplicateNameTest"] & toCoParsable
+"| While validating the functions while validating \nError: \n  \8226 The function \"not\" is defined multiple times"
 >>> loadAssetLangDef "Faulty" ["FunctionIncorrectNameTest"] & toCoParsable
+"| While validating the functions while validating \n| While checking function \"not\" \nError: \n  \8226 Some clauses have a different name. The function name is \"not\", but a clause is named f"
 
 -}
 
 instance Checkable' (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name]) (LanguageDef' ResolvedImport SyntFormIndex) where
 	check' extras (LanguageDef title imports meta li syntax superTypes functions rels rules)
-		= do	assert (title /= "") "The title of a language should not be empty"
-			checkM' extras syntax
-			checkM functions
-			checkM rels
-			assert (isNothing rules || isJust rels) "When rules are defined, a relation declaration section should be present"
-			checkM' (fromJust rels) rules
+		= do	assert' (title /= "") "The title of a language should not be empty"
+			checkM' extras syntax & inMsg' "While validating the syntax"
+			checkM functions & inMsg' "While validating the functions"
+			checkM rels & inMsg' "While validating the relation declarations"
+			assert' (isNothing rules || isJust rels) "When rules are defined, a relation declaration section should be present"
+			checkM' (fromJust rels) rules & inMsg' "While validating the relation implementation"
 			
 typeBottom	= ([], "⊥")
 typeTop		= ([], "⊤")
+
+superType	= error "Did you mean to use typeTop?"
 
 
 isSubtypeOf	:: LanguageDef' ResolvedImport fr -> FQName -> FQName -> Bool
@@ -132,11 +138,11 @@ _fixImport resolver imprt
 
 ------------------------------ PARSING STUFF --------------------------------------------------------
 
-_checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner) & either error id
+_checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner)
 
 -- | Parses the entire file, file should still be checked against it's context!
 -- >>> _checkCombiner
--- ()
+-- Success ()
 -- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language 
 -- Success ...
 parseFullFile	:: [Name] -> FilePath -> String -> Failable (LanguageDef' () ())
@@ -210,8 +216,8 @@ _optionalOrder plus a as
 
 >>> let resolve		= Success	:: FQName -> Failable FQName
 >>> let subtypeStub	= (==) :: FQName -> FQName -> Bool
->>> metaSyntaxes & M.toList |> (\(fq, s) -> check' (resolve, subtypeStub, fq) s) & allRight_ 
-Right ()
+>>> metaSyntaxes & M.toList |> (\(fq, s) -> check' (resolve, subtypeStub, fq) s) & allGood >> pass 
+Success ()
 -}
 metaSyntaxes	:: Map [Name] Syntax
 metaSyntaxes

@@ -11,7 +11,7 @@ import Utils.All
 import LanguageDef.Syntax.Syntax
 import LanguageDef.Syntax.BNF
 import LanguageDef.Syntax.ParseTree (ParseTree, parse)
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
 
 import qualified Data.Map as M
 

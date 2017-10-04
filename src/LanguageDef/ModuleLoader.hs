@@ -8,11 +8,11 @@ import Prelude hiding (putStr, putStrLn, readFile, putStrLn, fail)
 import Utils.All
 import Utils.PureIO
 
-import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.LanguageDef
 import LanguageDef.LangDefs
 import LanguageDef.LangDefsFix
-import LanguageDef.Tools.Scope
+import LanguageDef.Utils.Scope
 
 import Data.Map as M
 
@@ -46,7 +46,7 @@ Right (Success (LangDefs ...))
 >>> (resolve langL syntaxCall) ([], "a")
 Success (["TestInput","Nested","L"],"a")
 >>> (resolve langL syntaxCall) ([], "x")
-Success ((["TestInput","Nested","X"],"x"))
+Success (["TestInput","Nested","X"],"x")
 
 >>> runPure allAssets' (loadAll "TestInput" ["LoopingSupertypes"]) & either error id & fst & toCoParsable
 "| While constructing the global supertyping relationship while typing \nError: \n  \8226 Cycles are detected in the supertype relationship of the syntaxes:  LoopingSupertypes.z \8835 LoopingSupertypes.y \8835 LoopingSupertypes.x \8835 LoopingSupertypes.z\n    LoopingSupertypes.bool \8835 LoopingSupertypes.bool"

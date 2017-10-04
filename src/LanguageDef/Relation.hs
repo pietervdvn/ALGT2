@@ -3,11 +3,14 @@ module LanguageDef.Relation where
 
 
 import Utils.All
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
+
 import LanguageDef.Syntax.All
 import LanguageDef.Rule
 import LanguageDef.Expression hiding (choices')
-import LanguageDef.Tools.Grouper
+import LanguageDef.Utils.Grouper
 
 
 import Data.Map (Map, (!), filterWithKey)
@@ -175,32 +178,31 @@ rules	= _rules |||>>> const () |> asGrouper ("rule", "rules") (get ruleName)
 >>> loadAssetLangDef "Faulty/Relations" ["UnknownTypeRelation"] & toCoParsable
 "| While fully qualifiying the relation form \"~\" in Faulty/Relations/UnknownTypeRelation.language at lines 11 - 13\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, UnknownTypeRelation.a\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, UnknownTypeRelation.a"
 >>> loadAssetLangDef "Faulty/Relations" ["DuplicateRelation"] & toCoParsable
-
+"| While validating the relation declarations while validating \nError: \n  \8226 The relation \"~\" is defined multiple times"
 >>> loadAssetLangDef "Faulty/Relations" ["AllOutRel"] & toCoParsable
-Left "Relation (~) should have at least one input type"
-
+"| While validating the relation declarations while validating \nError: \n  \8226 Relation (~) should have at least one input type"
 -}
 instance Checkable Relation where
 	check relation
 		= do	let modes	= relation & get relTypes |> snd
-			assert (In `elem` modes) $ "Relation "++inParens (get relSymbol relation) ++" should have at least one input type"
+			assert' (In `elem` modes) $ "Relation "++inParens (get relSymbol relation) ++" should have at least one input type"
 
 
 {- |
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty/Relations" ["EmptyLine"]
-Left "This rule has no name. Add a name after the line, in square brackets\n\n predicate\n----------- [ name ]\n (~) args"
->>> loadAssetLangDef "Faulty/Relations" ["NotDeclared"]
-Left "When rules are defined, a relation declaration section should be present"
->>> loadAssetLangDef "Faulty/Relations" ["NotLocal"]
-Left "The relation \"~\" was not found."
+>>> loadAssetLangDef "Faulty/Relations" ["EmptyLine"] & toCoParsable
+"| While validating the relation implementation while validating \nError: \n  \8226 This rule has no name. Add a name after the line, in square brackets\n  \n   predicate\n  ----------- [ name ]\n   (~) args"
+>>> loadAssetLangDef "Faulty/Relations" ["NotDeclared"] & toCoParsable
+"| While validating \nError: \n  \8226 When rules are defined, a relation declaration section should be present"
+>>> loadAssetLangDef "Faulty/Relations" ["NotLocal"] & toCoParsable
+"| While fully qualifiying the rule \"abc\" in Faulty/Relations/NotLocal.language at lines 18 - 22\n| While fully qualifiying a conclusion using ([],\"~\") in Faulty/Relations/NotLocal.language at line 21, columns 4 - 5\nError: \n  \8226 The relation \"~\" was not found within the namespace \n  \8226 Perhaps you meant: \8594, NotLocal.\8594"
 -}
 instance Checkable' (Grouper Relation) (Rule' a) where
 	check' relations rule
-		= do	assert (not $ null $ get ruleName rule) 
+		= do	assert' (not $ null $ get ruleName rule) 
 				"This rule has no name. Add a name after the line, in square brackets\n\n predicate\n----------- [ name ]\n (~) args"
 			let ruleAbout	= rule & get (ruleConcl . conclRelName) & snd
-			assert (ruleAbout `M.member` get grouperDict relations)
+			assert' (ruleAbout `M.member` get grouperDict relations)
 				$ ["Rule", show $ get ruleName rule, "is about relation", inParens ruleAbout, "which is not declared in this document. Only locally declared relations can be implemented with rules"]  & unwords
 
 

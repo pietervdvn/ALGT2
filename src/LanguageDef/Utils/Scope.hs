@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module LanguageDef.Tools.Scope where
+module LanguageDef.Utils.Scope where
 
 
 import Utils.All

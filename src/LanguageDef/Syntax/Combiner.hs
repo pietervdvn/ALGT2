@@ -4,9 +4,11 @@ module LanguageDef.Syntax.Combiner where
 
 import Utils.All hiding (assert)
 
-import LanguageDef.Tools.ExceptionInfo
-import LanguageDef.Tools.LocationInfo
-import LanguageDef.Tools.Grouper
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
+
+import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.Grouper
 import LanguageDef.Syntax.Syntax
 import LanguageDef.Syntax.BNF hiding (Literal, Seq, string)
 import qualified LanguageDef.Syntax.BNF as BNF
@@ -40,7 +42,7 @@ data Combiner a	= LiteralC Doc (ParseTree' -> String -> Failable a)
 
 instance Checkable' Syntaxes (Combiner a) where
 	check' syntaxes cmb
-		= (inPhase Validating $ _check syntaxes S.empty cmb) & legacy
+		= (inPhase Validating $ _check syntaxes S.empty cmb)
 
 
 {-

@@ -6,10 +6,12 @@ module LanguageDef.LangDefsFix where
 import Utils.All
 
 import LanguageDef.LanguageDef
-import LanguageDef.Tools.LocationInfo
-import LanguageDef.Tools.ExceptionInfo
-import LanguageDef.Tools.Scope
-import LanguageDef.Tools.Grouper
+import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
+
+import LanguageDef.Utils.Scope
+import LanguageDef.Utils.Grouper
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
 import LanguageDef.LangDefs
@@ -62,7 +64,7 @@ asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |> s
 						& M.fromList 
 						& knotScopes 
 			ld'	<- typeLD ld |> LangDefs
-			check ld' & either error return -- TODO fixme: checks should become failable and not either String
+			inPhase Validating $ check ld'
 			return ld'
 
 

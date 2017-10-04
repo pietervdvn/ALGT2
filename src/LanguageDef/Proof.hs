@@ -8,9 +8,9 @@ import Utils.All
 import LanguageDef.Relation
 import LanguageDef.Rule
 import LanguageDef.Expression
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
 import LanguageDef.Syntax
-import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Utils.ExceptionInfo
 
 
 {-

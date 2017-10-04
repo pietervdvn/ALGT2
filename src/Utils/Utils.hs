@@ -50,32 +50,10 @@ type Path	= [Int]
 -- Markdown documentation
 type Doc	= String
 
-type Check	= Either String ()
-
-(<>)	:: Check -> Check -> Check
-(<>) a b
-	= allRight_ [a, b]
-
 class (Named d) => Documented d where
 	documentation	:: d -> Doc
 
-class Checkable a where
-	check	:: a -> Check
-	check a	= return ()
 
-class Checkable' info a where
-	check'	:: info -> a -> Check
-	check' info a
-		= return ()
-
-
-checkM	:: Checkable a => Maybe a -> Check
-checkM	= maybe pass check
-
-
-checkM'	:: Checkable' x a => x -> Maybe a -> Check
-checkM'	x
-	= maybe pass (check' x)
 
 class Normalizable a where
 	normalize	:: a -> a
@@ -227,7 +205,7 @@ assert :: Bool -> String -> Either String ()
 assert False msg	= Left msg
 assert True _ 		= pass
 
------------------------ Tuple Tools ------------------
+----------------------- Tuple Utils ------------------
 
 fst3		:: (a, b, c) -> a
 fst3 (a, _, _)	= a
@@ -273,7 +251,7 @@ both f (a, a')		= f a && f a'
 
 swap (a, b)		= (b, a)
 
------------------------ List tools --------------------
+----------------------- List Utils --------------------
 
 chain		:: (Traversable t) => t (a -> a) -> a -> a
 chain fs a	= foldl (&) a fs 
@@ -339,11 +317,6 @@ dubbles		:: Eq a => [a] -> [a]
 dubbles []	=  []
 dubbles (a:as)	=  (if a `elem` as then (a:) else id) $ dubbles as
 
-
-checkNoDuplicates	:: (Eq a) => [a] -> ([a] -> String) -> Either String ()
-checkNoDuplicates as msg
-	= do	let dups	= dubbles as
-		unless (null dups) $ Left $ msg dups 
 
 
 flattenWith		:: (Ord k, Ord k0, Ord k1) => Map k0 (Map k1 v) -> (k0 -> k1 -> k) -> Map k v

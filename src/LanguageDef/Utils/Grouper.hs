@@ -1,9 +1,12 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, Rank2Types #-}
-module LanguageDef.Tools.Grouper where
+module LanguageDef.Utils.Grouper where
 
 {- A 'Grouper' groups several name-indexed values in a certain order -}
 
 import Utils.All
+
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
 
 import Data.Map as M
 import Data.List as L
@@ -69,19 +72,20 @@ instance ToString a => ToString (Grouper a) where
 
 instance Checkable a => Checkable (Grouper a) where
 	check (Grouper as order groupName )
-		= let	ch1	= _checkNoDups groupName order
-			chcks	=  as & M.elems |> check
-			in
-			allRight_ (ch1:chcks)
+		= do	let ch1	= _checkNoDups groupName order
+			let chcks	=  as & M.elems |> check
+			allGood (ch1:chcks)
+			pass
 
 
 instance Checkable' x a => Checkable' x (Grouper a) where
 	check' x (Grouper as order groupName)
-		= let	ch1	= _checkNoDups groupName order 
-			chcks	= as & M.elems |> check' x
-			in
-			allRight_ (ch1:chcks)
+		= do	let ch1	= _checkNoDups groupName order 
+			let chcks	= as & M.elems |> check' x
+			allGood (ch1:chcks)
+			pass			
 
+_checkNoDups	:: (Name, String) -> [Name] -> Check
 _checkNoDups (name, names) order
 	= checkNoDuplicates order (\nms -> if length nms == 1 then unwords ["The", name, show $ head nms, "is defined multiple times"]
 					else "Some "++names++" are defined multiple times: "++ (nms |> show & commas))

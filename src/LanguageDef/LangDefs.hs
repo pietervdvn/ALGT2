@@ -11,13 +11,15 @@ See also: LanguageDef.LangDefsFix
 
 import Utils.All
 
-import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
+
 import LanguageDef.LanguageDef
-import LanguageDef.Tools.LocationInfo
-import LanguageDef.Tools.Grouper
+import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.Grouper
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
-import LanguageDef.Tools.Scope
+import LanguageDef.Utils.Scope
 import LanguageDef.Expression
 import LanguageDef.Function
 import LanguageDef.Rule
@@ -71,8 +73,8 @@ knotScopes lds
 
 {- | Parses a target string according to the language definition cluster
 
->>> import AssetUtils
->>> parseTarget testLangDefs (["TestLanguage"], "bool") "?"  "True"
+>>> import LanguageDef.API
+>>> parseTarget testLanguage (["TestLanguage"], "bool") "?"  "True"
 Success (RuleEnter {_pt = Literal {_ptToken = "True", ...}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...)
 
 
@@ -197,7 +199,11 @@ pickPriority list
 		(if L.null prior then nonPrior else prior) |> dropSnd3
 
 {- | Gives all items that are known for a certain resolver (e.g. all available syntaxCalls etc...
-The returning format is: fully qualified name, locally known as names, actual entity 
+The returning format is: 
+	- fully qualified name
+	- is locally defined (and has resolution priority)
+	- locally known as names
+	- actual entity 
 Each fqname should also occur under the 'known as'
 
 -}
@@ -231,11 +237,11 @@ _allKnownLocally (fq, ld) (_, getWhole, _)
 {- |
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty" ["TitleMismatch"] & toCoParsable
-Left "The module in file TitleMismatch is titled \"Some Other Title\". Retitle them to be the same (whitespace insensitive)"
+"| While validating \nError: \n  \8226 The module in file TitleMismatch is titled \"Some Other Title\". Retitle them to be the same (whitespace insensitive)"
 -}
 instance Checkable LangDefs where
 	check lds@(LangDefs defs)
-		= defs & M.toList |> _checkOne & allRight_
+		= defs & M.toList |> _checkOne & allGood >> pass
 	
 
 _checkOne	:: ([Name], LDScope) -> Check
@@ -244,14 +250,15 @@ _checkOne (fq, ldscope)
 		let isSubtype	= ld & isSubtypeOf
 		let resolveSF	= resolve ldscope syntaxCall
 		let extras	= (resolveSF , isSubtype, fq)	:: (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name])
-		check' extras ld <> _checkSameTitle fq ld
+		[check' extras ld, _checkSameTitle fq ld] & allGood
+		pass
 
 _checkSameTitle	:: [Name] -> LanguageDef -> Check
 _checkSameTitle fq ld
 	= do	let nm	= get langTitle ld
 		let noWS string	= string & L.filter (`notElem` " \t")
 		let msg	= "The module in file "++dots fq ++" is titled "++show nm++". Retitle them to be the same (whitespace insensitive)"
-		assert (noWS (last fq) == noWS nm) msg
+		assert' (noWS (last fq) == noWS nm) msg
 
 instance ToString LangDefs where 
 	toParsable ld	= ld & get langdefs & M.toList |> _withHeader & unlines

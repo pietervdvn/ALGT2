@@ -5,9 +5,12 @@ module LanguageDef.Function where
 import Utils.All
 
 import LanguageDef.Expression hiding (choices')
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.Checkable
+import LanguageDef.Utils.ExceptionInfo
+
 import LanguageDef.Syntax.All
-import LanguageDef.Tools.Grouper
+import LanguageDef.Utils.Grouper
 
 import Data.Maybe
 import Data.Map as M
@@ -36,14 +39,18 @@ data FunctionClause a = FunctionClause
 	} deriving (Show, Eq, Functor)
 
 
+-- TODO Move this to a more appropriate module
 type SyntForm	= FQName
 data SyntFormIndex = SyntFormIndex
-			{ _syntForm	:: SyntForm
-			, _syntChoice	:: Int	-- To what choice does it correspond?
-			, _syntSeqInd	:: Maybe Int	-- To what index in the sequence of the choice does it correspond?
+			{ _syntIndForm	:: SyntForm
+			, _syntIndChoice	:: Int	-- To what choice does it correspond?
+			, _syntIndSeqInd	:: Maybe Int	-- To what index in the sequence of the choice does it correspond?
 			} 
-			| NoIndex SyntForm
+			| NoIndex { _syntIndForm	:: SyntForm}
 			deriving (Show, Eq)
+
+makeLenses ''SyntFormIndex
+
 
 removeIndex'	:: SyntFormIndex -> SyntFormIndex
 removeIndex' (SyntFormIndex sf _ _)
@@ -51,6 +58,26 @@ removeIndex' (SyntFormIndex sf _ _)
 removeIndex' noIndex	= noIndex
 
 removeIndex i	= i & removeIndex' & (\(NoIndex sf) -> sf)
+
+-- Selects all elements in the list, for which the syntactic form is a smallest type
+selectSmallest	:: (FQName -> FQName -> Bool) ->  [(a, SyntFormIndex)] -> [(a, SyntFormIndex)]
+selectSmallest isSubtypeOf
+	= _selectSmallest isSubtypeOf []
+
+_selectSmallest	:: (FQName -> FQName -> Bool) -> [(a, SyntFormIndex)] -> [(a, SyntFormIndex)] -> [(a, SyntFormIndex)]
+_selectSmallest isSubtypeOf [] (a:as)
+		= _selectSmallest isSubtypeOf [a] as
+_selectSmallest _ smallest []	= smallest
+_selectSmallest isSubtypeOf smallest (a@(_, toJudge):as)
+ -- if to judge is a subtype of a value from smallest:
+ | any (isSubtypeOf (get syntIndForm toJudge)) (smallest |> snd |> get syntIndForm)
+	= let	toJudgeFQN	= toJudge & get syntIndForm
+		smallest'	= L.filter (not . isSubtypeOf toJudgeFQN . get syntIndForm . snd) smallest
+		in
+		_selectSmallest isSubtypeOf (a:smallest') as
+ | otherwise
+	= _selectSmallest isSubtypeOf smallest as
+
 
 instance ToString SyntFormIndex where
 	toParsable (NoIndex sf)	= showFQ sf
@@ -64,8 +91,8 @@ makeLenses ''FunctionClause
 
 instance Checkable (Function' a) where
 	check (Function name argTps retTp clauses docs)
-		= inMsg ("While checking function "++show name) $
-		  	unless (clauses |> get clauseFuncName & all (== name)) $ Left $
+		= inMsg' ("While checking function "++show name) $
+		  	assert' (clauses |> get clauseFuncName & all (== name)) $
 				"Some clauses have a different name. The function name is "++show name++
 				", but a clause is named "++(clauses |> get clauseFuncName & sort & nub & commas)
 

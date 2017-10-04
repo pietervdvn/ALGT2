@@ -23,9 +23,9 @@ import Utils.PureIO
 import AssetUtils
 
 import LanguageDef.LanguageDef
-import LanguageDef.Tools.ExceptionInfo
-import LanguageDef.Tools.LocationInfo
-import LanguageDef.Tools.Scope
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.Scope
 
 import LanguageDef.Syntax.All as Syntax
 import qualified LanguageDef.Syntax.Combiner as Combiner

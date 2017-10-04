@@ -15,10 +15,11 @@ The defintion of
 
 import Utils.All
 
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
 import LanguageDef.Syntax.BNF
-import LanguageDef.Tools.Grouper
-import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Utils.Grouper
+import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
 
 import Data.Maybe
 import qualified Data.Map as M
@@ -88,10 +89,10 @@ createSyntax
 
 instance Checkable' (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name]) SyntacticForm where
 	check' (resolve, isSubtypeOf, fqname) sf
-		= allRight_ 
-			[ _checkAllIdentsExist resolve sf & legacy
+		= allGood 
+			[ _checkAllIdentsExist resolve sf
 			, _checkNoTrivial sf
-			, _checkDeadClauses isSubtypeOf fqname sf] 
+			, _checkDeadClauses isSubtypeOf fqname sf] >> pass
 
 
 {- | All rulecalls shoud exist
@@ -103,7 +104,7 @@ instance Checkable' (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name]
 -- >>> _checkAllIdentsExist (asSyntaxes' ["Tests"] syntax2) (syntax2, ["Tests"])
 -- Right ...
 -}
-_checkAllIdentsExist	:: (FQName -> Failable FQName) -> SyntacticForm -> Failable ()
+_checkAllIdentsExist	:: (FQName -> Failable FQName) -> SyntacticForm -> Check
 _checkAllIdentsExist resolve sf
 	= inMsg' ("While resolving all calls in "++get syntName sf) $
 		do	let allCalls	= sf & get syntChoices >>= getRuleCalls
@@ -115,13 +116,13 @@ _checkAllIdentsExist resolve sf
 >>> let syntax2 = asSyntaxUnchecked' "Tests" "\nabc ::= abc\n"
 >>> let sf = syntax2 & get grouperDict & (M.! "abc")
 >>> _checkNoTrivial sf
-Left "The syntactic form abc is trivial. Remove the rule and replace it by Tests.abc"
+Failed (ExceptionInfo {_errMsg = "The syntactic form abc is trivial. Remove the rule and replace it by Tests.abc", _errSeverity = Error, _errSuggestion = Nothing})
 -}
 
 _checkNoTrivial	:: SyntacticForm -> Check
 _checkNoTrivial sf
 	= do	let replacedBy	= get syntChoices sf & head & getRuleCall & fromJust
-		assert (not $ isTrivial sf) $
+		assert' (not $ isTrivial sf) $
 			("The syntactic form "++get syntName sf++" is trivial. Remove the rule and replace it by "++showFQ replacedBy)
 	
 
@@ -146,7 +147,7 @@ _checkDeadClauses isSubtypeOf fq sf
 		let sBNF (i, bnf)	= (bnf & removeWS & toParsable) ++ " (choice "++show i++")"
 		let choicesMsg (a, b)
 				= sBNF a++ " shadows "++ sBNF b
-		assert (L.null dead) $
+		assert' (L.null dead) $
 			"In syntactic form "++showFQ (fq, get syntName sf) ++"\n"++ (dead |> choicesMsg & unlines & indent)
 
 
@@ -185,14 +186,14 @@ deadChoices isSubtypeOf sf
 >>> let unit = loadAssetLangDef "Faulty" fqname & crash' & (`getLangDef` fqname) & fromJust
 >>> let synt = unit & get langSyntax & fromJust
 >>> _checkLeftRecursion fqname synt
-Left "Left recursive calls detected:\nLeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b\n\n"
+Failed (ExceptionInfo {_errMsg = "Left recursive calls detected:\nLeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b\n\n", _errSeverity = Error, _errSuggestion = Nothing})
 -}
 
 
 _checkLeftRecursion	:: [Name] -> Syntax -> Check
 _checkLeftRecursion fq s
 	= do	let cycles = leftRecursiveCalls fq s
-		assert (null cycles) $ unlines
+		assert' (null cycles) $ unlines
 			[ "Left recursive calls detected:"
 			, cycles ||>> showFQ |> commas & unlines]
 

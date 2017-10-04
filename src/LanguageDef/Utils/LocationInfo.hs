@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes, TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.Tools.LocationInfo where
+module LanguageDef.Utils.LocationInfo where
 
 {-Small helper data structure, containg start and end position of parsetrees, metainfo or fully qualified names etc-}
 

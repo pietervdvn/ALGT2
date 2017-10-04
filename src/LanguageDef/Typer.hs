@@ -5,10 +5,10 @@ module LanguageDef.Typer where
 import Utils.All
 
 import LanguageDef.LanguageDef
-import LanguageDef.Tools.LocationInfo
-import LanguageDef.Tools.Grouper
-import LanguageDef.Tools.Scope
-import LanguageDef.Tools.ExceptionInfo
+import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.Grouper
+import LanguageDef.Utils.Scope
+import LanguageDef.Utils.ExceptionInfo
 
 import LanguageDef.Syntax.BNF (BNF)
 import qualified LanguageDef.Syntax.BNF as BNF
@@ -182,7 +182,13 @@ typePattern msg ld supers exp pat
 ------------------------------ TYPING OF EXPRESSIONS  ------------------------------
 
 
-{- | Same as 'typeExpression', but does not require a type expectation -}
+{- | Same as 'typeExpression', but does not require a type expectation 
+>>> import LanguageDef.API
+>>> let expr	=  createExpression testLanguage "interactive" "\"True\"" & crash'
+>>> typeExpressionFreely testLanguage' expr & crash'
+ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = 0, _liEndLine = 0, _liStartColumn = 0, _liEndColumn = 6, _miFile = "interactive"}}
+
+-}
 typeExpressionFreely	:: Eq fr => LDScope' fr -> Expression a -> Failable (Expression (a, SyntFormIndex))
 typeExpressionFreely lds
 	= typeExpression lds typeTop
@@ -195,13 +201,13 @@ typeExpressionFreely lds
 >>> import LanguageDef.API
 
 >>> typeExpression (error "") (["A"], "b") (DontCare () unknownLocation)
-Success (DontCare {_expAnnot = ((),NoIndex (["A"],"b")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
+Success (DontCare {_expAnnot = ((),NoIndex {_syntIndForm = (["A"],"b")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
 >>> typeExpression testLanguage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
-Success (Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...})
+Success (Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
 >>> typeExpression testLanguage' (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
-Success (ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
+Success (ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
 >>> typeExpression testLanguage' (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
-Success (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntForm = (["TestLanguage"],"bool"), _syntChoice = 0, _syntSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
+Success (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
  -}
 typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Failable (Expression (a, SyntFormIndex)) 
 typeExpression lds expectation expr
@@ -258,6 +264,21 @@ _typeExpression ld expectation (SeqExp exprs a li)
 {-Search for a choice from the syntactic forms matching the expressions -}
 typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> Failable ([Expression (a, SyntFormIndex)], SyntFormIndex)
 typeExpressionIndexed ld syntForm exprs
+ | syntForm == typeTop
+	= do	let all		= allKnowns ld syntaxCall |> fst3 |> fst	:: [FQName]
+		let tries	= all |> (\expectation -> typeExpressionIndexed ld expectation exprs)
+		let isSubtypeOf'	= isSubtypeOf (get (ldScope . payload) ld)
+		let successfull	= successess tries & selectSmallest isSubtypeOf' -- [([Expression (a, SyntFormIndex)], SyntFormIndex)]
+		inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as any known type") $
+			inMsg' ("Tried the types: "++all |> showFQ & commas' "and") $
+			when (null successfull) (fails tries & Aggregate & Failed)
+
+		assertSugg' (length successfull < 2) $ ("The sequence "++ unwords (exprs |> toParsable)++" could be typed in multiple ways, namely as:\n"
+			++ (successfull |> (\(_, sfi) -> "Via choice "++toParsable sfi) & unlines & indent), "Try adding a type ascription to disambiguate the typing")
+		let found	= head successfull
+		return found
+		
+ | otherwise
 	= do	(fqname, choices)	<- inMsg' ("While typing "++ exprs |> toParsable & commas) 
 						$ resolve' ld syntaxCall syntForm ||>> get syntChoices
 		let tries	= choices |> BNF.removeWS |> BNF.unsequence	-- prepare individual choices
@@ -269,8 +290,8 @@ typeExpressionIndexed ld syntForm exprs
 		when (null successfull) $ 
 			fails tries & Aggregate & Failed & inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as a "++showFQ syntForm)
 
-		assert' (length successfull < 2) $ "The sequence "++ unwords (exprs |> toParsable)++" could be typed in multiple ways, namely as:\n"
-			++ (successfull |> (\(i, exprs) -> "Via choice "++show i) & unlines & indent)
+		assertSugg' (length successfull < 2) $ ("The sequence "++ unwords (exprs |> toParsable)++" could be typed in multiple ways, namely as:\n"
+			++ (successfull |> (\(i, exprs) -> "Via choice "++show i) & unlines & indent), "Try adding a type ascription to disambiguate the typing")
 		let (foundInd, foundExprs)	= head successfull
 		(foundExprs, SyntFormIndex fqname foundInd Nothing) & return
 
@@ -355,21 +376,19 @@ _typingTable (SeqExp exprs _ _)
 
 {- | checks that no two typings do conflict (thus that no two typings result in an empty set for the variables). The typingtable is used for this
 
->>> import AssetUtils
+>>> import LanguageDef.API
 >>> let (Success boolVar) = typeExpression testLanguage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 >>> boolVar
-Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"bool")), _expLocation = ...}
+Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
 >>> let (Success intVar)  = typeExpression testLanguage' (["TestLanguage"], "int") (Var "x" () unknownLocation)
 >>> intVar
-Var {_varName = "x", _expAnnot = ((),NoIndex (["TestLanguage"],"int")), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
->>> let supertypings = testLangDefs & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)
+Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"int")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
+>>> let supertypings = testLanguage & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)
 >>> [boolVar, intVar] ||>> snd & mergeTypings supertypings
 Left [("x",fromList [(["TestLanguage"],"bool"),(["TestLanguage"],"int")])]
 >>> [boolVar, intVar] ||>> snd & mergeTypings' unknownLocation supertypings & handleFailure toCoParsable show
-"fromList *** Exception: \ESC[91mError\ESC[0m while typing:"
-"  \8226 While checking for conflicting variable usage  x\tis used as TestLanguage.bool, TestLanguage.int"
-"CallStack (from HasCallStack):"
-"  error, called at /home/pietervdvn/git/ALGT2/src/LanguageDef/ExceptionInfo.hs:266:19 in main:LanguageDef.ExceptionInfo"
+"| While checking for conflicting variable usage \nError: \n  \8226   x\tis used as TestLanguage.bool, TestLanguage.int"
+
 -}
 mergeTypings	:: Lattice FQName -> [Expression SyntFormIndex] -> Either [(String, Set SyntForm)] (Map Name SyntForm)
 mergeTypings supertyping exprs

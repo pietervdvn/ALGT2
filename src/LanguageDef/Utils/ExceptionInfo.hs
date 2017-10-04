@@ -1,11 +1,11 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.Tools.ExceptionInfo where
+module LanguageDef.Utils.ExceptionInfo where
 
 {- Gives more information about what goes wrong; with pretty colors -}
 
 import Utils.All hiding (Doc, (<>))
 
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
 import Text.PrettyPrint.ANSI.Leijen hiding (indent)
 import qualified Text.PrettyPrint.ANSI.Leijen as ANSI
 
@@ -40,14 +40,8 @@ data ExceptionInfo = ExceptionInfo
 
 makeLenses ''ExceptionInfo
 
--- FIXME TODO what is broken in the case of: Aggregate [ Exception , Aggregate [ Excp, Excp]]?
-fromAggregate	:: ExceptionInfo -> [ExceptionInfo]
-fromAggregate (Aggregate exps)	= exps
 fromAggregate exp	= [exp]
 
-flatten		:: [ExceptionInfo] -> [ExceptionInfo]
-flatten errs
-	= errs |> normalize |> fromAggregate & concat
 
 instance ToString' String Severity where
 	toParsable' extra severity	= severity & toCoParsable' extra & text & colorFor severity & show
@@ -59,6 +53,11 @@ instance ToString' String Severity where
 colorFor	:: Severity -> ANSI.Doc -> ANSI.Doc
 colorFor Error	= red
 colorFor Warning = yellow
+
+-- FIXME TODO what is broken in the case of: Aggregate [ Exception , Aggregate [ Excp, Excp]]?
+fromAggregate	:: ExceptionInfo -> [ExceptionInfo]
+fromAggregate (Aggregate exps)	= exps
+
 
 instance Normalizable ExceptionInfo where
 	normalize (Within Nothing Nothing Nothing e)
@@ -72,7 +71,7 @@ instance Normalizable ExceptionInfo where
 	normalize (Within msg ph li e)
 			= Within msg ph li $ normalize e
 	normalize (Aggregate errs)
-			= case errs & flatten of
+			= case errs |> normalize |> fromAggregate & concat of
 				[e]	-> e
 				exceps	-> Aggregate exceps
 	normalize ei	= ei
@@ -80,16 +79,6 @@ instance Normalizable ExceptionInfo where
 instance ToString Phase where
 	toParsable phase	= show phase & over _head toLower
 
-{- | 
-
->>> let li	= LocationInfo 42 42 0 5 "SomeFile.language"
->>> let ei	= Within Nothing (Just Resolving) (Just li) $ ExceptionInfo "Something went wrong" Warning (Just "Fix by x, y or z") 
->>> ei & toParsable
-"\ESC[93mWarning\ESC[0m\ESC[32m in \ESC[1m\ESC[92mSomeFile.language\ESC[0;32;1m\ESC[0;32m, line \ESC[1m42\ESC[0;32m\ESC[0m \ESC[32mwhile resolving:\ESC[0m\n  \8226 Something went wrong\n  \8226 Fix by x, y or z"
->>> ei & toCoParsable
-"\ESC[93m| \ESC[0mWhile  while resolving \ESC[32min \ESC[92m\ESC[1mSomeFile.language\ESC[0;92m\ESC[0;32m at line \ESC[1m42\ESC[0;32m, columns 0 - 5\ESC[0m\n\ESC[93mWarning: \ESC[0m\n  \8226 Something went wrong\n  \8226 Fix by x, y or z"
-
--}
 instance ToString ExceptionInfo where
 	toParsable e	= e & normalize & _fancy         & show
 	toCoParsable e	= e & normalize & _fancy & plain & show
@@ -110,9 +99,11 @@ _fancy (Within (Just msg) phase li err)
 		in
 		bar <> msg'
 _fancy (Within Nothing (Just phase) li err)
-	= _fancy $ Within (Just "While ") (Just phase) li err
-_fancy (Within Nothing Nothing li err)
-	= _fancy $ Within (Just "") Nothing li err
+	= _fancy $ Within (Just $ "While "++toParsable phase) Nothing li err
+_fancy (Within Nothing Nothing (Just li) err)
+	= _fancy $ Within (Just $ "At " ++ (coloredLocation li & show)) Nothing Nothing err
+_fancy (Within Nothing Nothing Nothing err)
+	= _fancy err
 _fancy (Aggregate exceps)
 	= exceps |> _fancy |> ANSI.indent 2 & vsep
 

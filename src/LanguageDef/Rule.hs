@@ -4,10 +4,10 @@ module LanguageDef.Rule where
 import Utils.Utils
 
 import Utils.All
-import LanguageDef.Tools.LocationInfo
+import LanguageDef.Utils.LocationInfo
 import LanguageDef.Syntax.All
 import LanguageDef.Expression hiding (choices')
-import LanguageDef.Tools.Grouper
+import LanguageDef.Utils.Grouper
 	
 
 import Data.Map (Map, (!), filterWithKey)
