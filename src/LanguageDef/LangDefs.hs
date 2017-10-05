@@ -19,7 +19,6 @@ import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Grouper
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
-import LanguageDef.Utils.Scope
 import LanguageDef.Expression
 import LanguageDef.Function
 import LanguageDef.Rule
@@ -46,12 +45,18 @@ data ImportFlags = ImportFlags
 makeLenses ''ImportFlags
 
 data LDScope' funcResolution = LDScope
-	{ _ldScope	:: Scope [Name] [Name] (LanguageDef' ResolvedImport funcResolution) ImportFlags ({-Re-export flags-})
+	{ _ldScope	:: LanguageDef' ResolvedImport funcResolution
+	, _imported	:: Map [Name] ImportFlags
 	, _environment	:: Map [Name] (LanguageDef' ResolvedImport funcResolution)
 	} 
 	deriving (Show, Eq)
 makeLenses ''LDScope'
 type LDScope	=  LDScope' SyntFormIndex
+
+
+updateEnv	:: LDScope' fr -> (LanguageDef' ResolvedImport fr0, Map [Name] (LanguageDef' ResolvedImport fr0)) -> LDScope' fr0
+updateEnv (LDScope _ imps _) (scope, env)
+	= LDScope scope imps env
 
 {- Contains the full cluster of language defintions -}
 data LangDefs	= LangDefs {_langdefs	:: Map [Name] LDScope}
@@ -61,13 +66,13 @@ makeLenses ''LangDefs
 getLangDef	:: LangDefs -> [Name] -> Maybe LanguageDef
 getLangDef defs fq
 	= do	def'	<- M.lookup fq (get langdefs defs)
-		def' & get (ldScope . payload) & return
+		def' & get ldScope & return
 
 
 -- Re-updates the environment of an LDScope
 knotScopes :: Map [Name] (LDScope' fr) -> Map [Name] (LDScope' fr)
 knotScopes lds
-	= let	env	= lds |> get (ldScope . payload) in
+	= let	env	= lds |> get ldScope in
 		lds |> set environment env
 
 
@@ -81,7 +86,7 @@ Success (RuleEnter {_pt = Literal {_ptToken = "True", ...}, _ptUsedRule = (["Tes
 -}
 parseTarget	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
 parseTarget langs (startModule, startRule) file contents
-	= do	let syntaxes	= langs & get langdefs |> get (ldScope . payload) |> get langSyntax |> fromMaybe emptySyntax
+	= do	let syntaxes	= langs & get langdefs |> get ldScope |> get langSyntax |> fromMaybe emptySyntax
 		parse file (syntaxes, startModule) startRule contents 
 
 
@@ -210,7 +215,7 @@ Each fqname should also occur under the 'known as'
 allKnowns	:: LDScope' fr -> Resolver fr x -> [((FQName, Bool), [FQName], x)]
 allKnowns scope resolver	
 	= let	-- The imports contain the local scope as well, so we don't need _allKnownLocally here
-		imports		= get (ldScope . imported) scope & M.toList		:: [([Name], ImportFlags)]
+		imports		= get imported scope & M.toList		:: [([Name], ImportFlags)]
 		mergedImports	= imports |> _mergeImport (get environment scope) resolver
 		-- TODO extra, renamed imports 
 		-- TODO include re-exports
@@ -246,7 +251,7 @@ instance Checkable LangDefs where
 
 _checkOne	:: ([Name], LDScope) -> Check
 _checkOne (fq, ldscope)
-	= do	let ld		= get (ldScope . payload) ldscope
+	= do	let ld		= get ldScope ldscope
 		let isSubtype	= ld & isSubtypeOf
 		let resolveSF	= resolve ldscope syntaxCall
 		let extras	= (resolveSF , isSubtype, fq)	:: (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name])
@@ -265,5 +270,5 @@ instance ToString LangDefs where
 
 
 _withHeader (nm, ld)
-	= ["\n---------------", dots nm, "-------------\n"] & unwords ++ (ld & get (ldScope . payload) & toParsable)
+	= ["\n---------------", dots nm, "-------------\n"] & unwords ++ (ld & get ldScope & toParsable)
 

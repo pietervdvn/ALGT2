@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Graphs.Lattice (Lattice, bottom, top, makeLattice, addElement, addRelation,
+module Graphs.Lattice (Lattice, bottom, top, makeLattice, makeLatticeInverted, addElement, addRelation,
 			subsetsOf, supersetsOf, allSubsetsOf, allSupersetsOf, isSubsetOf,
 			infimum, infimums, supremum, supremums, removeTransitive', removeTransitiveNoCycles,
 			debugLattice, emptyLattice) where
@@ -59,6 +59,25 @@ makeLattice bottom top isSubsetOf'
 		(lattice, unneeded)	<- removeTransitive $ Lattice bottom top isSubsetOf (error "Lattices: isSupersetOfEvery used in intialization. This is a bug") 
 		let lattice'		= set isSupersetOfEvery (invertDict $ get isSubsetOfEvery lattice) lattice
 		return (lattice', unneeded)
+
+
+makeLatticeInverted	::  (Show a, Ord a) => a -> a -> Map a (Set a) -> Either [[a]] (Lattice a, [(a, a)])
+makeLatticeInverted bottom top isSupersetOf'
+	= let	elements	= M.keys isSupersetOf' ++ (M.elems isSupersetOf' >>= S.toList)
+		restToTop	= M.singleton top (S.fromList elements)
+		bottomToRest	= zip elements (repeat $ S.singleton bottom) & M.fromList
+		isSupersetOf	= M.unions [isSupersetOf' |> S.insert bottom,
+									-- Original set; keep as intact as possible
+					M.singleton bottom S.empty,	-- We add the top element
+					restToTop,			-- We add the bottom element
+					bottomToRest]	-- add top to elements with no subtypes
+		isSubsetOf	= invertDict isSupersetOf
+		in do
+		(lattice, unneeded)	<- removeTransitive $ Lattice bottom top isSubsetOf (error "Lattices: isSupersetOfEvery used in intialization. This is a bug") 
+		let lattice'		= set isSupersetOfEvery (invertDict $ get isSubsetOfEvery lattice) lattice
+		return (lattice', unneeded)
+
+
 
 addElement	:: (Show a, Ord a) => a -> [a] -> [a] -> Lattice a -> Either [[a]] (Lattice a, [(a, a)])
 addElement newEl subsOfNew supersOfNew lattice

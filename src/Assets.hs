@@ -42,6 +42,7 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("Faulty/Relations/DuplicateRelation.language", _Faulty_Relations_DuplicateRelation_language)
 			, ("Faulty/Relations/EmptyLine.language", _Faulty_Relations_EmptyLine_language)
 			, ("Faulty/Relations/UnknownTypeRelation.language", _Faulty_Relations_UnknownTypeRelation_language)
+			, ("Faulty/Relations/IncorrectRule.language", _Faulty_Relations_IncorrectRule_language)
 			, ("Faulty/Relations/AllOutRel.language", _Faulty_Relations_AllOutRel_language)
 			, ("Faulty/Relations/NotDeclared.language", _Faulty_Relations_NotDeclared_language)
 			, ("Faulty/Relations/Relation.language", _Faulty_Relations_Relation_language)
@@ -146,6 +147,10 @@ _Faulty_Relations_EmptyLine_language
 {-# NOINLINE _Faulty_Relations_UnknownTypeRelation_language #-}
 _Faulty_Relations_UnknownTypeRelation_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/UnknownTypeRelation.language" in seq str str
+
+{-# NOINLINE _Faulty_Relations_IncorrectRule_language #-}
+_Faulty_Relations_IncorrectRule_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/IncorrectRule.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_AllOutRel_language #-}
 _Faulty_Relations_AllOutRel_language

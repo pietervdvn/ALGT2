@@ -12,7 +12,6 @@ import LanguageDef.ModuleLoader
 import LanguageDef.Function
 import LanguageDef.Expression 
 import LanguageDef.Utils.LocationInfo
-import LanguageDef.Utils.Scope
 import LanguageDef.Interpreter
 import LanguageDef.Syntax
 

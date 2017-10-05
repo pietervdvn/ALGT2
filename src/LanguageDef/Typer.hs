@@ -7,8 +7,8 @@ import Utils.All
 import LanguageDef.LanguageDef
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Grouper
-import LanguageDef.Utils.Scope
 import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Checkable
 
 import LanguageDef.Syntax.BNF (BNF)
 import qualified LanguageDef.Syntax.BNF as BNF
@@ -31,6 +31,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.List as L
 
 import Control.Monad
 import Data.Maybe
@@ -39,20 +40,10 @@ import Data.Maybe
 
 typeLD		:: Eq fr => Map [Name] (LDScope' fr) -> Failable (Map [Name] LDScope)
 typeLD lds
-	= do	typed	<- lds & M.toList ||>> typeScope |> sndEffect & allGood |> M.fromList
-				:: Failable (Map [Name] (Scope [Name] [Name] LanguageDef ImportFlags ()))
-		let env	= typed |> get payload
-		let scopes	= typed |> flip LDScope env	:: Map [Name] LDScope
+	= do	env	<- lds & M.toList ||>> (\lds -> typeScope' lds (get ldScope lds)) |> sndEffect & allGood |> M.fromList
+				:: Failable (Map [Name] (LanguageDef' ResolvedImport SyntFormIndex))
+		let scopes 	= M.intersectionWith (\old new -> updateEnv old (new, env)) lds env
 		return scopes
-
-
-
-typeScope	:: Eq fr =>  LDScope' fr -> Failable (Scope [Name] [Name] LanguageDef ImportFlags ())
-typeScope scope
-	= do	let langDef	= get (ldScope . payload) scope
-		langDef'	<- typeScope' scope langDef
-		let scope'	= scope & get ldScope & set payload langDef'
-		return scope'
 
 
 typeScope'	:: Eq fr => LDScope' fr -> LanguageDef' ResolvedImport fr
@@ -71,17 +62,102 @@ typeScope' ld langDef
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty/Relations" ["TypeErr"] & toCoParsable
-"| While typing \"5\" while typing in Faulty/Relations/TypeErr.language at line 24, columns 5 - 8\n| Could not type the sequence \"5\" as a TypeErr.bool \n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"True\"\n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"False\""
+"| While typing rule \"not\" in Faulty/Relations/TypeErr.language at lines 21 - 25\n| While typing \"5\" while typing in Faulty/Relations/TypeErr.language at line 24, columns 5 - 8\n| Could not type the sequence \"5\" as a TypeErr.bool \n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"True\"\n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"False\""
 
 
 -}
 typeRule	:: Eq fr => LDScope' fr -> Rule' a -> Failable (Rule' (a, SyntFormIndex))
 typeRule lds (Rule preds concl n mi)
-	= do	preds'	<- preds |> typePredicate lds & allGood
+	= inMsg' ("While typing rule "++show n) $ inLocation (get miLoc mi) $ 
+	  do	preds'	<- preds |> typePredicate lds & allGood
 		concl'	<- typeConclusion lds concl
-		-- TODO crosscheck variables for common ground
-		-- TODO check introduction correctness from left to right
+		initialTable	<- _newlyCreatedVars lds concl'
+		finalTable	<- foldM (typingTablePred lds) initialTable preds'
+		checkAllVarsCompatible lds finalTable concl'
+
 		return $ Rule preds' concl' n mi
+
+{-
+
+Given a current typing table, will check for a predicate that:
+- All consumed variables are initialized
+- All variable declarations are compatible
+
+It will return a new typing table, eventually updated with new values
+
+-}
+typingTablePred		:: LDScope' fr -> Map Name SyntForm -> Predicate (a, SyntFormIndex) -> Failable (Map Name SyntForm)
+typingTablePred lds knownVars (Right expr)
+	= do	_checkAllVarsExist knownVars expr
+		checkVarsCompatible lds knownVars [typingTable' expr]
+		return knownVars		 
+typingTablePred lds knownVars (Left concl)
+	= do	-- In a predicate position, the inArgs should not contain unknown variables;
+		inArgs	<- modedArgs lds In concl
+		inArgs |> _checkAllVarsExist knownVars & allGood
+		checkVarsCompatible lds knownVars (inArgs |> typingTable')
+
+		-- the outArgs generate variables
+		outArgs	<- modedArgs lds Out concl
+		let knownVars'	= knownVars |> S.singleton
+		let outArgs'	= outArgs |> typingTable'
+		mergeTypings lds (knownVars' : outArgs')
+
+
+-- Only to be used for the conclusion of the rule
+_newlyCreatedVars	:: LDScope' fr -> Conclusion (a, SyntFormIndex) -> Failable (Map Name SyntForm)
+_newlyCreatedVars lds concl
+	= do	inArgs	<- modedArgs lds In concl
+		-- input arguments generate new variables that can be used
+		let newVars	= inArgs ||>> snd |> typingTable
+		mergeTypings lds newVars
+
+
+
+{-
+Checks that all the variables of the given conclusion, in the output argument, are declared. Only to be used for the conclusion of the rule.
+Checks that each variable:
+ - exists withing the given dict
+ - have a compatible type
+-}
+checkAllVarsCompatible	:: LDScope' fr -> Map Name SyntForm -> Conclusion (a, SyntFormIndex) -> Check
+checkAllVarsCompatible lds knownVars concl
+	= do	outArgs	<- modedArgs lds Out concl
+		let exprTypings	= outArgs ||>> snd |> typingTable
+		outArgs |> _checkAllVarsExist knownVars & allGood
+		checkVarsCompatible lds knownVars exprTypings
+
+checkVarsCompatible	:: LDScope' fr -> Map Name SyntForm -> [Map Name (Set SyntForm)] -> Check
+checkVarsCompatible lds knownVars typingTables
+	= do	let knownVars'	= knownVars |> S.singleton
+		mergeTypings lds (knownVars' : typingTables)
+		pass
+
+
+_checkAllVarsExist	:: Map Name SyntForm -> Expression (a, SyntFormIndex) -> Check
+_checkAllVarsExist knownVars expr
+	= inMsg' ("In the expression "++toParsable expr) $ inLocation (get expLocation expr) $
+	  do	let exprTyping	= expr |> snd & typingTable
+		let neededVars	= exprTyping & M.keys
+		let missingVars	= neededVars & L.filter (`M.notMember` knownVars)
+		unless (null missingVars) $
+			multiFail (missingVars |> (\v -> "The variable "++show v++" is not in scope"))
+		
+
+
+
+modedArgs	:: LDScope' fr -> Mode -> Conclusion a -> Failable [Expression a]
+modedArgs lds mode concl
+	= do	rel	<- get conclRelName concl
+				& resolve' lds relationCall
+				|> snd
+		let modes	= get relTypes rel |> snd
+		let args	= concl & get conclArgs & zip modes & filter ((==) mode . fst) |> snd
+		return args
+
+
+
+		
 
 
 typePredicate	:: Eq fr => LDScope' fr -> Predicate a -> Failable (Predicate (a, SyntFormIndex))
@@ -111,7 +187,7 @@ typeFunction ld f
 	= inMsg' ("While typing "++ get funcName f) $
 	  do	let clauses	= get funcClauses f
 		let tps		= (get funcArgTypes f, get funcRetType f)
-		clauses'	<- clauses & mapi |> typeClause ld (ld & get (ldScope . payload . langSupertypes)) tps & allGood
+		clauses'	<- clauses & mapi |> typeClause ld tps & allGood
 		f & set funcClauses clauses' & return
 		
 {- |
@@ -124,40 +200,41 @@ Typing of the clause. Checks for:
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "" ["Faulty","FunctionTyperTest"] & toCoParsable
-"| While typing f \n| While typing clause f.0 in /Faulty/FunctionTyperTest.language at lines 25 - 26\n| The clause is: (f(x)\t = y) \nError: \n  \8226 The variable \"y\" was not defined\n| While typing g \n| While typing clause g.0 in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| The clause is: (g(x)\t = not(x)) \n| While typing the return expression of the function, namely not(x) \n| While typing not(x) while typing in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\nError: \n  \8226 Unexpected type of 'not(x)', namely Faulty.FunctionTyperTest.bool\n  \8226 Use an expression which returns a Faulty.FunctionTyperTest.int (or a subset of that type)\n| While typing h \n  | While typing clause h.0 in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  | The clause is: (h(x:int)\t = bool) \n  Error: \n    \8226 The variable \"bool\" was not defined\n  | While typing clause h.1 in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  | The clause is: (h(x)\t = not(x)) \n  Error: \n    \8226   The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader"
+"| While typing f \n| While typing clause f.0 in /Faulty/FunctionTyperTest.language at lines 25 - 26\n| The clause is: (f(x)\t = y) in /Faulty/FunctionTyperTest.language at lines 25 - 26\nError: \n  \8226 The variable \"y\" was not defined\n| While typing g \n| While typing clause g.0 in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| The clause is: (g(x)\t = not(x)) in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| While typing the return expression of the function, namely not(x) in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\n| While typing not(x) while typing in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\nError: \n  \8226 Unexpected type of 'not(x)', namely Faulty.FunctionTyperTest.bool\n  \8226 Use an expression which returns a Faulty.FunctionTyperTest.int (or a subset of that type)\n| While typing h \n  | While typing clause h.0 in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  | The clause is: (h(x:int)\t = bool) in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  Error: \n    \8226 The variable \"bool\" was not defined\n  | While typing clause h.1 in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  | The clause is: (h(x)\t = not(x)) in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  Error: \n    \8226   The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader"
 
 -}
 
-typeClause scope supers expectations (i, clause)
+typeClause scope expectations (i, clause)
 	=  inMsg' ("While typing clause "++get clauseFuncName clause ++"."++show i) $ inLocation (get (clauseDoc . miLoc) clause) $
 		inMsg' ("The clause is: "++inParens (toParsable clause)) $
-		_typeClause scope supers expectations (i, clause)
+		_typeClause scope expectations (i, clause)
 
-_typeClause	:: Eq fr => LDScope' fr -> Lattice FQName -> ([FQName], FQName) -> (Int, FunctionClause x) -> Failable (FunctionClause SyntFormIndex)
-_typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc nm)
+_typeClause	:: Eq fr => LDScope' fr -> ([FQName], FQName) -> (Int, FunctionClause x) -> Failable (FunctionClause SyntFormIndex)
+_typeClause scope (patExps, retExp) (i, FunctionClause pats ret doc nm)
  | length patExps /= length pats
 	= inLocation (get miLoc doc) $ fail $ 
 		"Expected "++show (length patExps)++" patterns for function "++show nm++", but got "++show (length pats)++" patterns instead"
  | otherwise
-	= do	let li	= get miLoc doc
-		pats'	<- zip patExps pats & mapi |> (\(i, (patExp, pat)) -> typePattern ("pattern "++show i) scope supertypings patExp pat)
+	= inLocation (get miLoc doc) $
+	   do	pats'	<- zip patExps pats & mapi |> (\(i, (patExp, pat)) -> typePattern ("pattern "++show i) scope patExp pat)
 				& allGood
-		ret'	<- typePattern "the return expression of the function" scope supertypings retExp ret	-- typing of the main return expression
+		ret'	<- typePattern "the return expression of the function" scope retExp ret	-- typing of the main return expression
 
 		-- Patterns, such as `f((x:expr), (x:int))` will get the intersection
 		patternTypes	<- inMsg' "While checking for conflicting variable usage between patterns" $
-					mergeTypings' li supertypings pats'
+					mergeTypings scope (pats' |> typingTable)
 		-- The usage in the return expression should be smaller, but never bigger: `f((x:expr)) = !plus((x:int), 5)` implies a type error
 		exprTypes	<- inMsg' "While checking for conflicting variable in the clause body" $ 
-					mergeTypings' li supertypings [ret']
+					mergeTypings scope [typingTable ret']
 		inMsg' "While checking for conflicting variable usage between patterns and the clause body" $ 
-			mergeTypings' li  supertypings (ret':pats')
+			mergeTypings scope ((ret':pats') |> typingTable)
 		
 		-- check that each variable exists
 		exprTypes & M.keys & filter (not . (`M.member` patternTypes))
 			|> (\k -> "The variable "++show k++" was not defined")
 			|> fail & allGood
 
+		let supertypings	= scope & get (ldScope . langSupertypes)
 		-- check that usage of each variable is a supertype of what the patterns generate (what a pattern gives is a subtype of what is needed)
 		let notSubset	= M.intersectionWith (,) patternTypes exprTypes	
 					& M.filter (uncurry (/=))
@@ -170,11 +247,11 @@ _typeClause scope supertypings (patExps, retExp) (i, FunctionClause pats ret doc
 
 
 
-typePattern	:: Eq fr => String -> LDScope' fr -> Lattice FQName -> FQName -> Expression x  -> Failable (Expression SyntFormIndex)
-typePattern msg ld supers exp pat
-	= inMsg' ("While typing "++msg++", namely "++toParsable pat) $ do
+typePattern	:: Eq fr => String -> LDScope' fr -> FQName -> Expression x  -> Failable (Expression SyntFormIndex)
+typePattern msg ld exp pat
+	= inMsg' ("While typing "++msg++", namely "++toParsable pat) $ inLocation (get expLocation pat) $ do
 		pat'	<- typeExpression ld exp pat ||>> snd
-		mergeTypings' (get expLocation pat) supers [pat']
+		mergeTypings ld [typingTable pat']
 		return pat'
 
 
@@ -232,7 +309,7 @@ _typeExpression ld expectation expr'@(FuncCall funcNm args a li)
 			("Too much arguments given, namely "++show (length args), argSugg)
 
 
-		let ld'			= get (ldScope . payload) ld
+		let ld'			= get ldScope ld
 		ftype	<- get funcRetType function & resolve ld syntaxCall
 		assertSugg' (isSubtypeOf ld' ftype expectation || isSubtypeOf ld' expectation ftype)
 			("Unexpected type of '"++ toParsable expr' ++"', namely "++ showFQ ftype, "Use an expression which returns a "++showFQ expectation++" (or a subset of that type)")
@@ -240,7 +317,7 @@ _typeExpression ld expectation expr'@(FuncCall funcNm args a li)
 _typeExpression ld expectation (Ascription expr name a li)
 	= do	name'	<- resolve ld syntaxCall name
 		expr'	<- typeExpression ld name' expr
-		assert' (isSubtypeOf (get (ldScope . payload) ld) name' expectation)
+		assert' (isSubtypeOf (get ldScope ld) name' expectation)
 			$ "The ascription of "++toParsable expr++" as a "++showFQ name++" is not a subtype of "++showFQ expectation
 		return $ Ascription expr' name' (a, NoIndex name') li
 _typeExpression ld expectation (Split e1 e2 a li)
@@ -267,7 +344,7 @@ typeExpressionIndexed ld syntForm exprs
  | syntForm == typeTop
 	= do	let all		= allKnowns ld syntaxCall |> fst3 |> fst	:: [FQName]
 		let tries	= all |> (\expectation -> typeExpressionIndexed ld expectation exprs)
-		let isSubtypeOf'	= isSubtypeOf (get (ldScope . payload) ld)
+		let isSubtypeOf'	= isSubtypeOf (get ldScope ld)
 		let successfull	= successess tries & selectSmallest isSubtypeOf' -- [([Expression (a, SyntFormIndex)], SyntFormIndex)]
 		inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as any known type") $
 			inMsg' ("Tried the types: "++all |> showFQ & commas' "and") $
@@ -348,30 +425,34 @@ _compareBNFPT (BNF.Seq bnf) pt
 
 
 {- | Maps an expression onto all possible types it assumes
->>> _typingTable $ DontCare {_expAnnot = (NoIndex (["A"],"b")), _expLocation = unknownLocation}
+>>> typingTable $ DontCare {_expAnnot = (NoIndex (["A"],"b")), _expLocation = unknownLocation}
 fromList []
 >>> let varX = Var {_varName = "x", _expAnnot = (NoIndex (["TestLanguage"],"bool")), _expLocation = unknownLocation}
->>> _typingTable varX
+>>> typingTable varX
 fromList [("x",fromList [(["TestLanguage"],"bool")])]
 >>> let varInt = Var {_varName = "x", _expAnnot = (NoIndex (["TestLanguage"],"int")), _expLocation = unknownLocation}
 >>> let seq = SeqExp [varX, varInt] (error "No index here") unknownLocation
->>> _typingTable seq
+>>> typingTable seq
 fromList [("x",fromList [(["TestLanguage"],"bool"),(["TestLanguage"],"int")])]
 
 -}
-_typingTable	:: Expression SyntFormIndex -> Map Name (Set FQName)
-_typingTable (Var nm (NoIndex sf) _)
+typingTable	:: Expression SyntFormIndex -> Map Name (Set FQName)
+typingTable (Var nm (NoIndex sf) _)
 	= M.singleton nm (S.singleton sf)
-_typingTable DontCare{}
+typingTable DontCare{}
 	= M.empty
-_typingTable ParseTree{}
+typingTable ParseTree{}
 	= M.empty
-_typingTable (FuncCall _ args _ _)
-	= args |> _typingTable & M.unionsWith S.union
-_typingTable (Ascription expr _ _ _)
-	= _typingTable expr
-_typingTable (SeqExp exprs _ _)
-	= exprs |> _typingTable & M.unionsWith S.union
+typingTable (FuncCall _ args _ _)
+	= args |> typingTable & M.unionsWith S.union
+typingTable (Ascription expr _ _ _)
+	= typingTable expr
+typingTable (SeqExp exprs _ _)
+	= exprs |> typingTable & M.unionsWith S.union
+
+typingTable'	:: Expression (a, SyntFormIndex) -> Map Name (Set FQName)
+typingTable' e
+	= typingTable (e |> snd)
 
 
 {- | checks that no two typings do conflict (thus that no two typings result in an empty set for the variables). The typingtable is used for this
@@ -383,32 +464,22 @@ Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"
 >>> let (Success intVar)  = typeExpression testLanguage' (["TestLanguage"], "int") (Var "x" () unknownLocation)
 >>> intVar
 Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"int")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
->>> let supertypings = testLanguage & get langdefs & (M.!["TestLanguage"]) & get (ldScope . payload . langSupertypes)
->>> [boolVar, intVar] ||>> snd & mergeTypings supertypings
-Left [("x",fromList [(["TestLanguage"],"bool"),(["TestLanguage"],"int")])]
->>> [boolVar, intVar] ||>> snd & mergeTypings' unknownLocation supertypings & handleFailure toCoParsable show
-"| While checking for conflicting variable usage \nError: \n  \8226   x\tis used as TestLanguage.bool, TestLanguage.int"
+>>> [boolVar, intVar] |> typingTable' & mergeTypings testLanguage' & handleFailure toCoParsable show
+"| While checking for conflicting variable usage \nError: \n  \8226 x\tis used as TestLanguage.bool, TestLanguage.int"
 
 -}
-mergeTypings	:: Lattice FQName -> [Expression SyntFormIndex] -> Either [(String, Set SyntForm)] (Map Name SyntForm)
-mergeTypings supertyping exprs
-	= do	let typings	= exprs |> _typingTable 
+mergeTypings	:: LDScope' fr -> [Map Name (Set SyntForm)] -> Failable (Map Name SyntForm)
+mergeTypings lds typings
+	= inMsg' "While checking for conflicting variable usage" $
+	  do	let lattice	= get (ldScope . langSupertypes) lds
+		let typings'	= typings
 					& M.unionsWith S.union
-					|> (id &&& infimums supertyping)
+					-- search a common subtype for each set: {"a" --> ⊥, "b" --> Bool}
+					|> (id &&& infimums lattice)	
 		let failedTypings
-				= typings & M.filter ((==) (get bottom supertyping) . snd)
+				= typings' & M.filter ((==) (get bottom lattice) . snd)	-- entries which are bottom (⊥) have failed typing
 					|> fst
 					& M.toList
-		unless (null failedTypings) $ Left failedTypings
-		return (typings |> snd)
-
--- Same as mergeTypings, but with an error message
-mergeTypings'	:: LocationInfo -> Lattice FQName -> [Expression SyntFormIndex] -> Failable (Map Name SyntForm)
-mergeTypings' li st exprs
-	= let	showEntry (nm, tps)	= nm++"\tis used as "++ (tps & S.toList |> showFQ & commas)
-		in
-		inMsg' "While checking for conflicting variable usage" $
-			mergeTypings st exprs & first (\msgs -> msgs |> showEntry & unlines & indent)
-				& either fail return 
-
-
+		let	showEntry (nm, tps)	= nm++"\tis used as "++ (tps & S.toList |> showFQ & commas)
+		unless (null failedTypings) (failedTypings |> showEntry & multiFail) 
+		return (typings' |> snd)

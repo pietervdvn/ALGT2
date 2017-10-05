@@ -5,9 +5,13 @@ import Utils.Utils
 
 import Utils.All
 import LanguageDef.Utils.LocationInfo
+import LanguageDef.Utils.Grouper
+import LanguageDef.Utils.ExceptionInfo
+
+
 import LanguageDef.Syntax.All
 import LanguageDef.Expression hiding (choices')
-import LanguageDef.Utils.Grouper
+
 	
 
 import Data.Map (Map, (!), filterWithKey)
@@ -21,6 +25,7 @@ data Conclusion a
 		{ _conclRelName	:: FQName
 		, _conclArgs	:: [Expression a]
 		} deriving (Show, Eq, Functor)
+
 
 data Rule' a
 	= Rule	{ _rulePreds	:: [Predicate a]

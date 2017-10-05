@@ -10,7 +10,6 @@ import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
 
-import LanguageDef.Utils.Scope
 import LanguageDef.Utils.Grouper
 import LanguageDef.Syntax.All
 import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
@@ -18,7 +17,7 @@ import LanguageDef.LangDefs
 import LanguageDef.Typer
 import LanguageDef.Function
 
-import Graphs.Lattice (makeLattice, Lattice, debugLattice)
+import Graphs.Lattice (makeLatticeInverted, Lattice, debugLattice)
 
 import Control.Arrow ((&&&))
 import Data.Bifunctor (first)
@@ -36,15 +35,16 @@ import Lens.Micro (Lens)
 
 >>> import AssetUtils
 >>> import LanguageDef.API
->>> let supertypings = testLanguage' & get (ldScope . payload . langSupertypes)
+>>> let supertypings = testLanguage' & get (ldScope . langSupertypes)
 >>> debugLattice showFQ supertypings & putStr
-⊤ has following subtypes:  TestLanguage.exprSum
 ⊥ has following subtypes:<no subs>
 TestLanguage.bool has following subtypes:  ⊥
 TestLanguage.expr has following subtypes:  TestLanguage.bool
   TestLanguage.int
 TestLanguage.exprSum has following subtypes:  TestLanguage.expr
 TestLanguage.int has following subtypes:  ⊥
+TestLanguage.op has following subtypes:  ⊥
+TestLanguage.tuple has following subtypes:  ⊥
 
 >>> import Graphs.Lattice
 >>> infimums supertypings [(["TestLanguage"], "bool")]
@@ -59,8 +59,8 @@ TestLanguage.int has following subtypes:  ⊥
 asLangDefs		:: Map [Name] (LanguageDef' ResolvedImport ()) -> Failable LangDefs
 asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |> sndEffect & allGood
 			scopes'		<- scopes ||>> fixScope |+> sndEffect	:: Failable [([Name], LDScope' ())]
-			supertyping	<- createSupertypingRelationship (scopes' ||>> get (ldScope . payload))
-			let ld	= scopes' ||>> over (ldScope . payload) (set langSupertypes supertyping)
+			supertyping	<- createSupertypingRelationship (scopes' ||>> get ldScope)
+			let ld	= scopes' ||>> over ldScope (set langSupertypes supertyping)
 						& M.fromList 
 						& knotScopes 
 			ld'	<- typeLD ld |> LangDefs
@@ -76,15 +76,15 @@ createSupertypingRelationship lds
 	= do	let syntaxes	= lds ||>> get langSyntax |> sndEffect & catMaybes 
 					||>> get grouperDict
 					|||>>> get syntChoices 		:: [([Name], Map Name [BNF])]
-		let fqsyntax	= syntaxes ||>> M.toList & unmerge
-					|> (\(fq, (nm, cont)) -> ((fq, nm), cont))
-					& M.fromList						:: Map FQName [BNF]
+		let fqsyntax	= syntaxes
+					|> (\(fq, syntForms) -> syntForms & mapKeys ((,) fq) )
+					& M.unions
+										:: Map FQName [BNF]
 		let supertypes	= fqsyntax ||>> getRuleCall |> catMaybes |> S.fromList		:: Map FQName (Set FQName)
-		let subtypes	= invertDict supertypes
 		let cycleMsg cycles
 				= "Cycles are detected in the supertype relationship of the syntaxes:"++
 					cycles |> (\cycle -> cycle |> showFQ & intercalate " ⊃ ") & unlines & indent
-		makeLattice typeBottom typeTop subtypes & first cycleMsg |> fst
+		makeLatticeInverted typeBottom typeTop supertypes & first cycleMsg |> fst
 			 & either fail return & inMsg' "While constructing the global supertyping relationship" & inPhase Typing
 	
 
@@ -94,12 +94,7 @@ _scopeFor ldefs (fqname, ld)
 		let selfImport	= (fqname, ImportFlags file True (tails fqname))
 		let imports	= ld & get langImports |> (get importName &&& _importFlagFor)	:: [ ([Name], ImportFlags) ]
 		imported	<- imports |+> (\k -> checkExists' (fst k) ldefs ("Weird, import "++show k++" not found... Bug in LangDefs"))
-		let scope	=  Scope
-			fqname
-			(M.fromList (selfImport:imports))	-- includes self as import
-			ld			-- actual payload/exports; resolve will filter
-			M.empty			-- reExports
-		return $ LDScope scope ldefs
+		return $ LDScope ld (M.fromList (selfImport:imports)) ldefs
 
 _importFlagFor	:: Import ResolvedImport -> ImportFlags
 _importFlagFor (Import name qualifiedOnly _ filePath)	-- name is the absolute path from the root directory here
@@ -108,9 +103,9 @@ _importFlagFor (Import name qualifiedOnly _ filePath)	-- name is the absolute pa
 -- Prepares the language definitions for production (e.g. resolves all calls to be fully qualified). The first argument should be a dict with all the fully fixed scopes
 fixScope	:: LDScope' fr -> Failable (LDScope' fr)
 fixScope scopeToFix
-	= do	let ld	= get (ldScope . payload) scopeToFix
+	= do	let ld	= get ldScope scopeToFix
 		ld'	<- fixLD scopeToFix ld
-		scopeToFix	& set (ldScope . payload) ld'
+		scopeToFix	& set ldScope ld'
 				& return
 
 

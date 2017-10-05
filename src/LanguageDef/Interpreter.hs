@@ -12,7 +12,6 @@ import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.ExceptionInfo
 
 import LanguageDef.LangDefs
-import LanguageDef.Utils.Scope
 import LanguageDef.Utils.Grouper
 
 import qualified Data.Map as M
@@ -22,13 +21,12 @@ import Data.Map (Map)
 {- | The type representing a variable store
 
 >>> import LanguageDef.API
->>> import LanguageDef.Utils.Scope
 >>> import LanguageDef.LangDefs
 
 >>> let testType x	= (["TestLanguage"], x)
 >>> let createPT tp p = createParseTree testLanguage (testType tp) "?" p & crash' & removeHidden
 >>> let createExp tp e = createTypedExpression testLanguage "?" e (testType tp) & crash'
->>> let ld = testLanguage' & get (ldScope . payload)
+>>> let ld = testLanguage' & get ldScope
 
 >>> let t te e tpt pt = patternMatch (const (), testLanguage) M.empty ld (createExp te e) (createPT tpt pt)
 >>> t "bool" "\"True\"" "bool" "True"
@@ -102,7 +100,7 @@ resolveAndRun'
 resolveAndRun	:: (SyntFormIndex -> a) -> LangDefs -> FQName -> [ParseTree a] -> Failable (ParseTree a)
 resolveAndRun fb2a lds (targetLD, name) args
 	= do	ld	<- checkExistsSugg' dots targetLD (get langdefs lds) ("The module "++dots targetLD++" was not found")
-		let ld'	= ld & get (ldScope . payload) 	:: LanguageDef
+		let ld'	= ld & get ldScope 	:: LanguageDef
 		let msg	= "The module "++dots targetLD++" does not have a function section and thus does not define "++name
 		funcs	<- ld' & get langFunctions 
 				& maybe (fail msg) return

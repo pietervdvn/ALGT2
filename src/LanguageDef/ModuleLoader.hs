@@ -12,7 +12,6 @@ import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.LanguageDef
 import LanguageDef.LangDefs
 import LanguageDef.LangDefsFix
-import LanguageDef.Utils.Scope
 
 import Data.Map as M
 

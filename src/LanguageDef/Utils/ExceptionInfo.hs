@@ -40,7 +40,6 @@ data ExceptionInfo = ExceptionInfo
 
 makeLenses ''ExceptionInfo
 
-fromAggregate exp	= [exp]
 
 
 instance ToString' String Severity where
@@ -54,9 +53,9 @@ colorFor	:: Severity -> ANSI.Doc -> ANSI.Doc
 colorFor Error	= red
 colorFor Warning = yellow
 
--- FIXME TODO what is broken in the case of: Aggregate [ Exception , Aggregate [ Excp, Excp]]?
 fromAggregate	:: ExceptionInfo -> [ExceptionInfo]
 fromAggregate (Aggregate exps)	= exps
+fromAggregate exp	= [exp]
 
 
 instance Normalizable ExceptionInfo where
@@ -80,7 +79,9 @@ instance ToString Phase where
 	toParsable phase	= show phase & over _head toLower
 
 instance ToString ExceptionInfo where
-	toParsable e	= e & normalize & _fancy         & show
+	toParsable e	= case normalize e of
+				(Aggregate errs)	-> errs |> _fancy |> show & intercalate "\n\n"
+				e'			-> _fancy e' & show
 	toCoParsable e	= e & normalize & _fancy & plain & show
 	
 
@@ -162,6 +163,14 @@ instance Monad Failable where
 		= Failed e
 	fail msg
 		= Failed $ ExceptionInfo msg Error Nothing
+
+failSugg	:: (String, String) -> Failable a
+failSugg (msg, sugg)
+	= ExceptionInfo msg Error (Just sugg) & Failed
+
+multiFail	:: [String] -> Failable a
+multiFail msgs
+	= msgs |> (\msg -> ExceptionInfo msg Error Nothing) & Aggregate & Failed
 
 instance ToString a => ToString (Failable a) where
 	toParsable (Success a)	= toParsable a

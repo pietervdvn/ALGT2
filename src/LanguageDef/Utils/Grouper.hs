@@ -62,26 +62,31 @@ overGrouperLens lens fixer langDef
 
 
 instance ToString a => ToString (Grouper a) where
-	toParsable (Grouper as order _)
-		= let	order'	= order ++
-				(as & M.keys & L.filter (`notElem` order)) in
-			order'	|> (as ! )
+	toParsable grouper
+		= grouper	& getOrdered
+				|> snd
 				|> toParsable
 				& unlines
 
+getOrdered	:: Grouper a -> [(Name, a)]
+getOrdered (Grouper as order _)
+	=  let	order'	= order ++
+				(as & M.keys & L.filter (`notElem` order)) in
+			order'	|> (id &&& (as ! ))
+
 
 instance Checkable a => Checkable (Grouper a) where
-	check (Grouper as order groupName )
+	check grouper@(Grouper as order groupName )
 		= do	let ch1	= _checkNoDups groupName order
-			let chcks	=  as & M.elems |> check
+			let chcks	=  grouper & getOrdered |> snd |> check
 			allGood (ch1:chcks)
 			pass
 
 
 instance Checkable' x a => Checkable' x (Grouper a) where
-	check' x (Grouper as order groupName)
+	check' x grouper@(Grouper as order groupName)
 		= do	let ch1	= _checkNoDups groupName order 
-			let chcks	= as & M.elems |> check' x
+			let chcks	= grouper & getOrdered |> snd |> check' x
 			allGood (ch1:chcks)
 			pass			
 

@@ -25,7 +25,7 @@ import AssetUtils
 import LanguageDef.LanguageDef
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
-import LanguageDef.Utils.Scope
+
 
 import LanguageDef.Syntax.All as Syntax
 import qualified LanguageDef.Syntax.Combiner as Combiner
@@ -135,7 +135,7 @@ fromList [(["TestLanguage"],ImportFlags {_ifOrigin = "/TestLanguage.language", _
 -}
 infoImports	:: LDScope -> Map [Name] ImportFlags
 infoImports scope
-	= scope & get (ldScope . imported)
+	= scope & get imported
 		
 
 resolveGlobal' lds entity fqn
@@ -184,7 +184,7 @@ createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Failable (E
 createTypedExpression ld source str typ@(loc, nm)
 	= do	expr	<- createExpression ld source str
 		scope	<- checkExistsSugg' dots loc (get langdefs ld)
-				("Module "++dots loc++ " not found")	-- TODO make failable
+				("Module "++dots loc++ " not found")
 		typeExpression scope typ expr ||>> snd
 
 

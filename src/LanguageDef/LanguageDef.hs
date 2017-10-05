@@ -143,7 +143,8 @@ _checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner)
 -- | Parses the entire file, file should still be checked against it's context!
 -- >>> _checkCombiner
 -- Success ()
--- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language 
+-- >>> import Graphs.Lattice
+-- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language |> set langSupertypes (emptyLattice ([], "T") ([], "B"))
 -- Success ...
 parseFullFile	:: [Name] -> FilePath -> String -> Failable (LanguageDef' () ())
 parseFullFile _ fp contents
@@ -157,7 +158,7 @@ parseFullFile _ fp contents
 			meta
 			li
 			syntax
-			(emptyLattice ([], "B") ([], "T"))	-- filled later on
+			(error "The lattice is not in use yet!")	-- filled later on
 			funcs
 			rels
 			rules
