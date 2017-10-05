@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
-module LanguageDef.Function where
+module LanguageDef.Data.Function where
 
 
 import Utils.All
 
-import LanguageDef.Expression hiding (choices')
+import LanguageDef.Data.Expression hiding (choices')
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Checkable
 import LanguageDef.Utils.ExceptionInfo

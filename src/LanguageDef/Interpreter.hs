@@ -4,10 +4,11 @@ module LanguageDef.Interpreter where
 
 import Utils.All
 
-import LanguageDef.LanguageDef
-import LanguageDef.Syntax hiding (assert')
-import LanguageDef.Function 
-import LanguageDef.Expression 
+import LanguageDef.Data.LanguageDef
+import LanguageDef.Data.SyntacticForm hiding (assert')
+import LanguageDef.Data.ParseTree
+import LanguageDef.Data.Function 
+import LanguageDef.Data.Expression 
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.ExceptionInfo
 

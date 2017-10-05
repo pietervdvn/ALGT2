@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes, TemplateHaskell, TypeSynonymInstances, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.Syntax.Syntax where
+module LanguageDef.Data.SyntacticForm where
 
 {- 
 
@@ -16,10 +16,11 @@ The defintion of
 import Utils.All
 
 import LanguageDef.Utils.LocationInfo
-import LanguageDef.Syntax.BNF
 import LanguageDef.Utils.Grouper
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
+
+import LanguageDef.Data.BNF
 
 import Data.Maybe
 import qualified Data.Map as M
@@ -27,13 +28,12 @@ import qualified Data.Set as S
 import qualified Data.List as L
 import Data.Map (Map, fromList, toList)
 import Data.Set (Set)
-
 import Data.Function (fix)
-
-import Control.Arrow ((&&&))
 import Data.Bifunctor (first)
+
 import Lens.Micro.TH
 import Lens.Micro (mapped)
+import Control.Arrow ((&&&))
 
 import Graphs.SearchCycles
 
@@ -95,15 +95,6 @@ instance Checkable' (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name]
 			, _checkDeadClauses isSubtypeOf fqname sf] >> pass
 
 
-{- | All rulecalls shoud exist
--- >>> import LanguageDef.Syntax
--- >>> let syntax1 = asSyntaxUnchecked' "Tests" "\nabc ::= x\n"
--- >>> _checkAllIdentsExist (asSyntaxes' ["Tests"] syntax1) (syntax1, ["Tests"])
--- Left ...
--- >>> let syntax2 = asSyntaxUnchecked' "Tests" "\nabc ::= abc\n"
--- >>> _checkAllIdentsExist (asSyntaxes' ["Tests"] syntax2) (syntax2, ["Tests"])
--- Right ...
--}
 _checkAllIdentsExist	:: (FQName -> Failable FQName) -> SyntacticForm -> Check
 _checkAllIdentsExist resolve sf
 	= inMsg' ("While resolving all calls in "++get syntName sf) $
@@ -112,8 +103,8 @@ _checkAllIdentsExist resolve sf
 			pass
 
 {- | Rules are not trivial (= one choice with only the rulecall)
->>> import LanguageDef.Syntax
->>> let syntax2 = asSyntaxUnchecked' "Tests" "\nabc ::= abc\n"
+>>> import LanguageDef.MetaSyntax
+>>> let syntax2 = parseSyntax "Tests" "\nabc ::= abc\n" & crash
 >>> let sf = syntax2 & get grouperDict & (M.! "abc")
 >>> _checkNoTrivial sf
 Failed (ExceptionInfo {_errMsg = "The syntactic form abc is trivial. Remove the rule and replace it by Tests.abc", _errSeverity = Error, _errSuggestion = Nothing})
@@ -136,7 +127,7 @@ isTrivial sf
 >>> import LanguageDef.API
 >>> import LanguageDef.LangDefs
 >>> import Data.Maybe (fromJust)
->>> import LanguageDef.LanguageDef
+>>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["TestShadowing"]
 >>> let unit = loadAssetLangDef "Faulty" fqname
 
@@ -155,7 +146,7 @@ _checkDeadClauses isSubtypeOf fq sf
 >>> import LanguageDef.API
 >>> import LanguageDef.LangDefs
 >>> import Data.Maybe (fromJust)
->>> import LanguageDef.LanguageDef
+>>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["TestShadowing"]
 >>> let unit = loadAssetLangDef "Faulty" fqname 
 -}
@@ -181,7 +172,7 @@ deadChoices isSubtypeOf sf
 >>> import LanguageDef.API
 >>> import LanguageDef.LangDefs
 >>> import Data.Maybe (fromJust)
->>> import LanguageDef.LanguageDef
+>>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
 >>> let unit = loadAssetLangDef "Faulty" fqname & crash' & (`getLangDef` fqname) & fromJust
 >>> let synt = unit & get langSyntax & fromJust
@@ -202,7 +193,7 @@ _checkLeftRecursion fq s
 >>> import LanguageDef.API
 >>> import LanguageDef.LangDefs
 >>> import Data.Maybe (fromJust)
->>> import LanguageDef.LanguageDef
+>>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
 >>> let unit = loadAssetLangDef "Faulty" fqname & crash' & (`getLangDef` fqname) & fromJust
 >>> let synt = unit & get langSyntax & fromJust
@@ -220,6 +211,11 @@ leftRecursiveCalls fq syntax
 			& M.fromList
 				:: Map FQName (Set FQName)
 	in cleanCycles syntax'
+
+
+
+
+
 
 
 

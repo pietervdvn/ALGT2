@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.LanguageDef where
+module LanguageDef.Data.LanguageDef where
 
 {-
 
@@ -11,16 +11,20 @@ import Utils.All
 
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
-
-import qualified LanguageDef.Syntax.BNF as BNF
-import LanguageDef.Syntax.All
-import LanguageDef.Utils.LocationInfo
-import LanguageDef.Expression hiding (choices')
-import LanguageDef.Function hiding (choices')
-import LanguageDef.Relation hiding (choices')
-import LanguageDef.Rule
-import qualified LanguageDef.Relation as Relations
 import LanguageDef.Utils.Grouper
+import LanguageDef.Utils.LocationInfo
+
+import LanguageDef.Syntax.All
+
+import qualified LanguageDef.Data.BNF as BNF
+
+import LanguageDef.Data.Expression hiding (choices')
+import LanguageDef.Data.Function hiding (choices')
+import LanguageDef.Data.Relation hiding (choices')
+import LanguageDef.Data.Rule
+import qualified LanguageDef.Data.Relation as Relations
+
+import LanguageDef.MetaSyntax (helperSyntax, bnfSyntax, parseSyntax, patchNames)
 
 import Graphs.Lattice
 
@@ -286,7 +290,7 @@ Grouper {_grouperDict = fromList [("arguments",SyntacticForm ...
 
 functionSyntax	:: Syntax
 functionSyntax
-	= _loadAssetsSyntax "Functions" Assets._Functions_language
+	= loadAssetsSyntax "Functions" Assets._Functions_language
 
 
 {- | The syntax that declares relations, as defined in the Assets
@@ -295,19 +299,17 @@ Grouper {_grouperDict = fromList [("commaSepExpr",SyntacticForm ...
 -}
 relationSyntax	:: Syntax
 relationSyntax
-	= _loadAssetsSyntax "Relations" Assets._Relations_language
+	= loadAssetsSyntax "Relations" Assets._Relations_language
 
 
 
-_loadAssetsSyntax	:: Name -> String -> Syntax
-_loadAssetsSyntax title contents
+loadAssetsSyntax	:: Name -> String -> Syntax
+loadAssetsSyntax title contents
 	= parseFullFile [title] ("Assets."++title++".language") contents
 		& crash
 		& get langSyntax
 		& fromMaybe (error $ title ++ " asset does not contain syntax?")
-		& _patchFullQualifies [title]
-
-
+		& patchNames [title]
 
 
 
@@ -348,7 +350,7 @@ mainSyntax subRules
 	++ ["modules    ::= "++subRules |> _titledModCall |> fst & allOptional & intercalate "\n\t|"]
 	++ [ "langDef      ::= title modules"
 	]
-	)  & unlines & asSyntaxUnchecked "ALGT" & crash
+	)  & unlines & parseSyntax "ALGT" & crash
 
 
 

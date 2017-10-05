@@ -7,13 +7,12 @@ import Utils.All
 import Assets
 import AssetUtils
 
-import LanguageDef.LanguageDef
+import LanguageDef.Data.LanguageDef
 import LanguageDef.ModuleLoader	
-import LanguageDef.Function
-import LanguageDef.Expression 
+import LanguageDef.Data.Function
+import LanguageDef.Data.Expression 
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Interpreter
-import LanguageDef.Syntax
 
 
 import LanguageDef.API

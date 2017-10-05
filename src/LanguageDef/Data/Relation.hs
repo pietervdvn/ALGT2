@@ -1,16 +1,16 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, DeriveFunctor #-}
-module LanguageDef.Relation where
+module LanguageDef.Data.Relation where
 
 
 import Utils.All
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
+import LanguageDef.Utils.Grouper
 
 import LanguageDef.Syntax.All
-import LanguageDef.Rule
-import LanguageDef.Expression hiding (choices')
-import LanguageDef.Utils.Grouper
+import LanguageDef.Data.Rule
+import LanguageDef.Data.Expression hiding (choices')
 
 
 import Data.Map (Map, (!), filterWithKey)

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, DeriveFunctor #-}
-module LanguageDef.Rule where
+module LanguageDef.Data.Rule where
 
 import Utils.Utils
 
@@ -10,7 +10,7 @@ import LanguageDef.Utils.ExceptionInfo
 
 
 import LanguageDef.Syntax.All
-import LanguageDef.Expression hiding (choices')
+import LanguageDef.Data.Expression hiding (choices')
 
 	
 

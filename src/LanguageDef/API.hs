@@ -22,20 +22,20 @@ import Utils.PureIO
 
 import AssetUtils
 
-import LanguageDef.LanguageDef
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
 
 
 import LanguageDef.Syntax.All as Syntax
-import qualified LanguageDef.Syntax.Combiner as Combiner
+import qualified LanguageDef.Combiner as Combiner
 
-import LanguageDef.Expression
-import LanguageDef.Function
-import LanguageDef.Rule
-import LanguageDef.Relation (predicate)
-import LanguageDef.Typer
+import LanguageDef.Data.LanguageDef
+import LanguageDef.Data.Expression
+import LanguageDef.Data.Function
+import LanguageDef.Data.Rule
+import LanguageDef.Data.Relation (predicate)
 import LanguageDef.Interpreter (resolveAndRun', constructParseTree)
+import LanguageDef.Typer
 
 import LanguageDef.LangDefs (LangDefs)
 import LanguageDef.ModuleLoader

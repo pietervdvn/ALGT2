@@ -1,16 +1,17 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
-module LanguageDef.Proof where
+module LanguageDef.Data.Proof where
 
 {- Creates a proof for a bunch of rules -}
 
 import Utils.All
 
-import LanguageDef.Relation
-import LanguageDef.Rule
-import LanguageDef.Expression
 import LanguageDef.Utils.LocationInfo
-import LanguageDef.Syntax
 import LanguageDef.Utils.ExceptionInfo
+
+import LanguageDef.Data.Relation
+import LanguageDef.Data.Rule
+import LanguageDef.Data.Expression
+import LanguageDef.Data.ParseTree
 
 
 {-

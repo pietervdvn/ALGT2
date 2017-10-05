@@ -5,17 +5,17 @@ module LanguageDef.LangDefsFix where
 
 import Utils.All
 
-import LanguageDef.LanguageDef
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
-
 import LanguageDef.Utils.Grouper
-import LanguageDef.Syntax.All
-import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
+
+import LanguageDef.Data.BNF (BNF, overRuleCall', getRuleCall)
+import LanguageDef.Data.SyntacticForm
+import LanguageDef.Data.LanguageDef
 import LanguageDef.LangDefs
 import LanguageDef.Typer
-import LanguageDef.Function
+import LanguageDef.Data.Function
 
 import Graphs.Lattice (makeLatticeInverted, Lattice, debugLattice)
 

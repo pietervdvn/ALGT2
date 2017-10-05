@@ -4,21 +4,23 @@ module LanguageDef.Typer where
 
 import Utils.All
 
-import LanguageDef.LanguageDef
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Grouper
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
 
-import LanguageDef.Syntax.BNF (BNF)
-import qualified LanguageDef.Syntax.BNF as BNF
-import LanguageDef.Syntax hiding (assert')
+import LanguageDef.Data.BNF (BNF)
+import qualified LanguageDef.Data.BNF as BNF
+import LanguageDef.Data.ParseTree
+import LanguageDef.Data.SyntacticForm
+
 import LanguageDef.LangDefs
 
-import LanguageDef.Expression
-import LanguageDef.Function
-import LanguageDef.Rule
-import LanguageDef.Relation
+import LanguageDef.Data.LanguageDef
+import LanguageDef.Data.Expression
+import LanguageDef.Data.Function
+import LanguageDef.Data.Rule
+import LanguageDef.Data.Relation
 
 
 import Graphs.Lattice
@@ -411,7 +413,7 @@ _compareBNFPT (BNF.Literal str) (Int token li _)
 _compareBNFPT (BNF.BuiltIn _ builtin) (Literal token li _ _)
 	= assertSugg' (token `BNF.isElementOf` builtin) ("Unexpected "++show token, "Expected a "++get BNF.biName builtin)
 _compareBNFPT (BNF.BuiltIn _ builtin) (Int token li _)
- 	= assertSugg' (builtin `elem` [BNF.intBI, BNF.numberBI]) ("Unexpected int "++show int, "Expected a "++get BNF.biName builtin)
+ 	= assertSugg' (builtin `elem` [BNF.intBI, BNF.numberBI]) ("Unexpected int "++show token, "Expected a "++get BNF.biName builtin)
 _compareBNFPT (BNF.RuleCall name) re@RuleEnter{}
 	= let	actRule = get ptUsedRule re in
 		assertSugg' (name == actRule)

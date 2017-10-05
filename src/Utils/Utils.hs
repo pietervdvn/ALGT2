@@ -109,6 +109,8 @@ showComma as	= as |> show & commas
 
 
 commas		= intercalate ", "
+
+commas' _ []	= ""
 commas' _ [value]
 		= value
 commas' lastSep stuff

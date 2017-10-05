@@ -9,7 +9,7 @@ import Utils.All
 import Utils.PureIO
 
 import LanguageDef.Utils.ExceptionInfo
-import LanguageDef.LanguageDef
+import LanguageDef.Data.LanguageDef
 import LanguageDef.LangDefs
 import LanguageDef.LangDefsFix
 

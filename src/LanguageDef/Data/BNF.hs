@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module LanguageDef.Syntax.BNF where
+module LanguageDef.Data.BNF where
 
 
 import Utils.All
@@ -298,6 +298,7 @@ _unescape (c:cs)
 
 
 unescape	:: String -> String
+unescape ""	= ""
 unescape str	= _unescape $ init $ tail str
 
 ------------------------ UTILS -------------------

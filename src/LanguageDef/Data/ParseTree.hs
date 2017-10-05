@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
-module LanguageDef.Syntax.ParseTree where
+module LanguageDef.Data.ParseTree where
 
 {- 
 The data structure representing a parsetree and related
@@ -7,12 +7,13 @@ The data structure representing a parsetree and related
 
 import Utils.All
 
-import qualified LanguageDef.Syntax.BNF as BNF
 import LanguageDef.Utils.ExceptionInfo
-import LanguageDef.Syntax.BNF (Parser, BNF, ParserMetaInfo (ParserMetaInfo), pmiColumn, pmiLine, pmiFile, biParse)
-import LanguageDef.Syntax.Syntax
 import LanguageDef.Utils.LocationInfo
+
 import LanguageDef.Utils.Grouper
+import LanguageDef.Data.BNF (Parser, BNF, ParserMetaInfo (ParserMetaInfo), pmiColumn, pmiLine, pmiFile, biParse)
+import qualified LanguageDef.Data.BNF as BNF
+import LanguageDef.Data.SyntacticForm
 
 import qualified Data.Map as M
 import Data.Map (Map)
@@ -83,8 +84,6 @@ mostSpecificRuleEnter pt
 	= pt
 
 {-  | Removes all superfluous information (location info and such), so that parsetrees can be compared to the bare structure and contents
-
-
 -}
 bareInformation	:: ParseTree a -> ParseTree'
 bareInformation pt

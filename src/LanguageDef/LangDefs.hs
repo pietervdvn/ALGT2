@@ -14,15 +14,17 @@ import Utils.All
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
 
-import LanguageDef.LanguageDef
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Grouper
+
 import LanguageDef.Syntax.All
-import LanguageDef.Syntax.BNF (overRuleCall', getRuleCall)
-import LanguageDef.Expression
-import LanguageDef.Function
-import LanguageDef.Rule
-import LanguageDef.Relation
+
+import LanguageDef.Data.BNF (overRuleCall', getRuleCall)
+import LanguageDef.Data.LanguageDef
+import LanguageDef.Data.Expression
+import LanguageDef.Data.Function
+import LanguageDef.Data.Rule
+import LanguageDef.Data.Relation
 
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)

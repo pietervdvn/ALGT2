@@ -1,18 +1,18 @@
 {-# LANGUAGE ExistentialQuantification, FlexibleInstances, MultiParamTypeClasses #-}
-module LanguageDef.Syntax.Combiner where
+module LanguageDef.Combiner where
 
 
 import Utils.All hiding (assert)
 
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
-
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Grouper
-import LanguageDef.Syntax.Syntax
-import LanguageDef.Syntax.BNF hiding (Literal, Seq, string)
-import qualified LanguageDef.Syntax.BNF as BNF
-import LanguageDef.Syntax.ParseTree
+
+import LanguageDef.Data.BNF hiding (Literal, Seq, string)
+import qualified LanguageDef.Data.BNF as BNF
+import LanguageDef.Data.SyntacticForm
+import LanguageDef.Data.ParseTree
 
 import qualified Data.Map as M
 import qualified Data.Set as S
