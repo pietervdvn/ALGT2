@@ -14,17 +14,18 @@ import LanguageDef.Utils.Checkable
 import LanguageDef.Utils.Grouper
 import LanguageDef.Utils.LocationInfo
 
-import LanguageDef.Syntax.All
 
 import qualified LanguageDef.Data.BNF as BNF
-
+import LanguageDef.Data.SyntacticForm
+import LanguageDef.Data.ParseTree
 import LanguageDef.Data.Expression hiding (choices')
 import LanguageDef.Data.Function hiding (choices')
 import LanguageDef.Data.Relation hiding (choices')
 import LanguageDef.Data.Rule
 import qualified LanguageDef.Data.Relation as Relations
 
-import LanguageDef.MetaSyntax (helperSyntax, bnfSyntax, parseSyntax, patchNames)
+import LanguageDef.Combiner
+import LanguageDef.MetaSyntax (helperSyntax, bnfSyntax, parseSyntax, patchNames, nls, syntaxDecl')
 
 import Graphs.Lattice
 

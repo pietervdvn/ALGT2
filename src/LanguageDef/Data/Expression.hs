@@ -7,8 +7,10 @@ The metaExpressions contain the patterns and expressions that make up functions 
  -}
 
 import Utils.All
-import LanguageDef.Syntax.All
 import LanguageDef.Utils.LocationInfo
+import LanguageDef.Data.ParseTree
+import LanguageDef.Data.BNF (unescape)
+import LanguageDef.Combiner
 
 
 {- Expressions can be used both as pattern or as expression in a function/natural deduction rule, they are symmetrical. See Assets/MetaFunctionSyntax.language for more details

@@ -4,13 +4,15 @@ module LanguageDef.Data.Function where
 
 import Utils.All
 
-import LanguageDef.Data.Expression hiding (choices')
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Checkable
 import LanguageDef.Utils.ExceptionInfo
-
-import LanguageDef.Syntax.All
 import LanguageDef.Utils.Grouper
+
+import LanguageDef.Data.Expression hiding (choices')
+
+import LanguageDef.Combiner
+import LanguageDef.MetaSyntax (nls, nl)
 
 import Data.Maybe
 import Data.Map as M

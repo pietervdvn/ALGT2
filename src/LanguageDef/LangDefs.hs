@@ -17,9 +17,9 @@ import LanguageDef.Utils.Checkable
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.Grouper
 
-import LanguageDef.Syntax.All
-
-import LanguageDef.Data.BNF (overRuleCall', getRuleCall)
+import LanguageDef.Data.BNF (BNF, overRuleCall', getRuleCall)
+import LanguageDef.Data.SyntacticForm
+import LanguageDef.Data.ParseTree
 import LanguageDef.Data.LanguageDef
 import LanguageDef.Data.Expression
 import LanguageDef.Data.Function

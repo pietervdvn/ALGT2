@@ -9,7 +9,6 @@ import LanguageDef.Utils.Grouper
 import LanguageDef.Utils.ExceptionInfo
 
 
-import LanguageDef.Syntax.All
 import LanguageDef.Data.Expression hiding (choices')
 
 	

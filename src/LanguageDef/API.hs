@@ -26,11 +26,11 @@ import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
 
 
-import LanguageDef.Syntax.All as Syntax
 import qualified LanguageDef.Combiner as Combiner
 
 import LanguageDef.Data.LanguageDef
 import LanguageDef.Data.Expression
+import LanguageDef.Data.ParseTree
 import LanguageDef.Data.Function
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Relation (predicate)

@@ -8,10 +8,11 @@ import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.Checkable
 import LanguageDef.Utils.Grouper
 
-import LanguageDef.Syntax.All
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Expression hiding (choices')
 
+import LanguageDef.Combiner
+import LanguageDef.MetaSyntax (nl, nls)
 
 import Data.Map (Map, (!), filterWithKey)
 import qualified Data.Map as M
