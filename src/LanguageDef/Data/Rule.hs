@@ -10,28 +10,33 @@ import LanguageDef.Utils.ExceptionInfo
 
 
 import LanguageDef.Data.Expression hiding (choices')
-
+import LanguageDef.Data.SyntFormIndex
 	
 
 import Data.Map (Map, (!), filterWithKey)
 import qualified Data.Map as M
 
-type Predicate a
-	= Either (Conclusion a) (Expression a)
+type Predicate' a
+	= Either (Conclusion' a) (Expression' a)
 
-data Conclusion a
+type Predicate	= Predicate' SyntFormIndex
+
+data Conclusion' a
 	= Conclusion
 		{ _conclRelName	:: FQName
-		, _conclArgs	:: [Expression a]
+		, _conclArgs	:: [Expression' a]
 		} deriving (Show, Eq, Functor)
 
+type Conclusion	= Conclusion' SyntFormIndex
 
 data Rule' a
-	= Rule	{ _rulePreds	:: [Predicate a]
-		, _ruleConcl	:: Conclusion a
+	= Rule	{ _rulePreds	:: [Predicate' a]
+		, _ruleConcl	:: Conclusion' a
 		, _ruleName	:: Name
 		, _ruleDocs	:: MetaInfo
 		} deriving (Show, Eq)
+
+type Rule	= Rule' SyntFormIndex
 
 instance Functor Rule' where
 	fmap f (Rule preds concl nm docs)
@@ -41,14 +46,11 @@ instance Functor Rule' where
 			nm
 			docs
 
-makeLenses ''Conclusion
+makeLenses ''Conclusion'
 makeLenses ''Rule'
 
 
-type Rule	= Rule' ()
-
-
-instance ToString (Conclusion a) where
+instance ToString (Conclusion' a) where
 	toParsable (Conclusion nm args)
 		= inParens (showFQ nm) ++ " " ++ (args |> toParsable & commas)
 

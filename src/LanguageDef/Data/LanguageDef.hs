@@ -19,6 +19,7 @@ import qualified LanguageDef.Data.BNF as BNF
 import LanguageDef.Data.SyntacticForm
 import LanguageDef.Data.ParseTree
 import LanguageDef.Data.Expression hiding (choices')
+import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Data.Function hiding (choices')
 import LanguageDef.Data.Relation hiding (choices')
 import LanguageDef.Data.Rule
@@ -174,7 +175,7 @@ _fullFileCombiner	:: Combiner
 				(Maybe (Grouper SyntacticForm),
 				(Maybe (Grouper (Function' ())),
 				(Maybe (Grouper Relation),
-				Maybe (Grouper Rule)
+				Maybe (Grouper (Rule' ()))
 				)))
 
 _fullFileCombiner

@@ -2,7 +2,7 @@
 module LanguageDef.Data.ParseTree where
 
 {- 
-The data structure representing a parsetree and related
+The data structure representing a ParseTree' and related
  -}
 
 import Utils.All
@@ -25,22 +25,22 @@ import Data.Bifunctor
 import Control.Monad
 
 
-data ParseTree a
+data ParseTree' a
 	= Literal	{ _ptToken :: String	, _ptLocation :: LocationInfo, _ptA :: a, _ptHidden :: Bool}
 	| Int 		{ _ptInt :: Int		, _ptLocation :: LocationInfo, _ptA :: a}
-	| Seq 		{ _pts :: [ParseTree a]	, _ptLocation :: LocationInfo, _ptA :: a}
-	| RuleEnter	{ _pt	:: ParseTree a  , _ptUsedRule :: FQName, _ptUsedIndex :: Int , _ptLocation :: LocationInfo, _ptA :: a}
+	| Seq 		{ _pts :: [ParseTree' a]	, _ptLocation :: LocationInfo, _ptA :: a}
+	| RuleEnter	{ _pt	:: ParseTree' a  , _ptUsedRule :: FQName, _ptUsedIndex :: Int , _ptLocation :: LocationInfo, _ptA :: a}
 	deriving (Show, Ord, Eq, Functor)
 
-makeLenses ''ParseTree
+makeLenses ''ParseTree'
 
-type ParseTree'	= ParseTree ()
+type ParseTree	= ParseTree' ()
 
 -- Used only here
 type Syntaxes	= Map [Name] Syntax
 
 
-instance Normalizable (ParseTree a) where
+instance Normalizable (ParseTree' a) where
 	normalize (Seq [pt] _ _)
 		= pt
 	normalize (RuleEnter pt nm i loc a)
@@ -48,15 +48,15 @@ instance Normalizable (ParseTree a) where
 	normalize pt =  pt 
 
 
-deAnnot	:: ParseTree a -> ParseTree'
+deAnnot	:: ParseTree' a -> ParseTree
 deAnnot pt
 	= pt |> const ()
 
-annot	:: a -> ParseTree x -> ParseTree a
+annot	:: a -> ParseTree' x -> ParseTree' a
 annot a pt
 	= pt |> const a
 
-removeLocationInfo	:: ParseTree a -> ParseTree a
+removeLocationInfo	:: ParseTree' a -> ParseTree' a
 removeLocationInfo re@RuleEnter{}
 	= re	& set ptLocation unknownLocation
 		& over pt removeLocationInfo
@@ -67,7 +67,7 @@ removeLocationInfo pt
 	= pt & set ptLocation unknownLocation
 
 
-removeRuleEnters	:: ParseTree a -> ParseTree a
+removeRuleEnters	:: ParseTree' a -> ParseTree' a
 removeRuleEnters (RuleEnter pt _ _ _ _)
 			= removeRuleEnters pt
 removeRuleEnters (Seq pts loc a)
@@ -75,7 +75,7 @@ removeRuleEnters (Seq pts loc a)
 removeRuleEnters pt	= pt
 
 
-mostSpecificRuleEnter	:: ParseTree a -> ParseTree a
+mostSpecificRuleEnter	:: ParseTree' a -> ParseTree' a
 mostSpecificRuleEnter (RuleEnter (re@RuleEnter{}) _ _ _ _)
 	= mostSpecificRuleEnter re
 mostSpecificRuleEnter (Seq pts loc a)
@@ -85,11 +85,11 @@ mostSpecificRuleEnter pt
 
 {-  | Removes all superfluous information (location info and such), so that parsetrees can be compared to the bare structure and contents
 -}
-bareInformation	:: ParseTree a -> ParseTree'
+bareInformation	:: ParseTree' a -> ParseTree
 bareInformation pt
 	= pt & deAnnot & removeLocationInfo & removeRuleEnters
 
-contents	:: ParseTree a -> String
+contents	:: ParseTree' a -> String
 contents (Literal token _ _ _)
 	= token
 contents (Int i _ _)
@@ -100,13 +100,13 @@ contents (RuleEnter pt _ _ _ _)
 	= contents pt
 
 
-isHiddenPt	:: ParseTree a -> Bool
+isHiddenPt	:: ParseTree' a -> Bool
 isHiddenPt (Literal _ _ _ hidden)
 	= hidden
 isHiddenPt _
 	= False
 
-removeHidden	:: ParseTree a -> ParseTree a
+removeHidden	:: ParseTree' a -> ParseTree' a
 removeHidden (Seq pts l a)
 	= let pts'	= pts & filter (not . isHiddenPt) |> removeHidden in
 		Seq pts' l a
@@ -124,14 +124,14 @@ removeHidden pt
 >>> simplePT "abc"
 Literal {_ptToken = "abc", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}
 -}
-simplePT	:: String -> ParseTree ()
+simplePT	:: String -> ParseTree
 simplePT string	= Literal string unknownLocation () False
 
 
 {- | Parses a file with the given syntax
 
 -}
-parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Failable ParseTree'
+parse	:: FilePath -> (Syntaxes, [Name]) -> Name -> String -> Failable ParseTree
 parse fileName syntax syntacticForm
 	= _runParser fileName (_parseRule syntax syntacticForm <* eof)
 
@@ -141,7 +141,7 @@ _runParser fileName parser string
 		& fromParseError
 
 
-_parseRule	:: (Syntaxes, [Name]) -> Name -> Parser ParseTree'
+_parseRule	:: (Syntaxes, [Name]) -> Name -> Parser ParseTree
 _parseRule (syntaxes, ns) nm
 	= do	syntax'	<- checkExistsSugg show ns syntaxes ("No namespace "++intercalate "." ns++" found while attempting to parse "++show nm) & either fail return
 		let syntax	= get grouperDict syntax'	
@@ -150,7 +150,7 @@ _parseRule (syntaxes, ns) nm
 		let choices	= get syntChoices syntForm
 		choice (mapi choices |> _parseChoice syntaxes (ns, nm) |> try)
 
-_parseChoice	:: Syntaxes -> FQName -> (Int, BNF) -> Parser ParseTree'
+_parseChoice	:: Syntaxes -> FQName -> (Int, BNF) -> Parser ParseTree
 _parseChoice syntaxes nm (i, choice)
 	= try $
 	  do	start	<- location
@@ -160,7 +160,7 @@ _parseChoice syntaxes nm (i, choice)
 		
 
 
-_parseBNF	:: Syntaxes -> BNF -> Parser ParseTree'
+_parseBNF	:: Syntaxes -> BNF -> Parser ParseTree
 _parseBNF syntax (BNF.Literal str)
 		= do	start	<- location
 			string str
@@ -220,7 +220,7 @@ nextLine = modifyState (
 		set pmiColumn 0)
 
 
-instance ToString (ParseTree a) where
+instance ToString (ParseTree' a) where
 	toParsable (Literal str _ _ _)
 		= str
 	toParsable (Int i _ _)

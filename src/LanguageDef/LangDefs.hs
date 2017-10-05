@@ -22,6 +22,7 @@ import LanguageDef.Data.SyntacticForm
 import LanguageDef.Data.ParseTree
 import LanguageDef.Data.LanguageDef
 import LanguageDef.Data.Expression
+import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Data.Function
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Relation
@@ -86,7 +87,7 @@ Success (RuleEnter {_pt = Literal {_ptToken = "True", ...}, _ptUsedRule = (["Tes
 
 
 -}
-parseTarget	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
+parseTarget	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree
 parseTarget langs (startModule, startRule) file contents
 	= do	let syntaxes	= langs & get langdefs |> get ldScope |> get langSyntax |> fromMaybe emptySyntax
 		parse file (syntaxes, startModule) startRule contents 
@@ -117,7 +118,7 @@ fullyQualifyFunction scope (Function nm argTps retType clauses docs)
 		return $ Function nm argTps' retType' clauses' docs
 
 
-fullyQualifyClause	:: LDScope' fr -> FunctionClause a -> Failable (FunctionClause a)
+fullyQualifyClause	:: LDScope' fr -> FunctionClause' a -> Failable (FunctionClause' a)
 fullyQualifyClause _	= return	-- full qualification happens by the typer
 
 
@@ -139,14 +140,14 @@ fullyQualifyRule scope (Rule preds concl name docs)
 		return $ Rule preds' concl' name docs
 
 
-fullyQualifyPred	:: LDScope' fr -> Either (Conclusion a) (Expression a) -> Failable (Either (Conclusion a) (Expression a))
+fullyQualifyPred	:: LDScope' fr -> Predicate' a -> Failable (Predicate' a)
 fullyQualifyPred scope (Left concl)
 	= fullyQualifyConcl scope concl |> Left
 fullyQualifyPred scope (Right expr)
 	= return $ Right expr	-- should be typechecked
 
 
-fullyQualifyConcl	:: LDScope' fr -> Conclusion a -> Failable (Conclusion a)
+fullyQualifyConcl	:: LDScope' fr -> Conclusion' a -> Failable (Conclusion' a)
 fullyQualifyConcl scope (Conclusion relName args)
 	= inMsg' ("While fully qualifiying a conclusion using "++show relName) $ inLocation (get expLocation $ head args ) $ 
 	  do	let args'	= args	-- qualification of expressions is done by the typechecker

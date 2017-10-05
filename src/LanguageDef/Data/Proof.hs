@@ -12,22 +12,25 @@ import LanguageDef.Data.Relation
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Expression
 import LanguageDef.Data.ParseTree
+import LanguageDef.Data.SyntFormIndex
 
 
 {-
 When a rule is applied to enough values (parsetrees) it generates a proof of this rule.
 -}
-data Proof a	= Proof { _proofConcl	:: [ParseTree ()]	-- output of the conclusion of the rule
-			, _proofWith	:: Rule	-- rule which has proven stuff
-			, _proofPreds	:: [Proof a]	-- predicates for the rule
+data Proof' a	= Proof { _proofConcl	:: [ParseTree]	-- output of the conclusion of the rule
+			, _proofWith	:: Rule' a	-- rule which has proven stuff
+			, _proofPreds	:: [Proof' a]	-- predicates for the rule
 			}
 		 deriving (Show, Eq)
 
-makeLenses ''Proof
+makeLenses ''Proof'
+
+type Proof	= Proof' SyntFormIndex
 
 
 {-Number of 'layers' in the proof-}
-depth	:: Proof a -> Int
+depth	:: Proof' a -> Int
 depth proof
  | null (get proofPreds proof)
 		=  1
@@ -35,7 +38,7 @@ depth proof
 
 
 {-Number of proof elements-}
-weight	:: Proof a -> Int
+weight	:: Proof' a -> Int
 weight proof
 	 = 1 + (proof & get proofPreds |> weight & sum)
 
@@ -52,26 +55,26 @@ defaultProofOptions	= PO (\s -> "["++s++"]") True "    "
 
 -- Extra options to print proofs
 data ProofOptions' a	= PO' {	opts'		:: ProofOptions,
-				sp		:: ParseTree' -> String,
-				se		:: Expression a -> String,
-				sr		:: Rule -> String
+				sp		:: ParseTree -> String,
+				se		:: Expression' a -> String,
+				sr		:: Rule' a -> String
 				}
 
-instance ToString (Proof a) where
+instance ToString (Proof' a) where
 	toParsable	= toParsable' defaultProofOptions
 	toCoParsable	= toCoParsable' defaultProofOptions
 	debug		= debug' defaultProofOptions
 
 
-instance ToString' ProofOptions (Proof a) where
-	show' po proof		= let opts	= PO' po show debug show 			in showProofWith opts proof & unlines
+instance ToString' ProofOptions (Proof' a) where
+	show' po proof		= let opts	= PO' po show debug debug			in showProofWith opts proof & unlines
 	toParsable' po proof	= let opts	= PO' po toParsable toParsable toCoParsable 	in showProofWith opts proof & unlines
 	toCoParsable' po proof	= let opts	= PO' po toCoParsable toParsable toParsable 	in showProofWith opts proof & unlines
 	debug' po proof		= let opts	= PO' po debug debug debug			in showProofWith opts proof & unlines
 		
 
 -- shows a proof part; returns lines 
-showProofWith	:: ProofOptions' a -> Proof a -> [String]
+showProofWith	:: ProofOptions' a -> Proof' a -> [String]
 showProofWith opts (Proof concl proverRule predicates)
 	= let	options	= opts' opts
 		preds'	= predicates |> showProofWith opts
@@ -90,7 +93,7 @@ showProofWith opts (Proof concl proverRule predicates)
 
 
 
-showProofWithDepth		:: String -> Name -> ProofOptions-> Proof a -> String
+showProofWithDepth		:: String -> Name -> ProofOptions -> Proof' a -> String
 showProofWithDepth input relation options proof
 	= ["# "++input++" applied to "++relation
 		,"# Proof weight: "++show (weight proof)++", proof depth: "++ show (depth proof) 

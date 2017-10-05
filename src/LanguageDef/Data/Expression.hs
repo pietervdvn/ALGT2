@@ -10,7 +10,9 @@ import Utils.All
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Data.ParseTree
 import LanguageDef.Data.BNF (unescape)
+import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Combiner
+
 
 
 {- Expressions can be used both as pattern or as expression in a function/natural deduction rule, they are symmetrical. See Assets/MetaFunctionSyntax.language for more details
@@ -18,37 +20,37 @@ import LanguageDef.Combiner
 The data might carry extra information, such as _typing info_ or such as _meta info_
 
 -}
-data Expression a
+data Expression' a
 	= Var	{ _varName 		:: Name
 		, _expAnnot 		:: a
 		, _expLocation		:: LocationInfo}
 	| DontCare {_expAnnot 		:: a
 		   , _expLocation	:: LocationInfo}
-	| ParseTree {_expPT 		:: ParseTree'
+	| ParseTree {_expPT 		:: ParseTree
 		, _expAnnot		:: a
 		, _expLocation		:: LocationInfo}
 	| FuncCall {_expCallName	:: FQName
-		, _expCallcArgs 	:: [Expression a]
+		, _expCallcArgs 	:: [Expression' a]
 		, _expAnnot 		:: a
 		, _expLocation		:: LocationInfo}
-	| Ascription {_ascExpr		:: Expression a
+	| Ascription {_ascExpr		:: Expression' a
 		, _ascType 		:: FQName
 		, _expAnnot 		:: a
 		, _expLocation		:: LocationInfo}
-	| Split {_exp1 			:: Expression a
-		, _exp2 		:: Expression a
+	| Split {_exp1 			:: Expression' a
+		, _exp2 		:: Expression' a
 		, _expAnnot 		:: a
 		, _expLocation		:: LocationInfo}
-	| SeqExp {_expSeq		:: [Expression a]
+	| SeqExp {_expSeq		:: [Expression' a]
 		 , _expAnnot 		:: a
 		 , _expLocation		:: LocationInfo}
 	deriving (Show, Eq, Functor)	
-makeLenses ''Expression
+makeLenses ''Expression'
 
 
+type Expression	= Expression' SyntFormIndex
 
-
-instance ToString (Expression a) where
+instance ToString (Expression' a) where
 	toParsable (Var nm a _)	= nm
 	toParsable (DontCare a _)
 				= "_"
@@ -61,7 +63,7 @@ instance ToString (Expression a) where
 	toParsable (SeqExp expr a _)	
 				= (expr |> toParsable & unwords) & inParens
 
-instance ToString' (a -> String) (Expression a) where
+instance ToString' (a -> String) (Expression' a) where
 	toParsable' showA (Var nm a _)	= nm ++ showA a
 	toParsable' showA (DontCare a _)
 				= "_" ++ showA a
@@ -87,7 +89,7 @@ choices' nm	= choices (["Functions"], nm)
 {-
 Converts the parsetree into an _untyped_ expression
 -}
-expressionTerm	:: Combiner (Expression ())
+expressionTerm	:: Combiner (Expression' ())
 expressionTerm
 	= choices' "expressionTerm"
 		[ funcCall 
@@ -100,13 +102,13 @@ expressionTerm
 		]
 
 
-expression	:: Combiner (Expression ())
+expression	:: Combiner (Expression' ())
 expression
 	= expression' & withLocation' (flip SeqExp ()) |> (\seqExp -> case seqExp of
 		SeqExp [exp] _ _	-> exp
 		_			-> seqExp)
 
-expression'	:: Combiner [Expression ()]
+expression'	:: Combiner [Expression' ()]
 expression'
 	= choices' "expression"
 		[ascription	|> (:[])
@@ -114,28 +116,28 @@ expression'
 		, cmb (:) expressionTerm expression'
 		, expressionTerm |> (:[])]
 
-splitExpression	:: Combiner (Expression ())
+splitExpression	:: Combiner (Expression' ())
 splitExpression
 	= choices' "splitExpression"
 		[(expressionTerm <+> (lit "&" **> expression))
 			& withLocation (\li (exp1, exp2) -> Split exp1 exp2 () li)]
 
 
-ascription	:: Combiner (Expression ())
+ascription	:: Combiner (Expression' ())
 ascription
 	= choices' "ascription"
 		[(expressionTerm <+> (lit ":" **> ident))
 			& withLocation (\li (exp, typ) -> Ascription exp typ () li) ]
 
 
-funcCall	:: Combiner (Expression ())
+funcCall	:: Combiner (Expression' ())
 funcCall
 	= choices' "funcCall"
 		[(ident <+> (lit "(" **> arguments <** lit ")"))
 			& withLocation (\li (id, args) -> FuncCall id args () li)
 		]
 
-arguments	:: Combiner [Expression ()]
+arguments	:: Combiner [Expression' ()]
 arguments
 	= choices' "arguments"
 		[ cmb (:) expression (lit "," **> arguments)

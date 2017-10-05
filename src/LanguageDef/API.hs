@@ -32,16 +32,20 @@ import LanguageDef.Data.LanguageDef
 import LanguageDef.Data.Expression
 import LanguageDef.Data.ParseTree
 import LanguageDef.Data.Function
+import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Relation (predicate)
+import LanguageDef.Data.Proof
+
+
+
 import LanguageDef.Interpreter (resolveAndRun', constructParseTree)
 import LanguageDef.Typer
-
 import LanguageDef.LangDefs (LangDefs)
-import LanguageDef.ModuleLoader
-
 import LanguageDef.LangDefs as LangDefs
 import LanguageDef.LangDefsFix as LDF
+import LanguageDef.ModuleLoader
+import LanguageDef.Prover
 
 import Data.Maybe
 
@@ -143,33 +147,38 @@ resolveGlobal' lds entity fqn
 
 
 
-runFunction  	:: LangDefs -> FQName -> [ParseTree ()] -> Failable (ParseTree ())
+runFunction  	:: LangDefs -> FQName -> [ParseTree] -> Failable ParseTree
 runFunction	= resolveAndRun'
 
 
-runExpression	:: LangDefs -> Expression SyntFormIndex -> Failable ParseTree'
+runExpression	:: LangDefs -> Expression -> Failable ParseTree
 runExpression lds
 	= constructParseTree (const ()) lds empty
 
-runExpression'	:: LangDefs -> FilePath -> FQName -> String -> Failable ParseTree'
+runExpression'	:: LangDefs -> FilePath -> FQName -> String -> Failable ParseTree
 runExpression' lds file expectedType input
 	= do	expr	<- createTypedExpression lds file input expectedType
 		runExpression lds expr
 
 
 
+runPredicate	:: LangDefs -> Predicate -> Failable Proof
+runPredicate lds predicate
+	= todo -- TODO
+
+
 {- | createParseTree: creates a parsetree based on the syntax of langdefs
 >>> createParseTree testLanguage (["TestLanguage"], "exprSum") "?" "True & True" |>  toParsable
 Success "True & True"
  -}
-createParseTree	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree'
+createParseTree	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree
 createParseTree	= parseTarget
 
 {- | Creates an entire expression, which is untyped 
 >>> createExpression testLanguage "?" "and(\"True\", \"True\")" |> toParsable
 Success "and(\"True\", \"True\")"
 -}
-createExpression	:: LangDefs -> FilePath -> String -> Failable (Expression ())
+createExpression	:: LangDefs -> FilePath -> String -> Failable (Expression' ())
 createExpression ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Functions"]) "expression" str
 		Combiner.interpret expression pt
@@ -180,7 +189,7 @@ Success "TestLanguage.and(\"True\", \"True\")"
 
 -}
 
-createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Failable (Expression SyntFormIndex)
+createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Failable (Expression' SyntFormIndex)
 createTypedExpression ld source str typ@(loc, nm)
 	= do	expr	<- createExpression ld source str
 		scope	<- checkExistsSugg' dots loc (get langdefs ld)
@@ -189,8 +198,7 @@ createTypedExpression ld source str typ@(loc, nm)
 
 
 
-createPredicate		:: LangDefs -> FilePath -> String -> Failable (Either (Conclusion ()) (Expression ()))
-
+createPredicate		:: LangDefs -> FilePath -> String -> Failable (Predicate' ())
 createPredicate ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Relations"]) "predicate" str
 		Combiner.interpret predicate pt

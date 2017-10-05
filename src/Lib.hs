@@ -13,7 +13,7 @@ import LanguageDef.Data.Function
 import LanguageDef.Data.Expression 
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Interpreter
-
+import LanguageDef.Prover
 
 import LanguageDef.API
 import LanguageDef.LangDefs

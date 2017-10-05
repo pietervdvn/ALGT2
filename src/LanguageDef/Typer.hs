@@ -21,6 +21,8 @@ import LanguageDef.Data.Expression
 import LanguageDef.Data.Function
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Relation
+import LanguageDef.Data.SyntFormIndex
+
 
 
 import Graphs.Lattice
@@ -88,7 +90,7 @@ Given a current typing table, will check for a predicate that:
 It will return a new typing table, eventually updated with new values
 
 -}
-typingTablePred		:: LDScope' fr -> Map Name SyntForm -> Predicate (a, SyntFormIndex) -> Failable (Map Name SyntForm)
+typingTablePred		:: LDScope' fr -> Map Name SyntForm -> Predicate' (a, SyntFormIndex) -> Failable (Map Name SyntForm)
 typingTablePred lds knownVars (Right expr)
 	= do	_checkAllVarsExist knownVars expr
 		checkVarsCompatible lds knownVars [typingTable' expr]
@@ -107,7 +109,7 @@ typingTablePred lds knownVars (Left concl)
 
 
 -- Only to be used for the conclusion of the rule
-_newlyCreatedVars	:: LDScope' fr -> Conclusion (a, SyntFormIndex) -> Failable (Map Name SyntForm)
+_newlyCreatedVars	:: LDScope' fr -> Conclusion' (a, SyntFormIndex) -> Failable (Map Name SyntForm)
 _newlyCreatedVars lds concl
 	= do	inArgs	<- modedArgs lds In concl
 		-- input arguments generate new variables that can be used
@@ -122,7 +124,7 @@ Checks that each variable:
  - exists withing the given dict
  - have a compatible type
 -}
-checkAllVarsCompatible	:: LDScope' fr -> Map Name SyntForm -> Conclusion (a, SyntFormIndex) -> Check
+checkAllVarsCompatible	:: LDScope' fr -> Map Name SyntForm -> Conclusion' (a, SyntFormIndex) -> Check
 checkAllVarsCompatible lds knownVars concl
 	= do	outArgs	<- modedArgs lds Out concl
 		let exprTypings	= outArgs ||>> snd |> typingTable
@@ -136,7 +138,7 @@ checkVarsCompatible lds knownVars typingTables
 		pass
 
 
-_checkAllVarsExist	:: Map Name SyntForm -> Expression (a, SyntFormIndex) -> Check
+_checkAllVarsExist	:: Map Name SyntForm -> Expression' (a, SyntFormIndex) -> Check
 _checkAllVarsExist knownVars expr
 	= inMsg' ("In the expression "++toParsable expr) $ inLocation (get expLocation expr) $
 	  do	let exprTyping	= expr |> snd & typingTable
@@ -148,7 +150,7 @@ _checkAllVarsExist knownVars expr
 
 
 
-modedArgs	:: LDScope' fr -> Mode -> Conclusion a -> Failable [Expression a]
+modedArgs	:: LDScope' fr -> Mode -> Conclusion' a -> Failable [Expression' a]
 modedArgs lds mode concl
 	= do	rel	<- get conclRelName concl
 				& resolve' lds relationCall
@@ -162,7 +164,7 @@ modedArgs lds mode concl
 		
 
 
-typePredicate	:: Eq fr => LDScope' fr -> Predicate a -> Failable (Predicate (a, SyntFormIndex))
+typePredicate	:: Eq fr => LDScope' fr -> Predicate' a -> Failable (Predicate' (a, SyntFormIndex))
 typePredicate lds (Left concl)
  	= do	concl'	<- typeConclusion lds concl
 		concl' & Left & return
@@ -171,7 +173,7 @@ typePredicate lds (Right expr)
 		expr' & Right & return
 
 
-typeConclusion	:: Eq fr => LDScope' fr -> Conclusion a -> Failable (Conclusion (a, SyntFormIndex))
+typeConclusion	:: Eq fr => LDScope' fr -> Conclusion' a -> Failable (Conclusion' (a, SyntFormIndex))
 typeConclusion lds (Conclusion rel args)
 	= do	(relFQn, relation)	<- resolve' lds relationCall rel
 		let types	= relation & get relTypes |> fst
@@ -211,7 +213,7 @@ typeClause scope expectations (i, clause)
 		inMsg' ("The clause is: "++inParens (toParsable clause)) $
 		_typeClause scope expectations (i, clause)
 
-_typeClause	:: Eq fr => LDScope' fr -> ([FQName], FQName) -> (Int, FunctionClause x) -> Failable (FunctionClause SyntFormIndex)
+_typeClause	:: Eq fr => LDScope' fr -> ([FQName], FQName) -> (Int, FunctionClause' x) -> Failable FunctionClause
 _typeClause scope (patExps, retExp) (i, FunctionClause pats ret doc nm)
  | length patExps /= length pats
 	= inLocation (get miLoc doc) $ fail $ 
@@ -249,7 +251,7 @@ _typeClause scope (patExps, retExp) (i, FunctionClause pats ret doc nm)
 
 
 
-typePattern	:: Eq fr => String -> LDScope' fr -> FQName -> Expression x  -> Failable (Expression SyntFormIndex)
+typePattern	:: Eq fr => String -> LDScope' fr -> FQName -> Expression' x  -> Failable Expression
 typePattern msg ld exp pat
 	= inMsg' ("While typing "++msg++", namely "++toParsable pat) $ inLocation (get expLocation pat) $ do
 		pat'	<- typeExpression ld exp pat ||>> snd
@@ -268,7 +270,7 @@ typePattern msg ld exp pat
 ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = 0, _liEndLine = 0, _liStartColumn = 0, _liEndColumn = 6, _miFile = "interactive"}}
 
 -}
-typeExpressionFreely	:: Eq fr => LDScope' fr -> Expression a -> Failable (Expression (a, SyntFormIndex))
+typeExpressionFreely	:: Eq fr => LDScope' fr -> Expression' a -> Failable (Expression' (a, SyntFormIndex))
 typeExpressionFreely lds
 	= typeExpression lds typeTop
 
@@ -288,13 +290,13 @@ Success (ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationI
 >>> typeExpression testLanguage' (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
 Success (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
  -}
-typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Failable (Expression (a, SyntFormIndex)) 
+typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression' a -> Failable (Expression' (a, SyntFormIndex)) 
 typeExpression lds expectation expr
 	= inContext ("While typing "++toParsable expr, Typing, get expLocation expr) $ 
 		_typeExpression lds expectation expr
 
 
-_typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression a -> Failable (Expression (a, SyntFormIndex)) 
+_typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression' a -> Failable (Expression' (a, SyntFormIndex)) 
 _typeExpression _ expectation (Var nm a li)
 	= return $ Var nm (a, NoIndex expectation) li
 _typeExpression _ expectation  (DontCare a li)
@@ -341,13 +343,13 @@ _typeExpression ld expectation (SeqExp exprs a li)
 		return $ SeqExp exprs' (a, subtype) li
 
 {-Search for a choice from the syntactic forms matching the expressions -}
-typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> Failable ([Expression (a, SyntFormIndex)], SyntFormIndex)
+typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression' a] -> Failable ([Expression' (a, SyntFormIndex)], SyntFormIndex)
 typeExpressionIndexed ld syntForm exprs
  | syntForm == typeTop
 	= do	let all		= allKnowns ld syntaxCall |> fst3 |> fst	:: [FQName]
 		let tries	= all |> (\expectation -> typeExpressionIndexed ld expectation exprs)
 		let isSubtypeOf'	= isSubtypeOf (get ldScope ld)
-		let successfull	= successess tries & selectSmallest isSubtypeOf' -- [([Expression (a, SyntFormIndex)], SyntFormIndex)]
+		let successfull	= successess tries & selectSmallest isSubtypeOf' -- [([Expression' (a, SyntFormIndex)], SyntFormIndex)]
 		inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as any known type") $
 			inMsg' ("Tried the types: "++all |> showFQ & commas' "and") $
 			when (null successfull) (fails tries & Aggregate & Failed)
@@ -364,7 +366,7 @@ typeExpressionIndexed ld syntForm exprs
 					& mapi 					-- Number the choices
 					|> typeExpressionIndexed' ld syntForm exprs	-- Actually type them
 					& mapi |> sndEffect				-- and number it again
-		let successfull	= successess tries		--	:: [(Int, [Expression (a, SyntFormIndex)])]
+		let successfull	= successess tries		--	:: [(Int, [Expression' (a, SyntFormIndex)])]
 		let li		= exprs & head & get expLocation
 		when (null successfull) $ 
 			fails tries & Aggregate & Failed & inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as a "++showFQ syntForm)
@@ -375,7 +377,7 @@ typeExpressionIndexed ld syntForm exprs
 		(foundExprs, SyntFormIndex fqname foundInd Nothing) & return
 
 
-typeExpressionIndexed'	:: Eq fr => LDScope' fr -> SyntForm -> [Expression a] -> (Int, [BNF]) -> Failable [Expression (a, SyntFormIndex)]
+typeExpressionIndexed'	:: Eq fr => LDScope' fr -> SyntForm -> [Expression' a] -> (Int, [BNF]) -> Failable [Expression' (a, SyntFormIndex)]
 typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
  | length choiceElems == 1 && length exprs /= 1 && BNF.isRuleCall (head choiceElems) 
 	= do	let [BNF.RuleCall fqname]	= choiceElems
@@ -387,7 +389,7 @@ typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
 	= zip (mapi choiceElems) exprs |> uncurry (typeExprBNF ld (syntForm, choiceIndex)) & allGood
 
 
-typeExprBNF		:: Eq fr => LDScope' fr -> (SyntForm, Int) -> (Int, BNF) -> Expression a -> Failable (Expression (a, SyntFormIndex))
+typeExprBNF		:: Eq fr => LDScope' fr -> (SyntForm, Int) -> (Int, BNF) -> Expression' a -> Failable (Expression' (a, SyntFormIndex))
 typeExprBNF ldscope (form, choiceInd) (seqIndex, BNF.RuleCall fqname) expr
 	= typeExpression ldscope fqname expr
 typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
@@ -405,7 +407,7 @@ typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
 						"Found a sequence "++toParsable s++" where a literal value of the form "++toParsable bnf++
 						" was expected; ascriptions can only match rulecalls"
 
-_compareBNFPT	:: BNF -> ParseTree a -> Failable ()
+_compareBNFPT	:: BNF -> ParseTree' a -> Failable ()
 _compareBNFPT (BNF.Literal str) (Literal token li _ _)
 	= assertSugg' (str == token) ("Unexpected literal "++show token, "Expected literal "++show str)
 _compareBNFPT (BNF.Literal str) (Int token li _)
@@ -438,7 +440,7 @@ fromList [("x",fromList [(["TestLanguage"],"bool")])]
 fromList [("x",fromList [(["TestLanguage"],"bool"),(["TestLanguage"],"int")])]
 
 -}
-typingTable	:: Expression SyntFormIndex -> Map Name (Set FQName)
+typingTable	:: Expression -> Map Name (Set FQName)
 typingTable (Var nm (NoIndex sf) _)
 	= M.singleton nm (S.singleton sf)
 typingTable DontCare{}
@@ -452,7 +454,7 @@ typingTable (Ascription expr _ _ _)
 typingTable (SeqExp exprs _ _)
 	= exprs |> typingTable & M.unionsWith S.union
 
-typingTable'	:: Expression (a, SyntFormIndex) -> Map Name (Set FQName)
+typingTable'	:: Expression' (a, SyntFormIndex) -> Map Name (Set FQName)
 typingTable' e
 	= typingTable (e |> snd)
 

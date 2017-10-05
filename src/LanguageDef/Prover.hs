@@ -1,10 +1,17 @@
 module LanguageDef.Prover where
 
 
-import Utils.Utils
+import Utils.All
+
+import LanguageDef.Utils.ExceptionInfo
+
+import LanguageDef.Data.Rule
+import LanguageDef.Data.Proof
+import LanguageDef.Data.SyntFormIndex
 
 
-proofThat rel args
-	= todo
+import LanguageDef.LangDefs
 
+proofThat	:: LDScope -> Predicate -> Failable Proof
+proofThat	= todo
 -- TODO make the prover!
