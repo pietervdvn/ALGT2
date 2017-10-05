@@ -1,12 +1,12 @@
 module LanguageDef.API 
-		(loadLangDef, loadLangDef', loadAssetLangDef, loadAssetLangDef'
+		(loadLangDef, loadAssetLangDef
 		, createParseTree, createExpression, createTypedExpression, parseTarget
-		, LangDefs.resolveGlobal, LangDefs.resolve, LangDefs.resolve', LangDefs.allKnowns
-		, LangDefs.syntaxCall, LangDefs.functionCall, LangDefs.ruleCall, LangDefs.relationCall
+		, LDScope.resolveGlobal, LDScope.resolve, LDScope.resolve', LDScope.allKnowns
+		, LDScope.syntaxCall, LDScope.functionCall, LDScope.ruleCall, LDScope.relationCall
 		, resolveGlobal'
 		, infoAbout, inScope, infoImports
-		, testLanguage, testLanguage'
-		, runFunction, runExpression, runExpression'
+		, testLanguage
+		, runFunction, runExpression, runExpression', runPredicate, runPredicate'
 		, typeTop, typeBottom) where
 
 {- 
@@ -39,10 +39,9 @@ import LanguageDef.Data.Proof
 
 
 
-import LanguageDef.Interpreter (resolveAndRun', constructParseTree)
+import LanguageDef.Interpreter (resolveAndRun', evalExpression)
 import LanguageDef.Typer
-import LanguageDef.LangDefs (LangDefs)
-import LanguageDef.LangDefs as LangDefs
+import LanguageDef.LangDefs as LDScope
 import LanguageDef.LangDefsFix as LDF
 import LanguageDef.ModuleLoader
 import LanguageDef.Prover
@@ -52,30 +51,17 @@ import Data.Maybe
 import Data.Map (Map, (!), empty)
 
 {- Loads a language definition from the filesystem; use with 'runIO'-}
-loadLangDef :: FilePath -> [Name] -> PureIO (Failable LangDefs)
-loadLangDef	= loadAll
+loadLangDef	:: FilePath -> [Name] -> PureIO (Failable LDScope)
+loadLangDef	= loadAll		
 
-loadLangDef'	:: FilePath -> [Name] -> PureIO (Failable LDScope)
-loadLangDef' fp fq
-		= loadLangDef fp fq ||>> get langdefs ||>> (! fq)
 
 {- Loads a language definition directly from the assets; is Pure -}
-loadAssetLangDef	:: FilePath -> [Name] -> Failable LangDefs
+loadAssetLangDef	:: FilePath -> [Name] -> Failable LDScope
 loadAssetLangDef fp names
 		= runPure allAssets' (loadLangDef fp names) |> fst & either fail id
 
-loadAssetLangDef'	:: FilePath -> [Name] -> Failable LDScope
-loadAssetLangDef' fp names
-		= loadAssetLangDef fp names |> get langdefs |> (! names)
 
-
-
-testLanguage	= _testLanguage loadAssetLangDef
-testLanguage'	= _testLanguage loadAssetLangDef' 
-
-_testLanguage	:: (FilePath -> [Name] -> Failable a) -> a
-_testLanguage loadWith
-		= loadWith "" ["TestLanguage"] & crash'
+testLanguage 	= loadAssetLangDef "" ["TestLanguage"] & crash'
 
 {- | Gives info about any entry, resolved globally
 >>> infoAbout testLanguage ["TestLanguage", "bool"] |> uncurry toParsable' & unlines
@@ -85,7 +71,7 @@ _testLanguage loadWith
 >>> infoAbout testLanguage ["TestLanguage", "and"] |> uncurry toParsable' & unlines
 "\n TestLanguage.and (Function) \n=============================\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\n\n TestLanguage.and (Rule) \n=========================\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n"
 >>> infoAbout testLanguage ["TestLanguage"]|> uncurry toParsable' & unlines
-"\n TestLanguage (Language Definition) \n====================================\n\n# Blabla\n# \n Test Language \n***************\n\n# Blabla\n\n\n Syntax \n========\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n\nint\t::=Number\t\n\n\nexpr\t::=TestLanguage.bool\t\n\t | TestLanguage.int\t\n\n\nexprSum\t::=TestLanguage.expr TestLanguage.op TestLanguage.exprSum\t\n\t | TestLanguage.expr\t\n\n\nop\t::=\"&\"\t\n\t | \"+\"\t\n\n\ntuple\t::=TestLanguage.expr TestLanguage.expr\t\n\n\n\n Functions \n===========\n\n# Inverts a boolean\n# \nnot\t : TestLanguage.bool \8594 TestLanguage.bool\nnot(\"True\")\t = \"False\"\nnot(\"False\")\t = \"True\"\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\nnand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nnand(a, b)\t = TestLanguage.not(TestLanguage.and(a, b))\n\n\nor\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nor(TestLanguage.not(\"True\"), TestLanguage.not(\"True\"))\t = \"False\"\nor(_, _)\t = \"True\"\n\n\n\n\n Relations \n===========\n\n\n(\8594)\tTestLanguage.exprSum (in) \215 TestLanguage.exprSum (out); Pronounced as \"smallstep\"\n\n\n\n\n Rules \n=======\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n\n\n\n\n"
+"\n TestLanguage. (Language Definition) \n=====================================\n\n# Blabla\n# \n Test Language \n***************\n\n# Blabla\n\n\n Syntax \n========\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n\nint\t::=Number\t\n\n\nexpr\t::=TestLanguage.bool\t\n\t | TestLanguage.int\t\n\n\nexprSum\t::=TestLanguage.expr TestLanguage.op TestLanguage.exprSum\t\n\t | TestLanguage.expr\t\n\n\nop\t::=\"&\"\t\n\t | \"+\"\t\n\n\ntuple\t::=TestLanguage.expr TestLanguage.expr\t\n\n\n\n Functions \n===========\n\n# Inverts a boolean\n# \nnot\t : TestLanguage.bool \8594 TestLanguage.bool\nnot(\"True\")\t = \"False\"\nnot(\"False\")\t = \"True\"\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\nnand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nnand(a, b)\t = TestLanguage.not(TestLanguage.and(a, b))\n\n\nor\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nor(TestLanguage.not(\"True\"), TestLanguage.not(\"True\"))\t = \"False\"\nor(_, _)\t = \"True\"\n\n\n\n\n Relations \n===========\n\n\n(\8594)\tTestLanguage.exprSum (in) \215 TestLanguage.exprSum (out); Pronounced as \"smallstep\"\n\n\n\n\n Rules \n=======\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n\n\n\n\n"
 
 >>> infoAbout testLanguage ["~"]
 []
@@ -95,26 +81,33 @@ _testLanguage loadWith
 "\n TestLanguage.\8594 (Relation) \n===========================\n\n\n(\8594)\tTestLanguage.exprSum (in) \215 TestLanguage.exprSum (out); Pronounced as \"smallstep\"\n\n\n"
 
 -}
-infoAbout	:: LangDefs -> [Name] -> [(FQName, AllInfo)]
-infoAbout langDefs names
-	= let	fqn	= (init names, last names)
-		ld	= getLangDef langDefs names |> getInfo |> (,) fqn
-		search x	= resolveGlobal langDefs x fqn & fromFailable ||>> getInfo
-		in
-		catMaybes [ld, search syntaxCall, search functionCall, search relationCall, search ruleCall]
+infoAbout	:: LDScope -> [Name] -> [(FQName, AllInfo)]
+infoAbout lds names
+	= let 	fqn	= (init names, last names)
+		-- the module to eventually give info over
+		ldInfo	= lds & enterScope names & fromFailable 
+					|> get ldScope |> getInfo |> (,) (names, "") & maybeToList
+
+		-- The language def to actually work in
+		otherInfo'	= do	inPhase Resolving $ assert' (length names > 1) $
+						"To get information about entries which are globally resolved, a scope qualifier is needed" 
+					ld		<- lds & enterScope (init names)
+					return $ infoAbout' ld names
+		otherInfo	= otherInfo' & fromFailable & fromMaybe []
+		in ldInfo ++ otherInfo
 
 {- | Gives info about any entry, resolved from within the module. An entity could be not in scope or could be info about an import
->>> infoAbout' testLanguage' ["TestLanguage", "bool"] |> uncurry toParsable' & unlines
+>>> infoAbout' testLanguage ["TestLanguage", "bool"] |> uncurry toParsable' & unlines
 "\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n"
->>> infoAbout' testLanguage' ["bool"] |> uncurry toParsable' & unlines
+>>> infoAbout' testLanguage ["bool"] |> uncurry toParsable' & unlines
 "\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n"
->>> infoAbout' testLanguage' ["and"] |> uncurry toParsable' & unlines
+>>> infoAbout' testLanguage ["and"] |> uncurry toParsable' & unlines
 "\n TestLanguage.and (Function) \n=============================\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\n\n TestLanguage.and (Rule) \n=========================\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n"
 -}
 infoAbout'	:: LDScope -> [Name] -> [(FQName, AllInfo)]
-infoAbout' langDefs names
+infoAbout' lds names
 	= let	fqn		= (init names, last names)
-		search x	= resolve' langDefs x fqn & fromFailable ||>> getInfo
+		search x	= resolve' lds x fqn & fromFailable ||>> getInfo
 		in
 		catMaybes [search syntaxCall, search functionCall, search relationCall, search ruleCall]
 
@@ -122,7 +115,7 @@ infoAbout' langDefs names
 
 
 {- | Dumps all info about all entries in scope
->>> inScope testLanguage' |> fst |> fst |> showFQ & unlines
+>>> inScope testLanguage |> fst |> fst |> showFQ & unlines
 "TestLanguage.bool\nTestLanguage.expr\nTestLanguage.exprSum\nTestLanguage.int\nTestLanguage.op\nTestLanguage.tuple\nTestLanguage.and\nTestLanguage.nand\nTestLanguage.not\nTestLanguage.or\nTestLanguage.\8594\nTestLanguage.and\n"
 
 -}	
@@ -133,7 +126,7 @@ inScope scope
 		ak syntaxCall ++ ak functionCall ++ ak relationCall ++ ak ruleCall
 
 {- | Gives the import flags for a scope
->>> infoImports testLanguage'
+>>> infoImports testLanguage
 fromList [(["TestLanguage"],ImportFlags {_ifOrigin = "/TestLanguage.language", _ifIsSelf = True, _ifDiffName = [["TestLanguage"],[]]})]
 
 -}
@@ -147,38 +140,44 @@ resolveGlobal' lds entity fqn
 
 
 
-runFunction  	:: LangDefs -> FQName -> [ParseTree] -> Failable ParseTree
+runFunction  	:: LDScope -> FQName -> [ParseTree] -> Failable ParseTree
 runFunction	= resolveAndRun'
 
 
-runExpression	:: LangDefs -> Expression -> Failable ParseTree
-runExpression lds
-	= constructParseTree (const ()) lds empty
+runExpression	:: LDScope -> Expression -> Failable ParseTree
+runExpression 	= evalExpression
 
-runExpression'	:: LangDefs -> FilePath -> FQName -> String -> Failable ParseTree
+runExpression'	:: LDScope -> FilePath -> FQName -> String -> Failable ParseTree
 runExpression' lds file expectedType input
 	= do	expr	<- createTypedExpression lds file input expectedType
 		runExpression lds expr
 
 
 
-runPredicate	:: LangDefs -> Predicate -> Failable Proof
+runPredicate	:: LDScope -> Predicate -> Failable Proof
 runPredicate lds predicate
-	= todo -- TODO
+	= proofThat lds predicate
 
 
-{- | createParseTree: creates a parsetree based on the syntax of langdefs
+
+runPredicate'	:: LDScope -> FilePath -> String -> Failable Proof
+runPredicate' lds fp input
+	= do	pred	<- createPredicate lds fp input
+		runPredicate lds pred
+
+
+{- | createParseTree: creates a parsetree based on the syntax of LDScope
 >>> createParseTree testLanguage (["TestLanguage"], "exprSum") "?" "True & True" |>  toParsable
 Success "True & True"
  -}
-createParseTree	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree
+createParseTree	:: LDScope -> FQName -> FilePath -> String -> Failable ParseTree
 createParseTree	= parseTarget
 
 {- | Creates an entire expression, which is untyped 
 >>> createExpression testLanguage "?" "and(\"True\", \"True\")" |> toParsable
 Success "and(\"True\", \"True\")"
 -}
-createExpression	:: LangDefs -> FilePath -> String -> Failable (Expression' ())
+createExpression	:: LDScope -> FilePath -> String -> Failable (Expression' ())
 createExpression ld source str
 	= do	pt	<- parse source (metaSyntaxes, ["Functions"]) "expression" str
 		Combiner.interpret expression pt
@@ -189,18 +188,25 @@ Success "TestLanguage.and(\"True\", \"True\")"
 
 -}
 
-createTypedExpression	:: LangDefs -> FilePath -> String -> FQName -> Failable (Expression' SyntFormIndex)
+createTypedExpression	:: LDScope -> FilePath -> String -> FQName -> Failable Expression
 createTypedExpression ld source str typ@(loc, nm)
 	= do	expr	<- createExpression ld source str
-		scope	<- checkExistsSugg' dots loc (get langdefs ld)
+		scope	<- checkExistsSugg' dots loc (get environment ld)
 				("Module "++dots loc++ " not found")
 		typeExpression scope typ expr ||>> snd
 
 
 
-createPredicate		:: LangDefs -> FilePath -> String -> Failable (Predicate' ())
-createPredicate ld source str
+createPredicate		:: LDScope -> FilePath -> String -> Failable Predicate
+createPredicate lds source str
 	= do	pt	<- parse source (metaSyntaxes, ["Relations"]) "predicate" str
-		Combiner.interpret predicate pt
+		pred	<- Combiner.interpret predicate pt
+		pred'	<- typePredicate lds pred	:: Failable (Predicate' ((), SyntFormIndex))
+		pred' |> snd & return
+
+
+-- TODO make test
+t	= runPredicate' testLanguage "?" "(→) 5, x" & crash
+t'	= runPredicate' testLanguage "?" "not(\"True\")" & crash
 
 

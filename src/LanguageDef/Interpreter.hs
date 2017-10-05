@@ -28,7 +28,7 @@ import Data.Map (Map)
 >>> let testType x	= (["TestLanguage"], x)
 >>> let createPT tp p = createParseTree testLanguage (testType tp) "?" p & crash' & removeHidden
 >>> let createExp tp e = createTypedExpression testLanguage "?" e (testType tp) & crash'
->>> let ld = testLanguage' & get ldScope
+>>> let ld = testLanguage & get ldScope
 
 >>> let t te e tpt pt = patternMatch (const (), testLanguage) M.empty ld (createExp te e) (createPT tpt pt)
 >>> t "bool" "\"True\"" "bool" "True"
@@ -92,16 +92,16 @@ type VariableStore a
 -------------------------- ABOUT RUNNING A FUNCTION ------------------------------------
 
 
-resolveAndRun'	:: LangDefs -> FQName -> [ParseTree] -> Failable ParseTree
+resolveAndRun'	:: LDScope -> FQName -> [ParseTree] -> Failable ParseTree
 resolveAndRun'
 	= resolveAndRun (const ())
 
 {- | Resolves the function, executes it. The first arguments adds an annotation to the parsetree, based on the type of the parsetree
 
 -}
-resolveAndRun	:: (SyntFormIndex -> a) -> LangDefs -> FQName -> [ParseTree' a] -> Failable (ParseTree' a)
+resolveAndRun	:: (SyntFormIndex -> a) -> LDScope -> FQName -> [ParseTree' a] -> Failable (ParseTree' a)
 resolveAndRun fb2a lds (targetLD, name) args
-	= do	ld	<- checkExistsSugg' dots targetLD (get langdefs lds) ("The module "++dots targetLD++" was not found")
+	= do	ld	<- checkExistsSugg' dots targetLD (get environment lds) ("The module "++dots targetLD++" was not found")
 		let ld'	= ld & get ldScope 	:: LanguageDef
 		let msg	= "The module "++dots targetLD++" does not have a function section and thus does not define "++name
 		funcs	<- ld' & get langFunctions 
@@ -111,14 +111,14 @@ resolveAndRun fb2a lds (targetLD, name) args
 				$ "The module "++dots targetLD++" does not define the function "++show name
 		runFunction fb2a lds ld' func args 
 
-runFunction	::  (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> Function -> [ParseTree' a] -> Failable (ParseTree' a)
+runFunction	::  (SyntFormIndex -> a) -> LDScope -> LanguageDef -> Function -> [ParseTree' a] -> Failable (ParseTree' a)
 runFunction fb2a lds ld func args
 	= inMsg' ("While executing the function "++get funcName func) $ inLocation (get (funcDoc . miLoc) func) $ 
 		do	let clauses	= func & get funcClauses
 			clauses & mapi |> flip (runClause fb2a lds ld) args & firstSuccess			
 
 
-runClause	:: (SyntFormIndex -> a) -> LangDefs -> LanguageDef -> (Int, FunctionClause) -> [ParseTree' a] -> Failable (ParseTree' a)
+runClause	:: (SyntFormIndex -> a) -> LDScope -> LanguageDef -> (Int, FunctionClause) -> [ParseTree' a] -> Failable (ParseTree' a)
 runClause fb2a lds ld (i, FunctionClause pats result doc nm) args
 	= inMsg' ("While trying clause "++ nm ++ "." ++ show i) $ inLocation (get miLoc doc) $
 	  do	store	<- patternMatchAll (fb2a, lds) M.empty ld pats args
@@ -128,7 +128,12 @@ runClause fb2a lds ld (i, FunctionClause pats result doc nm) args
 ------------------------- ABOUT PARSETREE CONSTRUCTION/INTERPRETATION --------------------------------
 
 
-constructParseTree	:: (SyntFormIndex -> a) -> LangDefs -> VariableStore a -> Expression -> Failable (ParseTree' a)
+
+evalExpression		:: LDScope -> Expression -> Failable ParseTree
+evalExpression langs
+	= constructParseTree (const ()) langs M.empty
+
+constructParseTree	:: (SyntFormIndex -> a) -> LDScope -> VariableStore a -> Expression -> Failable (ParseTree' a)
 constructParseTree _ _ vars (Var nm _ _)
 	= checkExistsSuggDist' (show, levenshtein) nm vars ("The variable "++show nm++" was not defined by the pattern")
 constructParseTree _ _ _ DontCare{}
@@ -160,7 +165,7 @@ constructParseTree fb2a lds vars (SeqExp exprs b _)
 ------------------------ ABOUT PATTERN MATCHING ---------------------------------------
 
 
-patternMatchAll	:: (SyntFormIndex -> a, LangDefs) -> VariableStore a -> LanguageDef -> [Expression] -> [ParseTree' a]  -> Failable (VariableStore a)
+patternMatchAll	:: (SyntFormIndex -> a, LDScope) -> VariableStore a -> LanguageDef -> [Expression] -> [ParseTree' a]  -> Failable (VariableStore a)
 patternMatchAll lds store ld [] []
 	= return store
 patternMatchAll lds store ld (expr:exprs) (arg:args)
@@ -176,7 +181,7 @@ patternMatchAll lds store ld (expr:exprs) (arg:args)
 
 
 
-patternMatch	:: (SyntFormIndex -> a, LangDefs) -> VariableStore a -> LanguageDef -> 
+patternMatch	:: (SyntFormIndex -> a, LDScope) -> VariableStore a -> LanguageDef -> 
 			Expression -> ParseTree' a -> Failable (VariableStore a)
 patternMatch _ _ _ (Var nm _ _) pt
 	= return $ M.singleton nm pt

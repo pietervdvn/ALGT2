@@ -35,13 +35,11 @@ makeLenses ''LoadingStatus
 {- | Load all modules, given the root path where to start looking
 
 >>> import AssetUtils
-
-
 >>> lds = runPure allAssets' (loadAll "" ["TestInput","Nested","L"]) |> fst
->>> lds
-Right (Success (LangDefs ...))
->>> Right (Success (LangDefs langs)) = lds
->>> langL = langs ! ["TestInput", "Nested", "L"]
+>>> lds & either (error "hi")  isSuccess
+True
+>>> Right (Success ldScope) = lds
+>>> langL = get environment ldScope ! ["TestInput", "Nested", "L"]
 >>> (resolve langL syntaxCall) ([], "a")
 Success (["TestInput","Nested","L"],"a")
 >>> (resolve langL syntaxCall) ([], "x")
@@ -54,11 +52,16 @@ Success (["TestInput","Nested","X"],"x")
 -}
 
 
-loadAll	:: FilePath -> [Name] -> PureIO (Failable LangDefs)
+loadAll	:: FilePath -> [Name] -> PureIO (Failable LDScope)
 loadAll fp plzLoad
 	= do	defs	<- _loadAll (LS [] fp M.empty) plzLoad |> get currentlyKnown |> _fixImports
-		asLangDefs defs & return
+		asLangDefs defs & _selectFile plzLoad & return
 		
+
+_selectFile	:: [Name] -> Failable (Map [Name] LDScope) -> Failable LDScope
+_selectFile fq dictF
+	= do	dict	<- dictF
+		checkExists' fq dict ("Scope "++dots fq ++ " not found")
 
 -- Adds the filepath to the imports, within the language def data
 _fixImports	:: Map [Name] (FilePath, LanguageDef' () fr) -> Map [Name] (LanguageDef' ResolvedImport fr)

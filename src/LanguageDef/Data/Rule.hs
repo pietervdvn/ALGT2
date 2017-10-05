@@ -16,10 +16,39 @@ import LanguageDef.Data.SyntFormIndex
 import Data.Map (Map, (!), filterWithKey)
 import qualified Data.Map as M
 
-type Predicate' a
-	= Either (Conclusion' a) (Expression' a)
+data Predicate' a
+	= PredConcl	{_predConcl	:: Conclusion' a, _predLocation	:: LocationInfo}
+	| PredExpr	{_predExpr	:: Expression' a, _predLocation	:: LocationInfo}
+	deriving (Show, Eq)
+
+predEither	:: (Conclusion' a -> b) -> (Expression' a -> b) -> Predicate' a -> b
+predEither fc _ (PredConcl concl _)
+	= fc concl
+predEither _ fe (PredExpr expr _)
+	= fe expr
+
+instance Functor Predicate' where
+	fmap f (PredConcl concl li)
+		= PredConcl (concl |> f) li
+	fmap f (PredExpr expr li)
+		= PredExpr (expr |> f) li
+
+instance ToString (Predicate' a) where
+	toParsable (PredConcl concl _)	= toParsable concl
+	toParsable (PredExpr expr _)	= toParsable expr
+
+	toCoParsable (PredConcl concl _)
+					= toCoParsable concl
+	toCoParsable (PredExpr expr _)	= toCoParsable expr
+
+	debug (PredConcl concl _)	= debug concl
+	debug (PredExpr expr _)		= debug expr
+
+	
 
 type Predicate	= Predicate' SyntFormIndex
+
+
 
 data Conclusion' a
 	= Conclusion
@@ -40,12 +69,12 @@ type Rule	= Rule' SyntFormIndex
 
 instance Functor Rule' where
 	fmap f (Rule preds concl nm docs)
-		= Rule (preds |> either (\concl -> concl |> f & Left)
-					(\expr -> expr |> f & Right))
+		= Rule (preds ||>> f)
 			(concl |> f)
 			nm
 			docs
 
+makeLenses ''Predicate'
 makeLenses ''Conclusion'
 makeLenses ''Rule'
 
@@ -58,7 +87,7 @@ instance ToString (Conclusion' a) where
 instance ToString (Rule' a) where
 	toParsable (Rule preds concl nm docs)
 		= let	doc'	= toParsable docs
-		 	preds'	= preds |> either toParsable toParsable
+		 	preds'	= preds |> toParsable
 					& intercalate "\t"
 			concl'	= toParsable concl
 			dashesL	= 1 + max (length preds') (length concl')

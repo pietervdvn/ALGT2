@@ -125,11 +125,8 @@ isTrivial sf
 
 {- | Checks for dead clauses
 >>> import LanguageDef.API
->>> import LanguageDef.LangDefs
->>> import Data.Maybe (fromJust)
->>> import LanguageDef.Data.LanguageDef
->>> let fqname = ["TestShadowing"]
->>> let unit = loadAssetLangDef "Faulty" fqname
+>>> loadAssetLangDef "Faulty" ["TestShadowing"] & toCoParsable
+"| While validating the syntax while validating \n  Error: \n    \8226 In syntactic form TestShadowing.x\n    \"a\" (choice 0) shadows \"a\" \"b\" (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.y\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool TestShadowing.bool (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.z\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.dead1\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.dead2\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool \";\" (choice 1)"
 
 -}
 _checkDeadClauses	:: (FQName -> FQName -> Bool) -> [Name] -> SyntacticForm -> Check
@@ -143,12 +140,6 @@ _checkDeadClauses isSubtypeOf fq sf
 
 
 {- | Filters all dead clauses. Maps an fqnname on shadowing clauses (e.g. "x ::= a | a b" will yield {"x", [(0, 1)]} as choice 0 kills 1)
->>> import LanguageDef.API
->>> import LanguageDef.LangDefs
->>> import Data.Maybe (fromJust)
->>> import LanguageDef.Data.LanguageDef
->>> let fqname = ["TestShadowing"]
->>> let unit = loadAssetLangDef "Faulty" fqname 
 -}
 deadClauses	:: (FQName -> FQName -> Bool) -> [Name] -> Syntax -> Map FQName [((Int, BNF), (Int, BNF))]
 deadClauses isSubtypeOf fq synt
@@ -174,8 +165,8 @@ deadChoices isSubtypeOf sf
 >>> import Data.Maybe (fromJust)
 >>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
->>> let unit = loadAssetLangDef "Faulty" fqname & crash' & (`getLangDef` fqname) & fromJust
->>> let synt = unit & get langSyntax & fromJust
+>>> let unit = loadAssetLangDef "Faulty" fqname & crash' & enterScope fqname & crash
+>>> let synt = unit & get (ldScope . langSyntax) & fromJust
 >>> _checkLeftRecursion fqname synt
 Failed (ExceptionInfo {_errMsg = "Left recursive calls detected:\nLeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b\n\n", _errSeverity = Error, _errSuggestion = Nothing})
 -}
@@ -192,11 +183,10 @@ _checkLeftRecursion fq s
 {- | Calculates the left recursive calls in all syntaxes. Only values left will be left recursive
 >>> import LanguageDef.API
 >>> import LanguageDef.LangDefs
->>> import Data.Maybe (fromJust)
 >>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
->>> let unit = loadAssetLangDef "Faulty" fqname & crash' & (`getLangDef` fqname) & fromJust
->>> let synt = unit & get langSyntax & fromJust
+>>> let unit = loadAssetLangDef "Faulty" fqname & crash' & enterScope fqname & crash'
+>>> let synt = unit & get (ldScope . langSyntax) & fromJust
 >>> leftRecursiveCalls fqname synt ||>> showFQ |> commas
 ["LeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b"]
  

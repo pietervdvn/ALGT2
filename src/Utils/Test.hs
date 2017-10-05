@@ -13,3 +13,4 @@ test' str
 
 test	:: IO ()
 test	= test' "*" 
+

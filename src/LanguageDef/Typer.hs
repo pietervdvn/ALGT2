@@ -42,22 +42,27 @@ import Data.Maybe
 
 -------------------- TYPING OF A LANGUAGEDEF -----------------------------------
 
+-- Types everything there is to type, knots the scopes afterwards
 typeLD		:: Eq fr => Map [Name] (LDScope' fr) -> Failable (Map [Name] LDScope)
-typeLD lds
-	= do	env	<- lds & M.toList ||>> (\lds -> typeScope' lds (get ldScope lds)) |> sndEffect & allGood |> M.fromList
-				:: Failable (Map [Name] (LanguageDef' ResolvedImport SyntFormIndex))
-		let scopes 	= M.intersectionWith (\old new -> updateEnv old (new, env)) lds env
-		return scopes
+typeLD env
+	= do	env'	<- env 	& M.toList 
+				||>> typeScope'
+				|> sndEffect & allGood 
+				|> M.fromList
+				:: Failable (Map [Name] LanguageDef)
+		-- yes, this is a knot. fixedEnv is used in its own definition
+		let fixedEnv	= M.intersectionWith (\lds ld -> updateEnv (ld, fixedEnv) lds) env env'	:: Map [Name] LDScope
+		return fixedEnv
 
 
-typeScope'	:: Eq fr => LDScope' fr -> LanguageDef' ResolvedImport fr
-			-> Failable (LanguageDef' ResolvedImport SyntFormIndex)
-typeScope' ld langDef
-	= do	langFuncs'	<- get langFunctions langDef & overGrouperMCmb' allGood (typeFunction ld)
+typeScope'	:: Eq fr => LDScope' fr	-> Failable LanguageDef
+typeScope' ld
+	= do	let langDef	= get ldScope ld
+		langFuncs'	<- get langFunctions langDef & overGrouperMCmb' allGood (typeFunction ld)
 		langRules'	<- get langRules langDef & overGrouperMCmb' allGood (typeRule ld)
 		let langRules''	= langRules' |||>>> snd
-		return $ updateFR (langFuncs', langRules'') langDef
-		
+		let langDef'	= updateFR (langFuncs', langRules'') langDef
+		return langDef'		
 
 
 -------------------- TYPING OF RULES/CONCLUSIONS/PREDICATES  ---------------------
@@ -91,11 +96,11 @@ It will return a new typing table, eventually updated with new values
 
 -}
 typingTablePred		:: LDScope' fr -> Map Name SyntForm -> Predicate' (a, SyntFormIndex) -> Failable (Map Name SyntForm)
-typingTablePred lds knownVars (Right expr)
+typingTablePred lds knownVars (PredExpr expr _)
 	= do	_checkAllVarsExist knownVars expr
 		checkVarsCompatible lds knownVars [typingTable' expr]
 		return knownVars		 
-typingTablePred lds knownVars (Left concl)
+typingTablePred lds knownVars (PredConcl concl _) 
 	= do	-- In a predicate position, the inArgs should not contain unknown variables;
 		inArgs	<- modedArgs lds In concl
 		inArgs |> _checkAllVarsExist knownVars & allGood
@@ -165,12 +170,12 @@ modedArgs lds mode concl
 
 
 typePredicate	:: Eq fr => LDScope' fr -> Predicate' a -> Failable (Predicate' (a, SyntFormIndex))
-typePredicate lds (Left concl)
+typePredicate lds (PredConcl concl li)
  	= do	concl'	<- typeConclusion lds concl
-		concl' & Left & return
-typePredicate lds (Right expr)
+		PredConcl concl' li & return
+typePredicate lds (PredExpr expr li)
 	= do	expr'	<- typeExpressionFreely lds expr 
-		expr' & Right & return
+		PredExpr expr' li & return
 
 
 typeConclusion	:: Eq fr => LDScope' fr -> Conclusion' a -> Failable (Conclusion' (a, SyntFormIndex))
@@ -266,7 +271,7 @@ typePattern msg ld exp pat
 {- | Same as 'typeExpression', but does not require a type expectation 
 >>> import LanguageDef.API
 >>> let expr	=  createExpression testLanguage "interactive" "\"True\"" & crash'
->>> typeExpressionFreely testLanguage' expr & crash'
+>>> typeExpressionFreely testLanguage expr & crash'
 ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = 0, _liEndLine = 0, _liStartColumn = 0, _liEndColumn = 6, _miFile = "interactive"}}
 
 -}
@@ -283,11 +288,11 @@ typeExpressionFreely lds
 
 >>> typeExpression (error "") (["A"], "b") (DontCare () unknownLocation)
 Success (DontCare {_expAnnot = ((),NoIndex {_syntIndForm = (["A"],"b")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
->>> typeExpression testLanguage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
+>>> typeExpression testLanguage (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 Success (Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
->>> typeExpression testLanguage' (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
+>>> typeExpression testLanguage (["TestLanguage"], "bool") (ParseTree (simplePT "True") () unknownLocation)
 Success (ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
->>> typeExpression testLanguage' (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
+>>> typeExpression testLanguage (["TestLanguage"], "bool") (Split (ParseTree (simplePT "True") () unknownLocation) (DontCare () unknownLocation) () unknownLocation)
 Success (Split {_exp1 = ParseTree {_expPT = Literal {_ptToken = "True", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}, _expAnnot = ((),SyntFormIndex {_syntIndForm = (["TestLanguage"],"bool"), _syntIndChoice = 0, _syntIndSeqInd = Just 0}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _exp2 = DontCare {_expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}, _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}})
  -}
 typeExpression	:: Eq fr => LDScope' fr -> SyntForm -> Expression' a -> Failable (Expression' (a, SyntFormIndex)) 
@@ -462,13 +467,13 @@ typingTable' e
 {- | checks that no two typings do conflict (thus that no two typings result in an empty set for the variables). The typingtable is used for this
 
 >>> import LanguageDef.API
->>> let (Success boolVar) = typeExpression testLanguage' (["TestLanguage"], "bool") (Var "x" () unknownLocation)
+>>> let (Success boolVar) = typeExpression testLanguage (["TestLanguage"], "bool") (Var "x" () unknownLocation)
 >>> boolVar
 Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"bool")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
->>> let (Success intVar)  = typeExpression testLanguage' (["TestLanguage"], "int") (Var "x" () unknownLocation)
+>>> let (Success intVar)  = typeExpression testLanguage (["TestLanguage"], "int") (Var "x" () unknownLocation)
 >>> intVar
 Var {_varName = "x", _expAnnot = ((),NoIndex {_syntIndForm = (["TestLanguage"],"int")}), _expLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}}
->>> [boolVar, intVar] |> typingTable' & mergeTypings testLanguage' & handleFailure toCoParsable show
+>>> [boolVar, intVar] |> typingTable' & mergeTypings testLanguage & handleFailure toCoParsable show
 "| While checking for conflicting variable usage \nError: \n  \8226 x\tis used as TestLanguage.bool, TestLanguage.int"
 
 -}

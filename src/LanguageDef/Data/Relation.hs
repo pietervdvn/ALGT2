@@ -124,8 +124,8 @@ conclusion
 predicate	:: Combiner (Predicate' ())
 predicate
 	= choices' "predicate"
-		[ conclusion |> Left
-		, expression |> Right
+		[ conclusion & withLocation' PredConcl
+		, expression & withLocation' PredExpr
 		]
 
 predicates	:: Combiner [Predicate' ()]

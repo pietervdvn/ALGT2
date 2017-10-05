@@ -35,7 +35,7 @@ import Lens.Micro (Lens)
 
 >>> import AssetUtils
 >>> import LanguageDef.API
->>> let supertypings = testLanguage' & get (ldScope . langSupertypes)
+>>> let supertypings = testLanguage & get (ldScope . langSupertypes)
 >>> debugLattice showFQ supertypings & putStr
 ⊥ has following subtypes:<no subs>
 TestLanguage.bool has following subtypes:  ⊥
@@ -56,16 +56,59 @@ TestLanguage.tuple has following subtypes:  ⊥
 >>> infimums supertypings [(["TestLanguage"], "bool"), (["TestLanguage"], "int")]
 ([],"\8869")
  -}
-asLangDefs		:: Map [Name] (LanguageDef' ResolvedImport ()) -> Failable LangDefs
-asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |> sndEffect & allGood
-			scopes'		<- scopes ||>> fixScope |+> sndEffect	:: Failable [([Name], LDScope' ())]
+asLangDefs		:: Map [Name] (LanguageDef' ResolvedImport ()) -> Failable (Map [Name] LDScope)
+asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |> sndEffect & allGood	:: Failable [([Name], LDScope' ())]
+			scopes'		<- scopes & M.fromList & knotScopes & M.toList 
+						||>> fullyQualifyScope |> sndEffect & allGood
 			supertyping	<- createSupertypingRelationship (scopes' ||>> get ldScope)
-			let ld	= scopes' ||>> over ldScope (set langSupertypes supertyping)
+		
+			let ldDict	= scopes' 
+						||>> over ldScope (set langSupertypes supertyping)
 						& M.fromList 
 						& knotScopes 
-			ld'	<- typeLD ld |> LangDefs
-			inPhase Validating $ check ld'
+			ld'	<- typeLD ldDict
+			inPhase Validating $ (ld' & M.toList |> uncurry check' & allGood )
 			return ld'
+
+
+knotScopes	:: Map [Name] (LDScope' fr) -> Map [Name] (LDScope' fr)
+knotScopes ldefs
+	= let	ldefs'	= ldefs |> set environment ldefs'
+		in
+		ldefs'
+
+
+
+_scopeFor	:: Map [Name] (LanguageDef' ResolvedImport fr) -> ([Name], LanguageDef' ResolvedImport fr) -> Failable (LDScope' fr)
+_scopeFor ldefs (fqname, ld)
+	= do	let file	= ld & get (langLocation . miFile)
+		let selfImport	= (fqname, ImportFlags file True (tails fqname))
+		let imports	= ld & get langImports |> (get importName &&& _importFlagFor)	:: [ ([Name], ImportFlags) ]
+		imported	<- imports |+> (\k -> checkExists' (fst k) ldefs ("Weird, import "++show k++" not found... Bug in LangDefs"))
+		return $ LDScope ld (M.fromList (selfImport:imports)) (error "Bug: No environment given yet; knot the scopes first")
+
+
+_importFlagFor	:: Import ResolvedImport -> ImportFlags
+_importFlagFor (Import name qualifiedOnly _ filePath)	-- name is the absolute path from the root directory here
+	= ImportFlags filePath False (if qualifiedOnly then [name] else tails name)
+
+
+
+
+-- Prepares the language definitions for production (e.g. resolves all calls to be fully qualified). The first argument should be a dict with all the fully fixed scopes
+fullyQualifyScope	:: LDScope' fr -> Failable (LDScope' fr)
+fullyQualifyScope scopeToFix
+	= do	let ld	= get ldScope scopeToFix
+		ld'	<- fullyQualifyLangDef scopeToFix ld
+		return $ set ldScope ld' scopeToFix
+
+
+fullyQualifyLangDef		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Failable (LanguageDef' ResolvedImport fr)
+fullyQualifyLangDef scope ld
+	= ld	& overGrouperLens langSyntax (fullyQualifySyntForm scope)
+		>>= overGrouperLens langFunctions (fullyQualifyFunction scope)
+		>>= overGrouperLens langRelations (fullyQualifyRelation scope)
+		>>= overGrouperLens langRules (fullyQualifyRule scope)
 
 
 {- | Creates the lattice tracking the supertype relationship
@@ -73,7 +116,8 @@ asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |> s
 -}
 createSupertypingRelationship	:: [([Name], LanguageDef' ResolvedImport a)] -> Failable (Lattice FQName)
 createSupertypingRelationship lds
-	= do	let syntaxes	= lds ||>> get langSyntax |> sndEffect & catMaybes 
+	= inMsg' "While constructing the global supertyping relationship" $ inPhase Typing $
+	  do	let syntaxes	= lds ||>> get langSyntax |> sndEffect & catMaybes 
 					||>> get grouperDict
 					|||>>> get syntChoices 		:: [([Name], Map Name [BNF])]
 		let fqsyntax	= syntaxes
@@ -85,38 +129,8 @@ createSupertypingRelationship lds
 				= "Cycles are detected in the supertype relationship of the syntaxes:"++
 					cycles |> (\cycle -> cycle |> showFQ & intercalate " ⊃ ") & unlines & indent
 		makeLatticeInverted typeBottom typeTop supertypes & first cycleMsg |> fst
-			 & either fail return & inMsg' "While constructing the global supertyping relationship" & inPhase Typing
+			 & either fail return
 	
-
-_scopeFor	:: Map [Name] (LanguageDef' ResolvedImport fr) -> ([Name], LanguageDef' ResolvedImport fr) -> Failable (LDScope' fr)
-_scopeFor ldefs (fqname, ld)
-	= do	let file	= ld & get (langLocation . miFile)
-		let selfImport	= (fqname, ImportFlags file True (tails fqname))
-		let imports	= ld & get langImports |> (get importName &&& _importFlagFor)	:: [ ([Name], ImportFlags) ]
-		imported	<- imports |+> (\k -> checkExists' (fst k) ldefs ("Weird, import "++show k++" not found... Bug in LangDefs"))
-		return $ LDScope ld (M.fromList (selfImport:imports)) ldefs
-
-_importFlagFor	:: Import ResolvedImport -> ImportFlags
-_importFlagFor (Import name qualifiedOnly _ filePath)	-- name is the absolute path from the root directory here
-	= ImportFlags filePath False (if qualifiedOnly then [name] else tails name)
-
--- Prepares the language definitions for production (e.g. resolves all calls to be fully qualified). The first argument should be a dict with all the fully fixed scopes
-fixScope	:: LDScope' fr -> Failable (LDScope' fr)
-fixScope scopeToFix
-	= do	let ld	= get ldScope scopeToFix
-		ld'	<- fixLD scopeToFix ld
-		scopeToFix	& set ldScope ld'
-				& return
-
-
-fixLD		:: LDScope' fr -> LanguageDef' ResolvedImport fr -> Failable (LanguageDef' ResolvedImport fr)
-fixLD scope ld
-	= ld	& overGrouperLens langSyntax (fullyQualifySyntForm scope)
-		>>= overGrouperLens langFunctions (fullyQualifyFunction scope)
-		>>= overGrouperLens langRelations (fullyQualifyRelation scope)
-		>>= overGrouperLens langRules (fullyQualifyRule scope)
-
-
 
 
 

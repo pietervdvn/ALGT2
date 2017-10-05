@@ -18,22 +18,41 @@ library
   exposed-modules:     Lib, Utils.Test
   other-modules:
         Paths_ALGT2
-        LanguageDef.LanguageDef
-        LanguageDef.LocationInfo
-        LanguageDef.Syntax.MetaSyntax
-        LanguageDef.Syntax.ParseTree
-        LanguageDef.Syntax.Pt2Syntax
-        LanguageDef.Syntax.Syntax
-        LanguageDef.Syntax.Combiner
-        LanguageDef.ModuleManagament
-        Paths_ALGT2
+        AssetUtils
+        Assets
+        Graphs.Lattice
+        Graphs.PathFinder
+        Graphs.SearchCycles
+        LanguageDef.API
+        LanguageDef.Combiner
+        LanguageDef.Data.BNF
+        LanguageDef.Data.Expression
+        LanguageDef.Data.Function
+        LanguageDef.Data.LanguageDef
+        LanguageDef.Data.ParseTree
+        LanguageDef.Data.Proof
+        LanguageDef.Data.Relation
+        LanguageDef.Data.Rule
+        LanguageDef.Data.SyntFormIndex
+        LanguageDef.Data.SyntacticForm
+        LanguageDef.Interpreter
+        LanguageDef.LangDefs
+        LanguageDef.LangDefsFix
+        LanguageDef.MetaSyntax
+        LanguageDef.ModuleLoader
+        LanguageDef.Prover
+        LanguageDef.Typer
+        LanguageDef.Utils.Checkable
+        LanguageDef.Utils.ExceptionInfo
+        LanguageDef.Utils.Grouper
+        LanguageDef.Utils.LocationInfo
         Utils.All
+        Utils.CreateAssets
+        Utils.PureIO
         Utils.ToString
         Utils.Utils
         Utils.Version
-        Assets
-        LanguageDef.Syntax.All
-        Utils.CreateAssets
+
 
   ghc-options:         -fno-warn-tabs
   build-depends:       base >= 4.7 && < 5, containers, microlens, microlens-th, random, parsec, directory, bytestring, Glob, QuickCheck, doctest, mtl, deepseq, ansi-wl-pprint

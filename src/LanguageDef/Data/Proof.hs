@@ -18,10 +18,15 @@ import LanguageDef.Data.SyntFormIndex
 {-
 When a rule is applied to enough values (parsetrees) it generates a proof of this rule.
 -}
-data Proof' a	= Proof { _proofConcl	:: [ParseTree]	-- output of the conclusion of the rule
+data Proof' a	= Proof -- Proof for a relation 
+			{ _proofConcl	:: [ParseTree]	-- output of the conclusion of the rule
 			, _proofWith	:: Rule' a	-- rule which has proven stuff
 			, _proofPreds	:: [Proof' a]	-- predicates for the rule
 			}
+		| ProofExpr	-- Proof that an expression holds
+			{ _exprResult	:: ParseTree
+			}
+
 		 deriving (Show, Eq)
 
 makeLenses ''Proof'
@@ -90,7 +95,8 @@ showProofWith opts (Proof concl proverRule predicates)
 		line'	= line ++ name
 		in
 		(preds ++ [line', concl'])
-
+showProofWith opts (ProofExpr pt)
+	= [(sp opts) pt]
 
 
 showProofWithDepth		:: String -> Name -> ProofOptions -> Proof' a -> String

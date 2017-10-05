@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 module LanguageDef.LangDefs where
 
 {-
@@ -50,34 +50,28 @@ makeLenses ''ImportFlags
 data LDScope' funcResolution = LDScope
 	{ _ldScope	:: LanguageDef' ResolvedImport funcResolution
 	, _imported	:: Map [Name] ImportFlags
-	, _environment	:: Map [Name] (LanguageDef' ResolvedImport funcResolution)
+	, _environment	:: Map [Name] (LDScope' funcResolution)	-- All loaded modules
 	} 
 	deriving (Show, Eq)
 makeLenses ''LDScope'
 type LDScope	=  LDScope' SyntFormIndex
 
+instance ToString (LDScope' fr) where
+	toParsable ldscope	= get ldScope ldscope & toParsable
 
-updateEnv	:: LDScope' fr -> (LanguageDef' ResolvedImport fr0, Map [Name] (LanguageDef' ResolvedImport fr0)) -> LDScope' fr0
-updateEnv (LDScope _ imps _) (scope, env)
+
+updateEnv	:: (LanguageDef' ResolvedImport fr0, Map [Name] (LDScope' fr0)) -> LDScope' fr -> LDScope' fr0
+updateEnv (scope, env) (LDScope _ imps _)
 	= LDScope scope imps env
 
-{- Contains the full cluster of language defintions -}
-data LangDefs	= LangDefs {_langdefs	:: Map [Name] LDScope}
-	deriving (Show)
-makeLenses ''LangDefs
 
-getLangDef	:: LangDefs -> [Name] -> Maybe LanguageDef
-getLangDef defs fq
-	= do	def'	<- M.lookup fq (get langdefs defs)
-		def' & get ldScope & return
-
-
--- Re-updates the environment of an LDScope
-knotScopes :: Map [Name] (LDScope' fr) -> Map [Name] (LDScope' fr)
-knotScopes lds
-	= let	env	= lds |> get ldScope in
-		lds |> set environment env
-
+enterScope	::  [Name] -> LDScope' fr -> Failable (LDScope' fr)
+enterScope names lds
+	= do	let allScopes	= get environment lds
+		let dist	= (dots, \ref v -> levenshtein (last ref) (last v))	:: ([Name] -> String, [Name] -> [Name] -> Int)
+		checkExistsSuggDist' dist names (get environment lds)
+			("The scope "++dots names++" was not found")
+		
 
 {- | Parses a target string according to the language definition cluster
 
@@ -87,9 +81,9 @@ Success (RuleEnter {_pt = Literal {_ptToken = "True", ...}, _ptUsedRule = (["Tes
 
 
 -}
-parseTarget	:: LangDefs -> FQName -> FilePath -> String -> Failable ParseTree
+parseTarget	:: LDScope' fr -> FQName -> FilePath -> String -> Failable ParseTree
 parseTarget langs (startModule, startRule) file contents
-	= do	let syntaxes	= langs & get langdefs |> get ldScope |> get langSyntax |> fromMaybe emptySyntax
+	= do	let syntaxes	= langs & get environment |> get ldScope |> get langSyntax |> fromMaybe emptySyntax
 		parse file (syntaxes, startModule) startRule contents 
 
 
@@ -141,10 +135,11 @@ fullyQualifyRule scope (Rule preds concl name docs)
 
 
 fullyQualifyPred	:: LDScope' fr -> Predicate' a -> Failable (Predicate' a)
-fullyQualifyPred scope (Left concl)
-	= fullyQualifyConcl scope concl |> Left
-fullyQualifyPred scope (Right expr)
-	= return $ Right expr	-- should be typechecked
+fullyQualifyPred scope (PredConcl concl li)
+	= do	concl'	<- fullyQualifyConcl scope concl
+		return $ PredConcl concl' li
+fullyQualifyPred scope (PredExpr expr li)
+	= return $ PredExpr expr li	-- should be typechecked
 
 
 fullyQualifyConcl	:: LDScope' fr -> Conclusion' a -> Failable (Conclusion' a)
@@ -155,35 +150,37 @@ fullyQualifyConcl scope (Conclusion relName args)
 		return $ Conclusion relName' args'
 
 
-type Resolver fr x
+type Resolver' fr x
 		= (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper x), Grouper x -> Map Name x)
+type Resolver x
+		= Resolver' SyntFormIndex x
 
-syntaxCall	:: Resolver fr SyntacticForm
+syntaxCall	:: Resolver' fr SyntacticForm
 syntaxCall	= ("the syntactic form", get langSyntax, get grouperDict)
 
-functionCall	:: Resolver fr (Function' fr)
+functionCall	:: Resolver' fr (Function' fr)
 functionCall	= ("the function", get langFunctions, get grouperDict)
 
 
-relationCall	:: Resolver fr Relation
+relationCall	:: Resolver' fr Relation
 relationCall	= ("the relation", get langRelations, get grouperDict)
 
-ruleCall	:: Resolver fr (Rule' fr)
+ruleCall	:: Resolver' fr (Rule' fr)
 ruleCall	= ("the rule", get langRules, get grouperDict)
 
 
-resolveGlobal	:: Eq x => LangDefs -> (String, LanguageDef -> Maybe (Grouper x), Grouper x -> Map Name x) -> FQName -> Failable (FQName, x)
+resolveGlobal	:: Eq x => LDScope  -> (String, LanguageDef -> Maybe (Grouper x), Grouper x -> Map Name x) -> FQName -> Failable (FQName, x)
 resolveGlobal lds entity fqname
 	= do	let path	= fst fqname
-		ld	<- checkExistsSuggDist' (dots, levenshtein `on` last) path (get langdefs lds) 
+		ld	<- checkExistsSuggDist' (dots, levenshtein `on` last) path (get environment lds) 
 				("Namespace "++ dots path ++ " was not found")
 		resolve' ld entity fqname
 
-resolve	:: Eq x => LDScope' fr -> Resolver fr x-> FQName -> Failable FQName
+resolve		:: Eq x => LDScope' fr -> Resolver' fr x-> FQName -> Failable FQName
 resolve	scope resolver fqn
 	= resolve' scope resolver fqn |> fst
 
-resolve'	:: Eq x => LDScope' fr ->  Resolver fr x -> FQName -> Failable (FQName, x)
+resolve'	:: Eq x => LDScope' fr ->  Resolver' fr x -> FQName -> Failable (FQName, x)
 resolve' scope resolver fqn
 	= do	let resDict	= resolutionMap scope resolver
 		let name	= over _head toUpper (fst3 resolver) ++ " " ++ show (showFQ fqn)
@@ -192,7 +189,7 @@ resolve' scope resolver fqn
 		return $ head results
 		
 {- Creates a dict {this local name --> these possible entities} -}
-resolutionMap	:: Eq x => LDScope' fr -> Resolver fr x -> Map FQName [(FQName, x)]
+resolutionMap	:: Eq x => LDScope' fr -> Resolver' fr x -> Map FQName [(FQName, x)]
 resolutionMap scope resolver
 	= let	preDict	= allKnowns scope resolver |> (\(entity, knownAs, x) -> [(ka, (entity, x)) | ka <- knownAs] )
 				& concat
@@ -215,18 +212,19 @@ The returning format is:
 Each fqname should also occur under the 'known as'
 
 -}
-allKnowns	:: LDScope' fr -> Resolver fr x -> [((FQName, Bool), [FQName], x)]
+allKnowns	:: LDScope' fr -> Resolver' fr x -> [((FQName, Bool), [FQName], x)]
 allKnowns scope resolver	
 	= let	-- The imports contain the local scope as well, so we don't need _allKnownLocally here
 		imports		= get imported scope & M.toList		:: [([Name], ImportFlags)]
-		mergedImports	= imports |> _mergeImport (get environment scope) resolver
+		env		= get environment scope |> get ldScope	-- :: Map [Name] (LanguageDef' ResolvedImport fr) 
+		mergedImports	= imports |> _mergeImport env resolver
 		-- TODO extra, renamed imports 
 		-- TODO include re-exports
 		in
 		concat mergedImports
 
 
-_mergeImport	:: Map [Name] (LanguageDef' ResolvedImport fr) -> Resolver fr b -> ([Name], ImportFlags) -> [((FQName, Bool), [FQName], b)] 
+_mergeImport	:: Map [Name] (LanguageDef' ResolvedImport fr) -> Resolver' fr b -> ([Name], ImportFlags) -> [((FQName, Bool), [FQName], b)] 
 _mergeImport scopes resolver (fq, ImportFlags _ isSelf knownNames)
 	= let	ld	= scopes ! fq
 		found	= _allKnownLocally (fq, ld) resolver 
@@ -234,7 +232,7 @@ _mergeImport scopes resolver (fq, ImportFlags _ isSelf knownNames)
 		found |> (\(fqn, b) -> ((fqn, isSelf), knownNames |> flip (,) (snd fqn), b))
 
 
-_allKnownLocally	:: ([Name], LanguageDef' ResolvedImport fr) -> Resolver fr b -> [(FQName, b)]
+_allKnownLocally	:: ([Name], LanguageDef' ResolvedImport fr) -> Resolver' fr b -> [(FQName, b)]
 _allKnownLocally (fq, ld) (_, getWhole, _)
 	= let	dict	= ld 	& getWhole |> get grouperDict
 				& maybe [] M.toList
@@ -242,24 +240,22 @@ _allKnownLocally (fq, ld) (_, getWhole, _)
 		dict |> first ((,) fq)
 		
 	
+
+
+instance Checkable' [Name] LDScope where
+	check' fq ldscope	
+		= do	let ld		= get ldScope ldscope
+			let isSubtype	= ld & isSubtypeOf
+			let resolveSF	= resolve ldscope syntaxCall
+			let extras	= (resolveSF , isSubtype, fq)	:: (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name])
+			[check' extras ld, _checkSameTitle fq ld] & allGood
+			pass
+
 {- |
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty" ["TitleMismatch"] & toCoParsable
 "| While validating \nError: \n  \8226 The module in file TitleMismatch is titled \"Some Other Title\". Retitle them to be the same (whitespace insensitive)"
 -}
-instance Checkable LangDefs where
-	check lds@(LangDefs defs)
-		= defs & M.toList |> _checkOne & allGood >> pass
-	
-
-_checkOne	:: ([Name], LDScope) -> Check
-_checkOne (fq, ldscope)
-	= do	let ld		= get ldScope ldscope
-		let isSubtype	= ld & isSubtypeOf
-		let resolveSF	= resolve ldscope syntaxCall
-		let extras	= (resolveSF , isSubtype, fq)	:: (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name])
-		[check' extras ld, _checkSameTitle fq ld] & allGood
-		pass
 
 _checkSameTitle	:: [Name] -> LanguageDef -> Check
 _checkSameTitle fq ld
@@ -267,11 +263,4 @@ _checkSameTitle fq ld
 		let noWS string	= string & L.filter (`notElem` " \t")
 		let msg	= "The module in file "++dots fq ++" is titled "++show nm++". Retitle them to be the same (whitespace insensitive)"
 		assert' (noWS (last fq) == noWS nm) msg
-
-instance ToString LangDefs where 
-	toParsable ld	= ld & get langdefs & M.toList |> _withHeader & unlines
-
-
-_withHeader (nm, ld)
-	= ["\n---------------", dots nm, "-------------\n"] & unwords ++ (ld & get ldScope & toParsable)
 

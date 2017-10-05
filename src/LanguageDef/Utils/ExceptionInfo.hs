@@ -202,6 +202,10 @@ fromFailed	:: Failable a -> Maybe ExceptionInfo
 fromFailed (Failed e)	= Just e
 fromFailed _		= Nothing
 
+isSuccess	:: Failable a -> Bool
+isSuccess (Success _)	= True
+isSuccess _ 		= False
+
 
 legacy	:: Failable a -> Either String a
 legacy (Failed e)
