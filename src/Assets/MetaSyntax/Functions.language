@@ -29,7 +29,7 @@ signature	::=Identifier ":" Functions.types Functions.lastTypeSep Functions.iden
 	 | Identifier ":" Functions.ident	
 
 # An identifier, eventually from another namespace
-ident	~~=Identifier "." Functions.ident		 # Absolute identifier, in another namespace
+ident	~~=IdentifierUpper "." Functions.ident		 # Absolute identifier, in another namespace
 	 | Identifier		 # Local identifier
 
 

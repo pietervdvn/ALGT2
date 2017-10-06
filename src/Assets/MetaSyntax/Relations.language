@@ -33,6 +33,7 @@ symbolChar	::=UnicodeChar
 	 | "@"	
 	 | "^"	
 	 | "_"	
+	 | ":"	
 	 | Digit	
 
 
