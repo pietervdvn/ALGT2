@@ -26,7 +26,7 @@ data Expression' a
 		, _expLocation		:: LocationInfo}
 	| DontCare {_expAnnot 		:: a
 		   , _expLocation	:: LocationInfo}
-	| ParseTree {_expPT 		:: ParseTree
+	| ParseTree {_expPT 		:: ParseTree' ()
 		, _expAnnot		:: a
 		, _expLocation		:: LocationInfo}
 	| FuncCall {_expCallName	:: FQName

@@ -9,8 +9,9 @@ import Utils.All
 
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
-
 import LanguageDef.Utils.Grouper
+
+import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Data.BNF (Parser, BNF, ParserMetaInfo (ParserMetaInfo), pmiColumn, pmiLine, pmiFile, biParse)
 import qualified LanguageDef.Data.BNF as BNF
 import LanguageDef.Data.SyntacticForm
@@ -34,7 +35,7 @@ data ParseTree' a
 
 makeLenses ''ParseTree'
 
-type ParseTree	= ParseTree' ()
+type ParseTree	= ParseTree' SyntFormIndex
 
 -- Used only here
 type Syntaxes	= Map [Name] Syntax
@@ -48,7 +49,7 @@ instance Normalizable (ParseTree' a) where
 	normalize pt =  pt 
 
 
-deAnnot	:: ParseTree' a -> ParseTree
+deAnnot	:: ParseTree' a -> (ParseTree' ())
 deAnnot pt
 	= pt |> const ()
 
@@ -85,7 +86,7 @@ mostSpecificRuleEnter pt
 
 {-  | Removes all superfluous information (location info and such), so that parsetrees can be compared to the bare structure and contents
 -}
-bareInformation	:: ParseTree' a -> ParseTree
+bareInformation	:: ParseTree' a -> (ParseTree' ())
 bareInformation pt
 	= pt & deAnnot & removeLocationInfo & removeRuleEnters
 
@@ -124,7 +125,7 @@ removeHidden pt
 >>> simplePT "abc"
 Literal {_ptToken = "abc", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}
 -}
-simplePT	:: String -> ParseTree
+simplePT	:: String -> (ParseTree' ())
 simplePT string	= Literal string unknownLocation () False
 
 
@@ -151,47 +152,50 @@ _parseRule (syntaxes, ns) nm
 		choice (mapi choices |> _parseChoice syntaxes (ns, nm) |> try)
 
 _parseChoice	:: Syntaxes -> FQName -> (Int, BNF) -> Parser ParseTree
-_parseChoice syntaxes nm (i, choice)
+_parseChoice syntax nm (i, choice)
 	= try $
-	  do	start	<- location
-		pt	<- _parseBNF syntaxes choice
+	  do	let sf	= SyntFormIndex nm i Nothing
+		start	<- location
+		pt	<- _parseBNF syntax (choice, sf)
 		info	<- endToken start
-		return $ RuleEnter pt nm i info ()
+		return $ RuleEnter pt nm i info sf
 		
 
 
-_parseBNF	:: Syntaxes -> BNF -> Parser ParseTree
-_parseBNF syntax (BNF.Literal str)
+_parseBNF	:: Syntaxes -> (BNF, SyntFormIndex) -> Parser ParseTree
+_parseBNF syntax (BNF.Literal str, sf)
 		= do	start	<- location
 			string str
 			skipChars str
 			info	<- endToken start
-			return $ Literal str info () False
+			return $ Literal str info sf False
 			
-_parseBNF syntax (BNF.BuiltIn hidden builtin)
+_parseBNF syntax (BNF.BuiltIn hidden builtin, sf)
 		= do	start	<- location
 			parsed	<- get biParse builtin
 			skipChars (either id show parsed)
 			info	<- endToken start
 			return $ case parsed of
-				Left str -> Literal str info () hidden
-				Right i  -> Int i info ()
+				Left str -> Literal str info sf hidden
+				Right i  -> Int i info sf
 
-_parseBNF syntaxes (BNF.RuleCall (ns, nm))
+_parseBNF syntaxes (BNF.RuleCall (ns, nm), _)
 		= _parseRule (syntaxes, ns) nm
 
-_parseBNF syntax (BNF.Group bnf)
+_parseBNF syntax (BNF.Group bnf, sf)
 		= do	start	<- location
-			pt	<- _parseBNF syntax bnf
+			pt	<- _parseBNF syntax (bnf, sf)
 			info	<- endToken start
-			return $ Literal (contents pt) info () False
+			return $ Literal (contents pt) info (NoIndex ([], "String")) False
 
 
-_parseBNF syntax (BNF.Seq bnfs)
+_parseBNF syntax (BNF.Seq bnfs, sf)
 		= do	start	<- location
-			pts	<- bnfs |+> _parseBNF syntax
+			pts	<- bnfs & mapi |> swap 
+					||>> (\i -> set syntIndSeqInd (Just i) sf)
+					|+> _parseBNF syntax
 			info	<- endToken start
-			return $ Seq pts info ()
+			return $ Seq pts info sf
 
 
 

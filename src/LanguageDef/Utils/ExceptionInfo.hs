@@ -239,9 +239,9 @@ _showMsgs parsecMsgs
 			unExp'	= "Did not expect " ++ commas' "or" (prep unExp) ++ " here"
 			msg	= "Expected "++commas' "or" (prep exp) ++" instead"
 			msgsConts	= (msgs & prep & commas) ++ ": "
-			sugg	= if null msgsConts then Nothing else Just msgsConts
+			sugg	= if null msgs then Nothing else Just msgsConts
 			in
-			(msg, sugg)
+			(unExp', sugg)
 			
 
 

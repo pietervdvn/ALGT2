@@ -22,11 +22,11 @@ import LanguageDef.LangDefs
 
 import qualified Data.Map as M
 import Data.Map (Map)
+import Data.List (nub)
 
 import Control.Arrow ((&&&))
 import Control.Monad
 
--- TODO
 proofThat	:: LDScope -> Predicate -> Failable Proof
 proofThat lds pred	
 	= inContext ("While proving "++toParsable pred, Evaluating, get predLocation pred) $
@@ -36,27 +36,30 @@ proofThat lds pred
 
 constructProof	:: LDScope -> VariableStore -> Predicate -> Failable (Proof, VariableStore)
 constructProof lds vars (PredExpr expr _)
-	= do	result	<- constructParseTree (const ()) lds vars expr
+	= do	result	<- constructParseTree lds vars expr
 		return (ProofExpr result, vars)
 constructProof lds vars (PredConcl concl _)
 	= do	(fqn, rel)	<- resolve' lds relationCall (get conclRelName concl)
 		lds'		<- lds & enterScope (fst fqn)
 		foundRules	<- rulesAbout lds' fqn	
 		inExprs		<- modedArgs lds' In concl
-		inArgs		<- inExprs |> constructParseTree (const ()) lds vars & allGood
+		inArgs		<- inExprs |> constructParseTree lds vars & allGood
 		let individual	= foundRules |> proofRule lds inArgs
 		let successfull	= successess individual
 		when (null successfull) $ inMsg' "No rule matched" $
 			fails individual & Aggregate & Failed
 		
-		let (proof:rest)= successfull
-		assert' (all ((==) proof) rest) $ "The proof is divergent; the rules can be interpreted in multiple ways yielding multiple results"
+		let concls@(proof:rest)
+				= successfull |> get proofConcl
+		
+		assert' (all ((==) proof) rest) $
+			"The proof is divergent; the rules can be interpreted in multiple ways yielding multiple results, namely: \n" ++
+			(concls & nub |> toParsable' ", " & intercalate "\n" & indent)
 		
 		outExprs	<- modedArgs lds' Out concl
-		outArgs		<- proof & get proofConcl
-					& selectModed lds' concl Out	:: Failable [ParseTree]
-		vars'		<- inMsg' ("While calculating the final variable store") $ patternMatchAll (const ()) lds' vars outExprs outArgs
-		return (proof, vars')
+		outArgs		<- proof & selectModed lds' concl Out	:: Failable [ParseTree]
+		vars'		<- inMsg' ("While calculating the final variable store") $ patternMatchAll lds' vars outExprs outArgs
+		return (head successfull, vars')
 
 
 
@@ -65,12 +68,12 @@ proofRule	:: LDScope -> [ParseTree] -> Rule -> Failable Proof
 proofRule lds inArgs rule@(Rule preds concl name docs)
 	= inMsg' ("While trying to proof "++show name) $ inLocation (get miLoc docs) $
 	  do	inExprs			<- modedArgs lds In concl
-		initialVarStore		<- patternMatchAll (const ()) lds M.empty inExprs inArgs
+		initialVarStore		<- patternMatchAll lds M.empty inExprs inArgs
 		(endVars, predProofs)	<- foldM (\(vars, proofs) pred -> 
 						do	(proof, vars')	<- constructProof lds vars pred
 							return (vars', proof:proofs)) (initialVarStore, []) preds
 		outExprs		<- modedArgs lds Out concl
-		outArgs			<- outExprs |> constructParseTree (const ()) lds endVars & allGood
+		outArgs			<- outExprs |> constructParseTree lds endVars & allGood
 		rel			<- resolve_ lds relationCall (get conclRelName concl)
 		let modes		= rel & get relTypes |> snd
 		let args		= interleaveArgs modes inArgs outArgs

@@ -8,7 +8,8 @@ module LanguageDef.API
 		, testLanguage
 		, runFunction, runExpression, runExpression', runPredicate, runPredicate'
 		, typeTop, typeBottom
-		, repl') where
+		, repl'
+		, trepl) where
 
 {- 
 
@@ -40,7 +41,7 @@ import LanguageDef.Data.Proof
 
 
 
-import LanguageDef.Interpreter (resolveAndRun', evalExpression)
+import LanguageDef.Interpreter (resolveAndRun, evalExpression)
 import LanguageDef.Typer
 import LanguageDef.LangDefs as LDScope
 import LanguageDef.LangDefsFix as LDF
@@ -175,7 +176,7 @@ resolveGlobal' lds entity fqn
 
 
 runFunction  	:: LDScope -> FQName -> [ParseTree] -> Failable ParseTree
-runFunction	= resolveAndRun'
+runFunction	= resolveAndRun
 
 
 runExpression	:: LDScope -> Expression -> Failable ParseTree
@@ -245,5 +246,5 @@ createPredicate lds source str
 		pred' |> snd & return
 
 
-
+trepl	= repl' "/home/pietervdvn/git/ALGT2/src/Assets" ["STFL"]
 

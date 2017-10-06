@@ -25,7 +25,7 @@ removeIndex' (SyntFormIndex sf _ _)
 	= NoIndex sf
 removeIndex' noIndex	= noIndex
 
-removeIndex i	= i & removeIndex' & (\(NoIndex sf) -> sf)
+removeIndex i	= i & get syntIndForm
 
 -- Selects all elements in the list, for which the syntactic form is a smallest type
 selectSmallest	:: (FQName -> FQName -> Bool) ->  [(a, SyntFormIndex)] -> [(a, SyntFormIndex)]

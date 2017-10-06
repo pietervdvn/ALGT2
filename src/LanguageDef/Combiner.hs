@@ -27,14 +27,14 @@ import Text.Parsec hiding (Error)
 import Control.Monad
 
 {- A combiner is a tree mimmicking the BNF structure, which converts a parsetree into a user chosen data structure -}
-data Combiner a	= LiteralC Doc (ParseTree -> String -> Failable a)
+data Combiner a	= LiteralC Doc (ParseTree' () -> String -> Failable a)
 		| forall b c . SeqC (Combiner b) (Combiner c) (b -> c -> a)
 		| forall b . MapC (Combiner b) (b -> a)
-		| IntC (ParseTree -> Int -> Failable a)
+		| IntC (ParseTree' () -> Int -> Failable a)
 		| Value a
 		| Annot FQName [Combiner a]	-- Enter a certain rule, with one combiner for each choice
 		| forall b . WithLocation (Combiner b) (LocationInfo -> b -> a)
-		| Debug (ParseTree -> String)			-- Crash and print the parsetree through an error message with the given msg
+		| Debug (ParseTree' () -> String)			-- Crash and print the parsetree through an error message with the given msg
 
 
 
@@ -152,11 +152,11 @@ instance Functor Combiner where
 		= MapC ca f
 
 
-
+interpret	:: Combiner a -> ParseTree' x -> Failable a
 interpret cmb pt
-	= pt & removeHidden & _interpret cmb & inPhase Parsing & inPtLoc pt
+	= pt & deAnnot & removeHidden & _interpret cmb & inPhase Parsing & inPtLoc pt
 
-_interpret	:: Combiner a -> ParseTree -> Failable a
+_interpret	:: Combiner a -> ParseTree' () -> Failable a
 _interpret (Debug f) pt
 	= fail $ f pt
 _interpret (LiteralC _ fa) pt@(Literal str' _ _ _)
@@ -210,7 +210,7 @@ cmb	:: (b -> c -> a) -> Combiner b -> Combiner c -> Combiner a
 cmb f cb cc
 	= SeqC cb cc f
 
-err	:: (ParseTree -> String) -> Combiner ()
+err	:: (ParseTree' () -> String) -> Combiner ()
 err	= Debug
 
 skip	:: Combiner ()
