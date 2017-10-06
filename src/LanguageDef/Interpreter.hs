@@ -30,7 +30,7 @@ import Data.Map (Map)
 >>> let createExp tp e = createTypedExpression testLanguage "?" e (testType tp) & crash'
 >>> let ld = testLanguage & get ldScope
 
->>> let t te e tpt pt = patternMatch (const (), testLanguage) M.empty ld (createExp te e) (createPT tpt pt)
+>>> let t te e tpt pt = patternMatch (const ()) testLanguage M.empty ld (createExp te e) (createPT tpt pt)
 >>> t "bool" "\"True\"" "bool" "True"
 Success (fromList [])
 >>> t "bool" "\"True\"" "bool" "False"
@@ -84,9 +84,10 @@ Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ..., 
 
 -}
 
-type VariableStore a
+type VariableStore' a
 	= Map Name (ParseTree' a)
  
+type VariableStore	= VariableStore' ()
 
 
 -------------------------- ABOUT RUNNING A FUNCTION ------------------------------------
@@ -121,7 +122,7 @@ runFunction fb2a lds ld func args
 runClause	:: (SyntFormIndex -> a) -> LDScope -> LanguageDef -> (Int, FunctionClause) -> [ParseTree' a] -> Failable (ParseTree' a)
 runClause fb2a lds ld (i, FunctionClause pats result doc nm) args
 	= inMsg' ("While trying clause "++ nm ++ "." ++ show i) $ inLocation (get miLoc doc) $
-	  do	store	<- patternMatchAll (fb2a, lds) M.empty ld pats args
+	  do	store	<- patternMatchAll fb2a lds M.empty pats args
 		constructParseTree fb2a lds store result
 
 
@@ -133,9 +134,9 @@ evalExpression		:: LDScope -> Expression -> Failable ParseTree
 evalExpression langs
 	= constructParseTree (const ()) langs M.empty
 
-constructParseTree	:: (SyntFormIndex -> a) -> LDScope -> VariableStore a -> Expression -> Failable (ParseTree' a)
+constructParseTree	:: (SyntFormIndex -> a) -> LDScope -> VariableStore' a -> Expression -> Failable (ParseTree' a)
 constructParseTree _ _ vars (Var nm _ _)
-	= checkExistsSuggDist' (show, levenshtein) nm vars ("The variable "++show nm++" was not defined by the pattern")
+	= checkExistsSuggDist' (show, levenshtein) nm vars ("No variable "++show nm++" is in scope here")
 constructParseTree _ _ _ DontCare{}
 	= fail "Found a wildcard (_) in an expression context. Only use these as patterns!"
 constructParseTree fb2a _ _ (ParseTree pt b _)
@@ -165,24 +166,24 @@ constructParseTree fb2a lds vars (SeqExp exprs b _)
 ------------------------ ABOUT PATTERN MATCHING ---------------------------------------
 
 
-patternMatchAll	:: (SyntFormIndex -> a, LDScope) -> VariableStore a -> LanguageDef -> [Expression] -> [ParseTree' a]  -> Failable (VariableStore a)
-patternMatchAll lds store ld [] []
+patternMatchAll	:: (SyntFormIndex -> a) -> LDScope -> VariableStore' a -> [Expression] -> [ParseTree' a]  -> Failable (VariableStore' a)
+patternMatchAll fb2a lds store [] []
 	= return store
-patternMatchAll lds store ld (expr:exprs) (arg:args)
+patternMatchAll fb2a lds store (expr:exprs) (arg:args)
 	= inLocation (get expLocation expr) $ do
 		assert' (length exprs == length args)
 			$ "Number of arguments is incorrect: got "++show (length args)++" patterns, but got "++show (length exprs)++" arguments"
-		store'	<- patternMatch lds store ld expr arg
+		store'	<- patternMatch fb2a lds store expr arg
 		mergedStores	<- mergeStores [store, store']
-		patternMatchAll lds mergedStores ld exprs args
+		patternMatchAll fb2a lds mergedStores exprs args
 
 
 
 
 
 
-patternMatch	:: (SyntFormIndex -> a, LDScope) -> VariableStore a -> LanguageDef -> 
-			Expression -> ParseTree' a -> Failable (VariableStore a)
+patternMatch	:: (SyntFormIndex -> a) -> LDScope -> VariableStore' a ->
+			Expression -> ParseTree' a -> Failable (VariableStore' a)
 patternMatch _ _ _ (Var nm _ _) pt
 	= return $ M.singleton nm pt
 patternMatch _ _ _ (DontCare _ _) _
@@ -195,33 +196,33 @@ patternMatch _ _ _ (ParseTree expectedPT _ _) actPt
 			, "Expected: "++toParsable exp
 			, "Got: "++toParsable act]
 		return M.empty
-patternMatch context@(fb2a, lds) vars ld (FuncCall funcName args b _) arg
+patternMatch fb2a lds vars (FuncCall funcName args b _) arg
 	= inMsg' ("While running a function within a pattern, namely "++showFQ funcName) $
 	  do	argsPt		<- args |+> constructParseTree fb2a lds vars
 		expectedPT	<- resolveAndRun fb2a lds funcName argsPt |> deAnnot
-		patternMatch context vars ld (ParseTree expectedPT b unknownLocation) arg
-patternMatch lds vars ld (Ascription expr expType _ _) re@RuleEnter{}
+		patternMatch fb2a lds vars (ParseTree expectedPT b unknownLocation) arg
+patternMatch fb2a lds vars (Ascription expr expType _ _) re@RuleEnter{}
 	= do	let actType	= re & mostSpecificRuleEnter & get ptUsedRule
-		assert' (isSubtypeOf ld actType expType) $ unlines
+		assert' (isSubtypeOf (get ldScope lds) actType expType) $ unlines
 			["Ascription failed"
 			, "Expected something of type "++showFQ expType
 			, "but got a parsetree of the form "++showFQ actType]
-		patternMatch lds vars ld expr re
-patternMatch lds vars ld (Split exp1 exp2 _ _) pt
-	= do	store1	<- patternMatch lds vars ld exp1 pt
+		patternMatch fb2a lds vars expr re
+patternMatch fb2a lds vars (Split exp1 exp2 _ _) pt
+	= do	store1	<- patternMatch fb2a lds vars exp1 pt
 		vars'	<- mergeStores [store1, vars]
-		store2	<- patternMatch lds vars' ld exp2 pt
+		store2	<- patternMatch fb2a lds vars' exp2 pt
 		mergeStores [store1, store2]
-patternMatch lds vars ld (SeqExp exprs _ _) (Seq pts _ _)
-	= patternMatchAll lds vars ld exprs pts
-patternMatch lds vars ld expr (RuleEnter pt _ _ _ _)
-	= patternMatch lds vars ld expr pt
+patternMatch fb2a lds vars (SeqExp exprs _ _) (Seq pts _ _)
+	= patternMatchAll fb2a lds vars exprs pts
+patternMatch fb2a lds vars expr (RuleEnter pt _ _ _ _)
+	= patternMatch fb2a lds vars expr pt
 
 patternMatch _ _ _ expr pt
 	= fail $ "Could not match "++toParsable expr++" with "++toParsable pt
 
 
-mergeStores	:: [VariableStore b] -> Failable (VariableStore b)
+mergeStores	:: [VariableStore' b] -> Failable (VariableStore' b)
 mergeStores stores
  	= do	let stores'	= stores ||>> return & M.unionsWith sameBareInfo
 		stores' & M.toList 

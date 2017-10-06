@@ -493,6 +493,16 @@ perTwo _ []	= []
 
 
 
+-- Removes entries from a list so that values occuring twice are removed
+-- >>> [1, 2, 2, 2, 3, 3, 3, 1]
+-- [1, 2, 3, 1]
+uniq	:: (Eq a) => [a] -> [a]
+uniq []		= []
+uniq [a]	= [a]
+uniq (a:b:as)
+ | a == b	= uniq (a:as)
+ | otherwise	= a : uniq (b:as)
+
 -- calculate levenshtein distance between two strings
 levenshtein	:: String -> String -> Int
 levenshtein "" "" = 0

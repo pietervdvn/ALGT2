@@ -1,13 +1,14 @@
 module LanguageDef.API 
 		(loadLangDef, loadAssetLangDef
-		, createParseTree, createExpression, createTypedExpression, parseTarget
+		, createParseTree, createExpression, createTypedExpression, parseTarget, createPredicate
 		, LDScope.resolveGlobal, LDScope.resolve, LDScope.resolve', LDScope.allKnowns
 		, LDScope.syntaxCall, LDScope.functionCall, LDScope.ruleCall, LDScope.relationCall
 		, resolveGlobal'
 		, infoAbout, inScope, infoImports
 		, testLanguage
 		, runFunction, runExpression, runExpression', runPredicate, runPredicate'
-		, typeTop, typeBottom) where
+		, typeTop, typeBottom
+		, repl') where
 
 {- 
 
@@ -18,13 +19,13 @@ This should all be based on some syntax
  -}
 
 import Utils.All
-import Utils.PureIO
+import Utils.PureIO (PureIO, runIO, runPure)
 
 import AssetUtils
 
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
-
+import Utils.GetLine
 
 import qualified LanguageDef.Combiner as Combiner
 
@@ -49,6 +50,39 @@ import LanguageDef.Prover
 import Data.Maybe
 
 import Data.Map (Map, (!), empty)
+
+import System.IO
+import System.Console.ANSI
+
+repl'		:: FilePath -> [Name] -> IO ()
+repl' fp path
+	= do	ld	<- runIO (loadLangDef fp path) |> crash
+		repl (fp, path) ld
+
+repl		:: (FilePath, [Name]) -> LDScope -> IO ()
+repl location@(fp, fq) ld
+	= do	line	<- prompt "※  "
+		case line of
+			":q"	-> return ()
+			"\EOT"	-> return ()
+			":l"	-> do	clearScreen
+					repl location ld
+			"\f"	-> do	clearScreen
+					repl location ld
+			":r"	-> do	ld'	<- reload location ld
+					repl location ld'
+			_	-> do	handleFailure printPars printPars $ runPredicate' ld "<interactive>" line
+					repl location ld
+
+
+
+
+reload	:: (FilePath, [Name]) -> LDScope -> IO LDScope
+reload (fp, fq) ld
+	= do	putStrLn ("Reloading " ++ fp ++ "/" ++ intercalate "/" fq)
+		mLd	<- runIO (loadLangDef fp fq)
+		mLd & handleFailure (\e -> printPars e >> putStrLn "Using the old definition" >> return ld) return				
+
 
 {- Loads a language definition from the filesystem; use with 'runIO'-}
 loadLangDef	:: FilePath -> [Name] -> PureIO (Failable LDScope)
@@ -160,6 +194,12 @@ runPredicate lds predicate
 
 
 
+{- >>> runPredicate' testLanguage "?" "not(\"True\")" & crash
+ProofExpr {_exprResult = Literal {_ptToken = "False", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}}
+>>> runPredicate' testLanguage "?" "(→) \"True\" \"&\" \"True\", x" & crash
+"------------------------------- [and]\n(TestLanguage.\8594)True&True, True\n"
+
+-}
 runPredicate'	:: LDScope -> FilePath -> String -> Failable Proof
 runPredicate' lds fp input
 	= do	pred	<- createPredicate lds fp input
@@ -205,8 +245,5 @@ createPredicate lds source str
 		pred' |> snd & return
 
 
--- TODO make test
-t	= runPredicate' testLanguage "?" "(→) 5, x" & crash
-t'	= runPredicate' testLanguage "?" "not(\"True\")" & crash
 
 

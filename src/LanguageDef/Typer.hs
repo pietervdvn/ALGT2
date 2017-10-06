@@ -157,15 +157,23 @@ _checkAllVarsExist knownVars expr
 
 modedArgs	:: LDScope' fr -> Mode -> Conclusion' a -> Failable [Expression' a]
 modedArgs lds mode concl
-	= do	rel	<- get conclRelName concl
+	= let 	args	= concl & get conclArgs
+		in
+		selectModed lds concl mode args
+
+
+selectModed	:: LDScope' fr -> Conclusion' x -> Mode -> [a] -> Failable [a]
+selectModed lds concl mode as
+	= inMsg' ("While selecting arguments with mode "++show mode++" for a conclusion about "++ showFQ (get conclRelName concl)) $
+	  do	rel	<- get conclRelName concl
 				& resolve' lds relationCall
 				|> snd
 		let modes	= get relTypes rel |> snd
-		let args	= concl & get conclArgs & zip modes & filter ((==) mode . fst) |> snd
-		return args
-
-
-
+		assertSugg' (length as == length modes) $ ("Unexpected number of arguments, namely "++show (length as), "Give "++show (length modes)++" arguments instead")
+		zip modes as
+			& filter ((==) mode . fst) 
+			|> snd
+			& return
 		
 
 

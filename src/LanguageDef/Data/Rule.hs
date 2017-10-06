@@ -16,6 +16,8 @@ import LanguageDef.Data.SyntFormIndex
 import Data.Map (Map, (!), filterWithKey)
 import qualified Data.Map as M
 
+import Lens.Micro (Lens')
+
 data Predicate' a
 	= PredConcl	{_predConcl	:: Conclusion' a, _predLocation	:: LocationInfo}
 	| PredExpr	{_predExpr	:: Expression' a, _predLocation	:: LocationInfo}
@@ -77,6 +79,10 @@ instance Functor Rule' where
 makeLenses ''Predicate'
 makeLenses ''Conclusion'
 makeLenses ''Rule'
+
+ruleAbout	:: Lens' (Rule' a) FQName
+ruleAbout
+	= ruleConcl . conclRelName
 
 
 instance ToString (Conclusion' a) where

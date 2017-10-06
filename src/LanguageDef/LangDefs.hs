@@ -180,6 +180,9 @@ resolve		:: Eq x => LDScope' fr -> Resolver' fr x-> FQName -> Failable FQName
 resolve	scope resolver fqn
 	= resolve' scope resolver fqn |> fst
 
+resolve_ scope resolver fqn
+	= resolve' scope resolver fqn |> snd
+
 resolve'	:: Eq x => LDScope' fr ->  Resolver' fr x -> FQName -> Failable (FQName, x)
 resolve' scope resolver fqn
 	= do	let resDict	= resolutionMap scope resolver
@@ -187,6 +190,7 @@ resolve' scope resolver fqn
 		results	<- checkExistsSuggDist' distFQ fqn resDict (name ++ " was not found within the namespace "++dots (fst fqn))
 		assert' (length results == 1) $ name ++ " could resolve to multiple entities:\n"++(results |> fst |> showFQ & unlines & indent)
 		return $ head results
+
 		
 {- Creates a dict {this local name --> these possible entities} -}
 resolutionMap	:: Eq x => LDScope' fr -> Resolver' fr x -> Map FQName [(FQName, x)]

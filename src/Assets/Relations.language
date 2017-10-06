@@ -24,7 +24,7 @@ symbolChar	::= UnicodeChar
 		| "+" | "-"
 		| "!" | "#" | "$" | "%" | "." | "~"
 		| "=" | "<" | ">" | "?" | "@" | "^"
-		| "_"
+		| "_" | ":"
 		| Digit
 symbol		::= symbolChar relIdent | symbolChar
 relIdent	::= Identifier "." relIdent | $symbol

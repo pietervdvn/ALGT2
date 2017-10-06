@@ -25,6 +25,7 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("TestLanguage.language", _TestLanguage_language)
 			, ("Helper.language", _Helper_language)
 			, ("Relations.language", _Relations_language)
+			, ("STFL.language", _STFL_language)
 			, ("TestInput/LoopingSupertypes.language", _TestInput_LoopingSupertypes_language)
 			, ("TestInput/Nested/Z.language", _TestInput_Nested_Z_language)
 			, ("TestInput/Nested/X.language", _TestInput_Nested_X_language)
@@ -79,6 +80,10 @@ _Helper_language
 {-# NOINLINE _Relations_language #-}
 _Relations_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Relations.language" in seq str str
+
+{-# NOINLINE _STFL_language #-}
+_STFL_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/STFL.language" in seq str str
 
 {-# NOINLINE _TestInput_LoopingSupertypes_language #-}
 _TestInput_LoopingSupertypes_language

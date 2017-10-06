@@ -35,7 +35,11 @@ data Relation	= Relation
 makeLenses ''Relation
 
 
+--------------------- BUILTIN RELATIONS -------------------
 
+
+builtinRelationNames	:: [String]
+builtinRelationNames	= [":"]
 
 
 
@@ -187,6 +191,8 @@ instance Checkable Relation where
 	check relation
 		= do	let modes	= relation & get relTypes |> snd
 			assert' (In `elem` modes) $ "Relation "++inParens (get relSymbol relation) ++" should have at least one input type"
+			assert' (get relSymbol relation `notElem` builtinRelationNames)
+				$ "The relation symbol "++show (get relSymbol relation) ++" is builtin and should not be redeclared"
 
 
 {- |

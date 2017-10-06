@@ -113,8 +113,8 @@ Failed (ExceptionInfo {_errMsg = "The syntactic form abc is trivial. Remove the 
 _checkNoTrivial	:: SyntacticForm -> Check
 _checkNoTrivial sf
 	= do	let replacedBy	= get syntChoices sf & head & getRuleCall & fromJust
-		assert' (not $ isTrivial sf) $
-			("The syntactic form "++get syntName sf++" is trivial. Remove the rule and replace it by "++showFQ replacedBy)
+		assertSugg' (not $ isTrivial sf) $
+			("The syntactic form "++get syntName sf++" is trivial", "Remove this rule and replace it by "++showFQ replacedBy)
 	
 
 isTrivial	:: SyntacticForm -> Bool
@@ -135,8 +135,8 @@ _checkDeadClauses isSubtypeOf fq sf
 		let sBNF (i, bnf)	= (bnf & removeWS & toParsable) ++ " (choice "++show i++")"
 		let choicesMsg (a, b)
 				= sBNF a++ " shadows "++ sBNF b
-		assert' (L.null dead) $
-			"In syntactic form "++showFQ (fq, get syntName sf) ++"\n"++ (dead |> choicesMsg & unlines & indent)
+		assertSugg' (L.null dead) $
+			("In syntactic form "++showFQ (fq, get syntName sf) ++"\n"++ (dead |> choicesMsg & unlines & indent), "Swap the choices")
 
 
 {- | Filters all dead clauses. Maps an fqnname on shadowing clauses (e.g. "x ::= a | a b" will yield {"x", [(0, 1)]} as choice 0 kills 1)
