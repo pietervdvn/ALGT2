@@ -42,7 +42,7 @@ data Combiner a	= LiteralC Doc (ParseTree' () -> String -> Failable a)
 
 instance Checkable' Syntaxes (Combiner a) where
 	check' syntaxes cmb
-		= (inPhase Validating $ _check syntaxes S.empty cmb)
+		= (inPhase Validating $ _check syntaxes S.empty cmb) >> pass
 
 
 {-
@@ -55,18 +55,18 @@ This check checks combiners against the syntax, so that:
 This does the call check; not that the given rule should be in the current namespace
 To prevent loops, already checked is a blacklist
 -}
-_check	:: Syntaxes -> Set FQName -> Combiner a -> Failable ()
+_check	:: Syntaxes -> Set FQName -> Combiner a -> Failable (Set FQName)
 _check synts ac (MapC c _)
 	= _check synts ac c
-_check synts _ (Value a)
-	= pass
+_check synts ac (Value a)
+	= return ac
 _check synts ac (WithLocation cmb _)
 	= _check synts ac cmb
 _check synts _ (Debug _)
 	= fail "Debug value found"
 _check synts ac (Annot fqname@(ns, syntForm) choices)
  | (ns, syntForm) `S.member` ac
-	= pass	-- Already checked
+	= return ac	-- Already checked
  | otherwise
 	= do	let noNSMsg	= "No namespace found: "++ (if null ns then "(empty namespace)" else show $ dots ns)++" (it should have contained: "++show syntForm
 		syntax		<- checkExistsSuggDist' (dots, \nms nms' -> levenshtein (last nms) (last nms') ) ns synts noNSMsg
@@ -77,23 +77,23 @@ _check synts ac (Annot fqname@(ns, syntForm) choices)
 		let ac'	= S.insert fqname ac
 		let recCheck	= zip choices choices'	|> uncurry (_checkBNF (synts, ac'))
 		let choiceIndicator	= (recCheck |> handleFailure (const "✘ ") (const "✓ ")) ++ repeat "  "
-		let sameLength	= assert' (length choices == length choices') $ unlines
+		assert' (length choices == length choices') $ unlines
 			[ "Only "++show (length choices)++" choices provided in combiner for "++showFQ fqname
 			, "Choices that should be accounted for are:\n"++indent (choices' |> toParsable & zipWith (++) choiceIndicator & unlines)
 			]
-		inMsg' ("While checking the combiner for syntactic form "++showFQ fqname) $ 
-			allGood (sameLength:recCheck)
-		pass
+		acs	<- inMsg' ("While checking the combiner for syntactic form "++showFQ fqname) $ 
+				allGood recCheck
+		return $ S.unions acs
 
 _check _ _ cmbr
 	= fail $ "Could not check a combiner without top-level annotation element: "++show cmbr
 
 
-_checkBNF	:: (Syntaxes, Set FQName) -> Combiner a -> BNF -> Failable ()
+_checkBNF	:: (Syntaxes, Set FQName) -> Combiner a -> BNF -> Failable (Set FQName)
 _checkBNF synts (MapC c _) bnf
 	= _checkBNF synts c bnf
 _checkBNF synts (Value a) _
-	= pass
+	= return $ snd synts
 _checkBNF synts (WithLocation cmb _) bnf
 	= _checkBNF synts cmb bnf
 _checkBNF synts (Debug _) _
@@ -108,14 +108,14 @@ _checkBNF (synts, ac) annot@Annot{} (RuleCall _)
 _checkBNF synts annot@(Annot nm _) bnf
 	= fail $ "Could not match "++show (toParsable bnf)++" against the combiner expecting a "++showFQ nm
 _checkBNF synts (LiteralC _ _) (Group _)
-	= pass
+	= return $ snd synts
 _checkBNF synts (LiteralC _ _) (BNF.Literal _)
-	= pass
+	= return $ snd synts
 _checkBNF synts (LiteralC _ _) builtin@(BNF.BuiltIn _ _)
-	= pass
+	= return $ snd synts
 _checkBNF synts (IntC _) builtin@(BNF.BuiltIn _ bi)
  | get biName bi `elem` ["Number", "Integer"] 
-	= pass
+	= return $ snd synts
  | otherwise
 	= fail "Can not capture a integer/number, use the builtin Number or Integer"
 

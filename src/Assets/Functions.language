@@ -11,7 +11,7 @@ import Syntax
 
 # Imports are injected fakely
 # Imports are:
-# Syntax (nls, nl)
+# Syntax (nls, nl, ident, typeIdent)
 #
 
  Syntax
@@ -27,22 +27,18 @@ typeSep		::= "*"
 lastTypeSep	::= "->" | "→" 
 
 
-types		::= ident typeSep types | ident
+types		::= Syntax.typeIdent typeSep types | Syntax.typeIdent
 
 # The type signature
-signature	::= Identifier ":" types lastTypeSep ident
-		|   Identifier ":" ident
+signature	::= Identifier ":" types lastTypeSep Syntax.typeIdent
+		|   Identifier ":" Syntax.typeIdent			# This would be a constant
 
 
-
-# An identifier, eventually from another namespace
-ident		~~= IdentifierUpper "." ident	# Absolute identifier, in another namespace
-		| Identifier			# Local identifier
 
 arguments	::= expression "," arguments | expression
-funcCall	::= ident "(" arguments ")"
+funcCall	::= Syntax.ident "(" arguments ")"
 
-ascription	::= expressionTerm ":" ident
+ascription	::= expressionTerm ":" Syntax.typeIdent
 splitExpression	::= expressionTerm "&" expression
 
 # The metaExpressions/patterns that can be used (note: the comments are in a special format: example, name, behaviour in patterns, behaviour in arguments)

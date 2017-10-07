@@ -28,7 +28,7 @@ nls	::=Syntax.nl Syntax.nls
 	 | Syntax.nl	
 
 # The names of syntactic forms that are available as builtins
-builtins	::="Whitespace"		 # Zero or more whitespace characters. Always produces a token in the parsetree; [ \t]*
+builtin	::="Whitespace"		 # Zero or more whitespace characters. Always produces a token in the parsetree; [ \t]*
 	 | "IdentifierUpper"		 # An identifier starting with an uppercase letter; [A-Z][a-zA-Z0-9]*
 	 | "Identifier"		 # An identifier starting with a lowercase letter; [a-z][a-zA-Z0-9]*
 	 | "String"		 # A double quoted string, where \" is a literal double quote and \\ is a literal backslash; "([^"]|\[nt"\])"
@@ -46,7 +46,7 @@ builtins	::="Whitespace"		 # Zero or more whitespace characters. Always produces
 bnfTerm	::=String		 # Literal value
 	 | IdentifierUpper "." Identifier		 # Syntactic form call in some namespace
 	 | Identifier		 # Syntactic form call
-	 | Syntax.builtins		 # Call of a builtin
+	 | Syntax.builtin		 # Call of a builtin
 	 | "$" Syntax.bnfTerm		 # Grouping an entire parsetree to a single token
 
 # A sequence of BNF-terms
@@ -72,5 +72,15 @@ bnfDecl	::=Syntax.nls Identifier Syntax.assign Syntax.bnfChoices		 # With commen
 # An entire syntax declaration
 syntax	::=Syntax.bnfDecl Syntax.syntax	
 	 | Syntax.bnfDecl	
+
+# Identifies something (such as a function, rule, relation, syntactic form, ...);
+#  can be fully qualified or not
+ident	::=IdentifierUpper "." Syntax.ident	
+	 | Identifier	
+
+# Identifies a syntactic form; used as types for functions and relations.
+# Can be an identifier, fully qualified identiefier or builtin value
+typeIdent	::=$Syntax.builtin	
+	 | Syntax.ident	
 
 

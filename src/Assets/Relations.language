@@ -34,7 +34,7 @@ relIdent	::= Identifier "." relIdent | $symbol
 
 # The mode (input/output)
 mode		::= "in" | "out"
-type		::= Functions.ident "(" mode ")"
+type		::= Syntax.typeIdent "(" mode ")"
 # Full type: ` bool (in) * bool (out)`
 types		::= type Functions.typeSep types | type
 

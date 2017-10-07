@@ -21,26 +21,22 @@ lastTypeSep	::="->"
 	 | "\8594"	
 
 
-types	::=Functions.ident Functions.typeSep Functions.types	
-	 | Functions.ident	
+types	::=Syntax.typeIdent Functions.typeSep Functions.types	
+	 | Syntax.typeIdent	
 
 # The type signature
-signature	::=Identifier ":" Functions.types Functions.lastTypeSep Functions.ident	
-	 | Identifier ":" Functions.ident	
-
-# An identifier, eventually from another namespace
-ident	~~=IdentifierUpper "." Functions.ident		 # Absolute identifier, in another namespace
-	 | Identifier		 # Local identifier
+signature	::=Identifier ":" Functions.types Functions.lastTypeSep Syntax.typeIdent	
+	 | Identifier ":" Syntax.typeIdent		 # This would be a constant
 
 
 arguments	::=Functions.expression "," Functions.arguments	
 	 | Functions.expression	
 
 
-funcCall	::=Functions.ident "(" Functions.arguments ")"	
+funcCall	::=Syntax.ident "(" Functions.arguments ")"	
 
 
-ascription	::=Functions.expressionTerm ":" Functions.ident	
+ascription	::=Functions.expressionTerm ":" Syntax.typeIdent	
 
 
 splitExpression	::=Functions.expressionTerm "&" Functions.expression	

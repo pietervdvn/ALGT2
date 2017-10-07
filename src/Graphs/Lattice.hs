@@ -183,7 +183,7 @@ infimum l a b
  | b == get bottom l			= b
  | a `S.member` allSubsetsOf l b	= a
  | b `S.member` allSubsetsOf l a	= b
- | otherwise	= infimums l $ S.intersection (subsetsOf l a) (subsetsOf l b)
+ | otherwise	= get bottom l
 
 infimums	:: (Eq a, Ord a, Foldable t, Show a) => Lattice a -> t a -> a
 infimums l as
@@ -199,7 +199,7 @@ supremum l a b
  | b == get top l			= b
  | a `S.member` allSupersetsOf l b	= a
  | b `S.member` allSupersetsOf l a	= b
- | otherwise			= supremums l $ S.intersection (supersetsOf l a) (supersetsOf l b)	-- Empty intersections can not occur here, there will always be top
+ | otherwise			= get top l
 
 -- a `elem` c, d
 -- b `elem` c, d

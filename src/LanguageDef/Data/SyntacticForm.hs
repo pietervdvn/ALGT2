@@ -29,6 +29,7 @@ import qualified Data.List as L
 import Data.Map (Map, fromList, toList)
 import Data.Set (Set)
 import Data.Function (fix)
+import Data.Char (isUpper)
 import Data.Bifunctor (first)
 
 import Lens.Micro.TH
@@ -99,7 +100,8 @@ _checkAllIdentsExist	:: (FQName -> Failable FQName) -> SyntacticForm -> Check
 _checkAllIdentsExist resolve sf
 	= inMsg' ("While resolving all calls in "++get syntName sf) $
 		do	let allCalls	= sf & get syntChoices >>= getRuleCalls
-			allCalls |> resolve & allGood
+			let allCalls'	= allCalls & filter (not . isUpper . head . snd)
+			allCalls' |> resolve & allGood
 			pass
 
 {- | Rules are not trivial (= one choice with only the rulecall)

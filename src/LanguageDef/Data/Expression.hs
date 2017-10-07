@@ -12,7 +12,7 @@ import LanguageDef.Data.ParseTree
 import LanguageDef.Data.BNF (unescape)
 import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Combiner
-
+import LanguageDef.MetaSyntax (ident, typeIdent)
 
 
 {- Expressions can be used both as pattern or as expression in a function/natural deduction rule, they are symmetrical. See Assets/MetaFunctionSyntax.language for more details
@@ -126,7 +126,7 @@ splitExpression
 ascription	:: Combiner (Expression' ())
 ascription
 	= choices' "ascription"
-		[(expressionTerm <+> (lit ":" **> ident))
+		[(expressionTerm <+> (lit ":" **> typeIdent))
 			& withLocation (\li (exp, typ) -> Ascription exp typ () li) ]
 
 
@@ -144,10 +144,4 @@ arguments
 		, expression |> (:[])
 		]
 
-
-ident		:: Combiner ([Name], Name)
-ident	= choices' "ident"
-		[ cmb (\head (tail, nm) -> (head:tail, nm))
-			capture (lit "." **> ident)
-		, capture |> (,) []]
 

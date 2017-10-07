@@ -12,7 +12,7 @@ import LanguageDef.Data.Rule
 import LanguageDef.Data.Expression hiding (choices')
 
 import LanguageDef.Combiner
-import LanguageDef.MetaSyntax (nl, nls)
+import LanguageDef.MetaSyntax (nl, nls, ident, typeIdent)
 
 import Data.Map (Map, (!), filterWithKey)
 import qualified Data.Map as M
@@ -63,7 +63,7 @@ mode		= choices' "mode"
 
 typ :: Combiner (FQName, Mode)
 typ		= choices' "type"
-			[ ident <+> lit "(" **> mode <** lit ")"
+			[ typeIdent <+> lit "(" **> mode <** lit ")"
 			]
 
 

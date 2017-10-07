@@ -79,13 +79,13 @@ helperSyntax'	= [ syntForm "commentContents" "The contents of comments, such as 
 bnfSyntax	:: Syntax
 bnfSyntax	
 	= createSyntax $ helperSyntax' ++
-		[ syntForm "builtins" "The names of syntactic forms that are available as builtins"
+		[ syntForm "builtin" "The names of syntactic forms that are available as builtins"
 			(knownBuiltins |> (\bisf -> choice (get biDocs bisf++"; "++get biRegex bisf) [Literal $ get biName bisf] ))
 		, syntForm "bnfTerm" "A single term of BNF, thus either a literal, syntactic form call or builtin"
 			[ choice "Literal value" [bi string]
 			, choice "Syntactic form call in some namespace" [bi identifierUpper, Literal ".", bi identifier ]
 			, choice "Syntactic form call" [bi identifier]
-			, choice "Call of a builtin" [call "builtins"]
+			, choice "Call of a builtin" [call "builtin"]
 			, choice "Grouping an entire parsetree to a single token" [Literal "$", call "bnfTerm"]
 			]
 		, syntForm "bnfSeq" "A sequence of BNF-terms"
@@ -110,6 +110,16 @@ bnfSyntax
 		, syntForm "syntax" "An entire syntax declaration"
 			[ choice "" [call "bnfDecl", call "syntax"]
 			, choice "" [call "bnfDecl"]
+			]
+		, syntForm "ident" "Identifies something (such as a function, rule, relation, syntactic form, ...);\n can be fully qualified or not"
+			[ choice "" [bi identifierUpper, Literal ".", call "ident"]
+			, choice "" [bi identifier]
+			]
+		, syntForm "typeIdent"
+				("Identifies a syntactic form; used as types for functions and relations.\n"++
+				"Can be an identifier, fully qualified identiefier or builtin value")
+			[ choice "" [Group $ call "builtin"]
+			, choice "" [call "ident"]
 			]
 		]
 
@@ -168,7 +178,7 @@ nls	= choices' "nls"
 
 
 builtinValue	:: Combiner BNF
-builtinValue	= choices' "builtins"
+builtinValue	= choices' "builtin"
 			(knownBuiltins |> BNF.BuiltIn False |> Value)
 
 bnfTerm	:: Combiner BNF
@@ -220,6 +230,23 @@ bnfDecl
 		] |> (\(mi, (nm, choices')) -> SyntacticForm nm (choices' |> fst) (choices' |> snd) mi)
 
 
+
+
+ident		:: Combiner ([Name], Name)
+ident	= choices' "ident"
+		[ cmb (\head (tail, nm) -> (head:tail, nm))
+			capture (lit "." **> ident)
+		, capture |> (,) []]
+
+
+typeIdent	:: Combiner ([Name], Name)
+typeIdent
+	= choices' "typeIdent"
+		[ capture |> ((,) [])
+		, ident
+		]
+
+
 syntaxDecl	:: Combiner [SyntacticForm]
 syntaxDecl
 	= choices' "syntax"
@@ -231,4 +258,8 @@ syntaxDecl
 syntaxDecl'	:: Combiner Syntax
 syntaxDecl'
 	= syntaxDecl |> createSyntax
+
+
+
+
 

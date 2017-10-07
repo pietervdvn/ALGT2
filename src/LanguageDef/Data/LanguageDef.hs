@@ -144,6 +144,7 @@ _fixImport resolver imprt
 
 ------------------------------ PARSING STUFF --------------------------------------------------------
 
+-- >>> _checkCombiner
 _checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner)
 
 -- | Parses the entire file, file should still be checked against it's context!

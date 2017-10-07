@@ -14,6 +14,7 @@ import LanguageDef.Data.SyntFormIndex hiding (choices')
 
 import LanguageDef.Combiner
 import LanguageDef.MetaSyntax (nls, nl)
+import LanguageDef.MetaSyntax (ident, typeIdent)
 
 import Data.Maybe
 import Data.Map as M
@@ -85,16 +86,16 @@ function = choices' "function"
 functionSignature	:: Combiner (Name, [FQName])
 functionSignature
 	= choices' "signature"
-		[ capture <+> (lit ":" **> cmb (\tps tp -> tps ++ [tp]) functionTypes (skip **> ident))
-		, capture <+> (lit ":" **> (ident |> (:[])))
+		[ capture <+> (lit ":" **> cmb (\tps tp -> tps ++ [tp]) functionTypes (skip **> typeIdent))
+		, capture <+> (lit ":" **> (typeIdent |> (:[])))
 		]
 
 
 functionTypes	:: Combiner [FQName]
 functionTypes
 	= choices' "types" 
-		[ cmb (:) ident (skip **> functionTypes)
-		, ident |> (:[])
+		[ cmb (:) typeIdent (skip **> functionTypes)
+		, typeIdent |> (:[])
 		]
 
 
