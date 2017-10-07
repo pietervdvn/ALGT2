@@ -25,5 +25,8 @@ prompt' msg curText
 			'\f'	-> clearScreen >> setCursorPosition 0 0 >> prompt' msg curText
 			'\EOT'	-> putStrLn "" >> return (curText ++ [c])
 			'\n'	-> return curText
+			'\ESC'	-> do	getChar
+					getChar
+					prompt' msg curText
 			_	-> prompt' msg (curText ++ [c])
 			

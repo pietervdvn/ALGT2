@@ -106,8 +106,8 @@ _checkAllIdentsExist resolve sf
 >>> import LanguageDef.MetaSyntax
 >>> let syntax2 = parseSyntax "Tests" "\nabc ::= abc\n" & crash
 >>> let sf = syntax2 & get grouperDict & (M.! "abc")
->>> _checkNoTrivial sf
-Failed (ExceptionInfo {_errMsg = "The syntactic form abc is trivial. Remove the rule and replace it by Tests.abc", _errSeverity = Error, _errSuggestion = Nothing})
+>>> _checkNoTrivial sf & fromFailed & fromJust & toCoParsable
+"Error: \n  \8226 The syntactic form abc is trivial\n  \8226 Remove this rule and replace it by Tests.abc"
 -}
 
 _checkNoTrivial	:: SyntacticForm -> Check
@@ -126,8 +126,7 @@ isTrivial sf
 {- | Checks for dead clauses
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty" ["TestShadowing"] & toCoParsable
-"| While validating the syntax while validating \n  Error: \n    \8226 In syntactic form TestShadowing.x\n    \"a\" (choice 0) shadows \"a\" \"b\" (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.y\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool TestShadowing.bool (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.z\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.dead1\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool (choice 1)\n  Error: \n    \8226 In syntactic form TestShadowing.dead2\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool \";\" (choice 1)"
-
+"| While validating the syntax while validating \n  Error: \n    \8226 In syntactic form TestShadowing.x\n    \"a\" (choice 0) shadows \"a\" \"b\" (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.y\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool TestShadowing.bool (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.z\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.dead1\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.dead2\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool \";\" (choice 1)\n    \8226 Swap the choices"
 -}
 _checkDeadClauses	:: (FQName -> FQName -> Bool) -> [Name] -> SyntacticForm -> Check
 _checkDeadClauses isSubtypeOf fq sf

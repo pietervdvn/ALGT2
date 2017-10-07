@@ -28,15 +28,14 @@ import Data.Map (Map)
 >>> let testType x	= (["TestLanguage"], x)
 >>> let createPT tp p = createParseTree testLanguage (testType tp) "?" p & crash' & removeHidden
 >>> let createExp tp e = createTypedExpression testLanguage "?" e (testType tp) & crash'
->>> let ld = testLanguage & get ldScope
 
->>> let t te e tpt pt = patternMatch (const ()) testLanguage M.empty ld (createExp te e) (createPT tpt pt)
+>>> let t te e tpt pt = patternMatch testLanguage M.empty (createExp te e) (createPT tpt pt)
 >>> t "bool" "\"True\"" "bool" "True"
 Success (fromList [])
 >>> t "bool" "\"True\"" "bool" "False"
 Failed (ExceptionInfo {_errMsg = "Argument does not match expected token\nExpected: True\nGot: False\n", _errSeverity = Error, _errSuggestion = Nothing})
 >>> t "bool" "x" "bool" "True"
-Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", _ptLocation = ..., _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, _ptLocation = ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", _ptLocation = ..., _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, _ptLocation = ...})])
 >>> t "bool" "_" "bool" "True"
 Success (fromList [])
 >>> t "bool" "(x:bool)" "bool" "True"
@@ -44,25 +43,25 @@ Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", _ptLocation
 >>> t "bool" "(x:bool)" "int" "5"
 Failed (ExceptionInfo {_errMsg = "Ascription failed\nExpected something of type TestLanguage.bool\nbut got a parsetree of the form TestLanguage.int\n", _errSeverity = Error, _errSuggestion = Nothing})
 >>> t "bool" "(x:bool)" "expr" "True"
-Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 0, ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 0, ...})])
 >>> t "bool" "(x:bool)" "expr" "5"
 Failed (ExceptionInfo {_errMsg = "Ascription failed\nExpected something of type TestLanguage.bool\nbut got a parsetree of the form TestLanguage.int\n", _errSeverity = Error, _errSuggestion = Nothing})
 >>> t "bool" "x&(y:bool)" "bool" "True"
-Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()}),("y",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...}),("y",RuleEnter {_pt = Literal {_ptToken = "True", ..., _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"bool"), _ptUsedIndex = 0, ...})])
 >>> t "exprSum" "x \"+\" y" "exprSum" "5 + 6 + 7"
-Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()}),("y",RuleEnter {_pt = Seq {_pts = [RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 6, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()},RuleEnter {_pt = Literal {_ptToken = "+", ..., _ptA = (), _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"op"), _ptUsedIndex = 1, ..., _ptA = ()},RuleEnter {_pt = RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 7, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 1, ..., _ptA = ()}], ..., _ptA = ()}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 0, ..., _ptA = ()})])
+Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ...}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ...}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ...}),("y",RuleEnter {_pt = Seq {_pts = [RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 6, ...}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ...}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ...},RuleEnter {_pt = Literal {_ptToken = "+", ..., _ptHidden = False}, _ptUsedRule = (["TestLanguage"],"op"), _ptUsedIndex = 1, ...},RuleEnter {_pt = RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 7, ...}, _ptUsedRule = (["TestLanguage"],"int"), _ptUsedIndex = 0, ...}, _ptUsedRule = (["TestLanguage"],"expr"), _ptUsedIndex = 1, ...}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 1, ...}], ...}, _ptUsedRule = (["TestLanguage"],"exprSum"), _ptUsedIndex = 0, ...})])
 
 
 
 
 
->>> tNot arg	= resolveAndRun (const ()) testLanguage (["TestLanguage"], "not") [createPT "expr" arg] & crash' & toParsable
+>>> tNot arg	= resolveAndRun testLanguage (["TestLanguage"], "not") [createPT "expr" arg] & crash' & toParsable
 >>> tNot "True"
 "False"
 >>> tNot "False"
 "True"
 
->>> let tNand a b	= resolveAndRun (const ()) testLanguage (["TestLanguage"], "nand") [createPT "expr" a, createPT "expr" b] & crash' & toParsable
+>>> let tNand a b	= resolveAndRun testLanguage (["TestLanguage"], "nand") [createPT "expr" a, createPT "expr" b] & crash' & toParsable
 >>> tNand "False" "False"
 "True"
 >>> tNand "True" "False"
@@ -72,7 +71,7 @@ Success (fromList [("x",RuleEnter {_pt = RuleEnter {_pt = Int {_ptInt = 5, ..., 
 >>> tNand "True" "True"
 "False"
 
->>> let tOr a b	= resolveAndRun (const ()) testLanguage (["TestLanguage"], "or") [createPT "expr" a, createPT "expr" b] & crash' & toParsable
+>>> let tOr a b	= resolveAndRun testLanguage (["TestLanguage"], "or") [createPT "expr" a, createPT "expr" b] & crash' & toParsable
 >>> tOr "True" "True"
 "True"
 >>> tOr "True" "False"

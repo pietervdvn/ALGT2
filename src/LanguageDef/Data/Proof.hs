@@ -85,7 +85,8 @@ showProofWith opts (Proof concl proverRule predicates)
 		preds'	= predicates |> showProofWith opts
 		preds''	= if null preds' then [] else init preds' ||>> (++ betweenPredicates options)  ++ [last preds']
 		preds	= preds'' & foldl (stitch ' ') []	:: [String]
-		predsW	= ("":preds) |> length & maximum	:: Int
+		
+	        predsW	= ("":preds) |> length & maximum	:: Int
 		conclArgs	= concl |> sp opts & commas
 		concl'	= (proverRule & get (ruleConcl . conclRelName) & showFQ & inParens) ++ conclArgs
 		lineL	= max predsW (length concl')

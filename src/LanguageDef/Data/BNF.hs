@@ -10,6 +10,7 @@ import Data.Either
 import Control.Monad.Identity
 import Data.Char
 
+import Data.Maybe
 
 import Text.Parsec (Parsec, char, oneOf, noneOf, many, many1, (<|>), try, runParser)
 
@@ -109,7 +110,8 @@ getRuleCalls (Seq bnfs)
 		= bnfs >>= getRuleCalls
 getRuleCalls (RuleCall nm)
 		= [nm]
-getRuleCalls _	= []
+getRuleCalls bnf
+		= getRuleCall bnf & maybeToList
 
 
 {-

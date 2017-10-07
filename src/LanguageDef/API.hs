@@ -3,13 +3,13 @@ module LanguageDef.API
 		, createParseTree, createExpression, createTypedExpression, parseTarget, createPredicate
 		, LDScope.resolveGlobal, LDScope.resolve, LDScope.resolve', LDScope.allKnowns
 		, LDScope.syntaxCall, LDScope.functionCall, LDScope.ruleCall, LDScope.relationCall
+		, LDScope.LDScope, FQName, showFQ
 		, resolveGlobal'
-		, infoAbout, inScope, infoImports
+		, infoAbout, infoAbout', inScope, infoImports
 		, testLanguage
 		, runFunction, runExpression, runExpression', runPredicate, runPredicate'
-		, typeTop, typeBottom
-		, repl'
-		, trepl) where
+		, typeTop, typeBottom, supertypes
+		) where
 
 {- 
 
@@ -26,7 +26,6 @@ import AssetUtils
 
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
-import Utils.GetLine
 
 import qualified LanguageDef.Combiner as Combiner
 
@@ -52,38 +51,8 @@ import Data.Maybe
 
 import Data.Map (Map, (!), empty)
 
-import System.IO
-import System.Console.ANSI
 
-repl'		:: FilePath -> [Name] -> IO ()
-repl' fp path
-	= do	ld	<- runIO (loadLangDef fp path) |> crash
-		repl (fp, path) ld
-
-repl		:: (FilePath, [Name]) -> LDScope -> IO ()
-repl location@(fp, fq) ld
-	= do	line	<- prompt "※  "
-		case line of
-			":q"	-> return ()
-			"\EOT"	-> return ()
-			":l"	-> do	clearScreen
-					repl location ld
-			"\f"	-> do	clearScreen
-					repl location ld
-			":r"	-> do	ld'	<- reload location ld
-					repl location ld'
-			_	-> do	handleFailure printPars printPars $ runPredicate' ld "<interactive>" line
-					repl location ld
-
-
-
-
-reload	:: (FilePath, [Name]) -> LDScope -> IO LDScope
-reload (fp, fq) ld
-	= do	putStrLn ("Reloading " ++ fp ++ "/" ++ intercalate "/" fq)
-		mLd	<- runIO (loadLangDef fp fq)
-		mLd & handleFailure (\e -> printPars e >> putStrLn "Using the old definition" >> return ld) return				
-
+import Graphs.Lattice (Lattice)
 
 {- Loads a language definition from the filesystem; use with 'runIO'-}
 loadLangDef	:: FilePath -> [Name] -> PureIO (Failable LDScope)
@@ -168,7 +137,11 @@ fromList [(["TestLanguage"],ImportFlags {_ifOrigin = "/TestLanguage.language", _
 infoImports	:: LDScope -> Map [Name] ImportFlags
 infoImports scope
 	= scope & get imported
-		
+
+
+supertypes	:: LDScope -> Lattice FQName
+supertypes lds
+	= lds & get (ldScope . langSupertypes)
 
 resolveGlobal' lds entity fqn
 	= resolveGlobal lds entity fqn |> snd
@@ -245,6 +218,4 @@ createPredicate lds source str
 		pred'	<- typePredicate lds pred	:: Failable (Predicate' ((), SyntFormIndex))
 		pred' |> snd & return
 
-
-trepl	= repl' "/home/pietervdvn/git/ALGT2/src/Assets" ["STFL"]
 

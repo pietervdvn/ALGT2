@@ -120,6 +120,14 @@ commas' lastSep stuff
 dots		= intercalate "."
 
 
+uncalate	:: (Eq a) => a -> [a] -> [[a]]
+uncalate _ []	= []
+uncalate a as
+	= let	(pre, post)	= as & break (== a) in
+		if null post then [pre]
+		else  pre:uncalate a (tail post)
+
+
 allCombinations	:: [[a]] -> [[a]]
 allCombinations []	= [[]]
 allCombinations (a:as)
@@ -492,6 +500,11 @@ perTwo _ [a]	= [a]
 perTwo _ []	= []
 
 
+
+stripL		:: String -> String
+stripL (' ':str)
+		= stripL str
+stripL str	= str
 
 -- Removes entries from a list so that values occuring twice are removed
 -- >>> [1, 2, 2, 2, 3, 3, 3, 1]
