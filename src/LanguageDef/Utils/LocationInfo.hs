@@ -51,7 +51,7 @@ class Infoable a where
 instance ToString' FQName AllInfo where
 	toParsable' fqn (AllInfo nm tp mi repr)
 		= inHeader' (showFQ fqn ++ " " ++ inParens tp) $
-			toParsable mi ++ repr
+			repr
 
 	toCoParsable'	= toParsable'
 	debug'		= toParsable'

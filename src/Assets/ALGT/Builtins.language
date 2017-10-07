@@ -1,0 +1,67 @@
+ Builtins
+***********
+
+# Contains builtin BNFs and functions. As most of these functions are hardware supported; they do not contain an actual implementation
+
+
+ Syntax
+========
+ 
+number		::= Number
+whitespace	::= Whitespace
+identifierUpper	::= IdentifierUpper
+identifier	::= Identifier
+string		::= String
+any		::= Any
+unicodeChar	::= UnicodeChar
+upper		::= Upper
+lower		::= Lower
+digit		::= Digit
+lineChar	::= LineChar
+wordChar	::= WordChar
+integer		::= Integer
+number		::= Number
+
+
+
+ Functions
+===========
+
+# Addition of two numbers
+plus		: number * number -> number
+plus(x, y)	= x # Substituted by real implementation at runtime
+
+# Subtraction of two numbers
+min		: number * number -> number
+min(x, y)	= x # Substituted by real implementation at runtime
+
+# Multiplication of two numbers
+mul		: number * number -> number
+mul(x, y)	= x # Substituted by real implementation at runtime
+
+# Integer division of two numbers, floored towards zero 
+# > div(-1,2)  	= 0
+div		: number * number -> number
+div(x, y)	= x  # Substituted by real implementation at runtime
+
+# Fraction after division 
+mod		: number * number -> number
+mod(x, y)	= x  # Substituted by real implementation at runtime
+
+
+# Given a string, parses it accoring to the syntax
+# Use with a type ascription: 
+# > parse("True & False": string) : boolExpr = "True" "&" "False"
+parse		: string -> ⊤
+parse(x)	= x	# Substituted by real implementation at runtime
+
+# Given a complex structure, simplifies it to a string
+# > group("True" "&" "False) = "True&False"
+group		: ⊤ -> string
+parse(x)	= x	# Substituted by real implementation at runtime
+
+
+# A function which fails with the given error message
+error		: string -> ⊥
+error(msg)	= msg	# Substituted by real implementation at runtime
+

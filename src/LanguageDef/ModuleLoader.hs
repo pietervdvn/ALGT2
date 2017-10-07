@@ -17,7 +17,7 @@ import Data.Map as M
 
 import Control.Monad hiding (fail)
 
-
+import qualified Assets
 
 
 
@@ -26,7 +26,7 @@ import Control.Monad hiding (fail)
 data LoadingStatus = LS
 	{ _rootModule	:: [Name]
 	, _rootPath	:: FilePath
-	, _currentlyKnown	:: Map [Name] (FilePath, LanguageDef' () ())
+	, _currentlyKnown	:: Map [Name] (FilePath, Failable (LanguageDef' () ()))
 	}
 makeLenses ''LoadingStatus
 
@@ -54,14 +54,26 @@ Success (["TestInput","Nested","X"],"x")
 
 loadAll	:: FilePath -> [Name] -> PureIO (Failable LDScope)
 loadAll fp plzLoad
-	= do	defs	<- _loadAll (LS [] fp M.empty) plzLoad |> get currentlyKnown |> _fixImports
-		asLangDefs defs & _selectFile plzLoad & return
+	= do	defs	<- _loadAll (LS [] fp M.empty) plzLoad |> get currentlyKnown
+		return $ _fixAll plzLoad defs
 		
 
-_selectFile	:: [Name] -> Failable (Map [Name] LDScope) -> Failable LDScope
-_selectFile fq dictF
-	= do	dict	<- dictF
-		checkExists' fq dict ("Scope "++dots fq ++ " not found")
+_fixAll	:: [Name] -> Map [Name] (FilePath, Failable (LanguageDef' () ())) -> Failable LDScope
+_fixAll plzLoad defs
+	= do	defs'	<- defs |> sndEffect & allGoodMap
+		let defsFixedImports	= _fixImports defs'
+		scopes	<- asLangDefs defsFixedImports
+		checkExists' plzLoad scopes ("Scope "++dots plzLoad ++ " not found")
+
+
+-- A few files (notably the ALGT-package) is builtin. This is the content of those files
+injectedFiles	:: Map [Name] String
+injectedFiles
+	= M.fromList
+		[ (["ALGT", "Builtins"], Assets._ALGT_Builtins_language)
+		]
+
+		
 
 -- Adds the filepath to the imports, within the language def data
 _fixImports	:: Map [Name] (FilePath, LanguageDef' () fr) -> Map [Name] (LanguageDef' ResolvedImport fr)
@@ -83,21 +95,30 @@ _loadAll ls toLoad
 				  , "Relative namespace", intercalate "." (get rootModule ls)
 				  , "Target path", path
 				  ] & perTwo (\a b -> "  "++a ++ ": "++b) & intercalate "\n"
+		let isInjected	= toLoad `member` injectedFiles
 		let msg	= "\nLoading:\n"++msgs
-		putStr msg
-		contents	<- readFile path
-		-- Language def with unresolved inputs
-		let absName	= get rootModule ls ++ toLoad
-		ld	<- parseFullFile absName path contents & handleFailure (\e -> toParsable e & fail) return
-		let ld'	= ld & resolveLocalImports (get rootModule ls, init toLoad)
-		let ls'	= ls & over currentlyKnown (M.insert absName (path, ld'))
+		if isInjected then putStrLn ("Loading builtin module "++dots toLoad) else putStrLn msg
 		
-		putStrLn (ld & get langImports |> toParsable & intercalate "\n" & indent)
+		contents	<- if isInjected then 
+					return $ Just (injectedFiles ! toLoad)
+					else safeReadFile path
 
-		ld 	& get langImports
-			& foldM (_loadImport toLoad) ls'
+		let loadedLD	= _handleFile (get rootModule ls) toLoad path contents
+		let absName	= get rootModule ls ++ toLoad
+		let ls'	= ls & over currentlyKnown (M.insert absName (path, loadedLD |> fst))
+
+		loadedLD |> snd & handleFailure (\e -> putStrLn (toParsable e) >> return ls')   
+			(foldM (_loadImport toLoad) ls')
 
 
+_handleFile	:: [Name] -> [Name] -> FilePath -> Maybe String -> Failable (LanguageDef' () (), [Import ()])
+_handleFile _ _ toLoad Nothing
+	= fail $ "The file "++toLoad++" was not found"
+_handleFile root fq path (Just contents)
+	= do	ld		<- parseFullFile path contents
+		let ld'		= ld & resolveLocalImports (root, init fq {- The second parameter is the relative offset; thus init -})
+		let toLoad	= ld & get langImports
+		return (ld', toLoad)
 
 -- Loads the imports recursively
 _loadImport	:: [Name] -> LoadingStatus -> Import x -> PureIO LoadingStatus

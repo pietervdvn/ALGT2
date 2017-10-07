@@ -25,7 +25,6 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("TestLanguage.language", _TestLanguage_language)
 			, ("Helper.language", _Helper_language)
 			, ("Relations.language", _Relations_language)
-			, ("STFL.language", _STFL_language)
 			, ("TestInput/LoopingSupertypes.language", _TestInput_LoopingSupertypes_language)
 			, ("TestInput/Nested/Z.language", _TestInput_Nested_Z_language)
 			, ("TestInput/Nested/X.language", _TestInput_Nested_X_language)
@@ -49,6 +48,8 @@ allAssets	= [("Syntax.language", _Syntax_language)
 			, ("Faulty/Relations/Relation.language", _Faulty_Relations_Relation_language)
 			, ("Faulty/Relations/TypeErr.language", _Faulty_Relations_TypeErr_language)
 			, ("Faulty/Relations/UnkownTypeRelation.language", _Faulty_Relations_UnkownTypeRelation_language)
+			, ("ALGT/Builtins.language", _ALGT_Builtins_language)
+			, ("ALGT/Readme.md", _ALGT_Readme_md)
 			, ("MetaSyntax/Syntax.language", _MetaSyntax_Syntax_language)
 			, ("MetaSyntax/Functions.language", _MetaSyntax_Functions_language)
 			, ("MetaSyntax/ALGT.language", _MetaSyntax_ALGT_language)
@@ -80,10 +81,6 @@ _Helper_language
 {-# NOINLINE _Relations_language #-}
 _Relations_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Relations.language" in seq str str
-
-{-# NOINLINE _STFL_language #-}
-_STFL_language
-	 = let str = unsafePerformIO $ readFile' "src/Assets/STFL.language" in seq str str
 
 {-# NOINLINE _TestInput_LoopingSupertypes_language #-}
 _TestInput_LoopingSupertypes_language
@@ -176,6 +173,14 @@ _Faulty_Relations_TypeErr_language
 {-# NOINLINE _Faulty_Relations_UnkownTypeRelation_language #-}
 _Faulty_Relations_UnkownTypeRelation_language
 	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/UnkownTypeRelation.language" in seq str str
+
+{-# NOINLINE _ALGT_Builtins_language #-}
+_ALGT_Builtins_language
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Builtins.language" in seq str str
+
+{-# NOINLINE _ALGT_Readme_md #-}
+_ALGT_Readme_md
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Readme.md" in seq str str
 
 {-# NOINLINE _MetaSyntax_Syntax_language #-}
 _MetaSyntax_Syntax_language

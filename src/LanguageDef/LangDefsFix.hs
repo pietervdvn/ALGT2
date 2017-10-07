@@ -16,6 +16,8 @@ import LanguageDef.Data.LanguageDef
 import LanguageDef.LangDefs
 import LanguageDef.Typer
 import LanguageDef.Data.Function
+import LanguageDef.MetaSyntax (typeTop, typeBottom)
+
 
 import Graphs.Lattice (makeLatticeInverted, Lattice, debugLattice)
 
@@ -37,13 +39,12 @@ import Lens.Micro (Lens)
 >>> import LanguageDef.API
 >>> let supertypings = testLanguage & get (ldScope . langSupertypes)
 >>> debugLattice showFQ supertypings & putStr
-Number has following subtypes:  ⊥
 ⊥ has following subtypes:<no subs>
 TestLanguage.bool has following subtypes:  ⊥
 TestLanguage.expr has following subtypes:  TestLanguage.bool
   TestLanguage.int
 TestLanguage.exprSum has following subtypes:  TestLanguage.expr
-TestLanguage.int has following subtypes:  Number
+TestLanguage.int has following subtypes:  ⊥
 TestLanguage.op has following subtypes:  ⊥
 TestLanguage.tuple has following subtypes:  ⊥
 

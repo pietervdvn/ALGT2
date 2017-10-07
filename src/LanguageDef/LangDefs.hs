@@ -151,25 +151,25 @@ fullyQualifyConcl scope (Conclusion relName args)
 
 
 type Resolver' fr x
-		= (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper x), Grouper x -> Map Name x)
+		= (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper x))
 type Resolver x
 		= Resolver' SyntFormIndex x
 
 syntaxCall	:: Resolver' fr SyntacticForm
-syntaxCall	= ("the syntactic form", get langSyntax, get grouperDict)
+syntaxCall	= ("the syntactic form", get langSyntax)
 
 functionCall	:: Resolver' fr (Function' fr)
-functionCall	= ("the function", get langFunctions, get grouperDict)
+functionCall	= ("the function", get langFunctions)
 
 
 relationCall	:: Resolver' fr Relation
-relationCall	= ("the relation", get langRelations, get grouperDict)
+relationCall	= ("the relation", get langRelations)
 
 ruleCall	:: Resolver' fr (Rule' fr)
-ruleCall	= ("the rule", get langRules, get grouperDict)
+ruleCall	= ("the rule", get langRules)
 
 
-resolveGlobal	:: Eq x => LDScope  -> (String, LanguageDef -> Maybe (Grouper x), Grouper x -> Map Name x) -> FQName -> Failable (FQName, x)
+resolveGlobal	:: Eq x => LDScope  -> Resolver x-> FQName -> Failable (FQName, x)
 resolveGlobal lds entity fqname
 	= do	let path	= fst fqname
 		ld	<- checkExistsSuggDist' (dots, levenshtein `on` last) path (get environment lds) 
@@ -186,7 +186,7 @@ resolve_ scope resolver fqn
 resolve'	:: Eq x => LDScope' fr ->  Resolver' fr x -> FQName -> Failable (FQName, x)
 resolve' scope resolver fqn
 	= do	let resDict	= resolutionMap scope resolver
-		let name	= over _head toUpper (fst3 resolver) ++ " " ++ show (showFQ fqn)
+		let name	= over _head toUpper (fst resolver) ++ " " ++ show (showFQ fqn)
 		results	<- checkExistsSuggDist' distFQ fqn resDict (name ++ " was not found within the namespace "++dots (fst fqn))
 		assert' (length results == 1) $ name ++ " could resolve to multiple entities:\n"++(results |> fst |> showFQ & unlines & indent)
 		return $ head results
@@ -237,7 +237,7 @@ _mergeImport scopes resolver (fq, ImportFlags _ isSelf knownNames)
 
 
 _allKnownLocally	:: ([Name], LanguageDef' ResolvedImport fr) -> Resolver' fr b -> [(FQName, b)]
-_allKnownLocally (fq, ld) (_, getWhole, _)
+_allKnownLocally (fq, ld) (_, getWhole)
 	= let	dict	= ld 	& getWhole |> get grouperDict
 				& maybe [] M.toList
 		in

@@ -18,6 +18,8 @@ import LanguageDef.Prover
 import LanguageDef.API
 import LanguageDef.LangDefs
 
+import Repl (repl, trepl, replAsset)
+
 
 
 import Data.Map as M

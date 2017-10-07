@@ -21,7 +21,7 @@ prompt' msg curText
 		hFlush stdout
 		c	<- getChar
 		case c of
-			'\DEL'	-> prompt' msg (init curText)
+			'\DEL'	-> prompt' msg (if null curText then [] else init curText)
 			'\f'	-> clearScreen >> setCursorPosition 0 0 >> prompt' msg curText
 			'\EOT'	-> putStrLn "" >> return (curText ++ [c])
 			'\n'	-> return curText

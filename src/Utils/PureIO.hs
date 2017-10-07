@@ -4,12 +4,14 @@ module Utils.PureIO (PureIO', PureIO
 	, runIO, runIO', runPure', runPure, runPureStatus
 	, readFile, getLine, getFile, putStr, putStrLn, fail
 	, readFile', getLine', getFile', putStr', putStrLn'
+	, doesFileExist', doesFileExist, safeReadFile
 	) where
 
 import Utils.All
 
 import Prelude hiding (writeFile, putStrLn, readFile, readLine, getLine, putStr)
 import qualified Prelude as IO
+import qualified System.Directory as IO
 import Data.Map as M
 
 import Data.Bifunctor (first)
@@ -26,6 +28,7 @@ data PureIO' b
 	| Value b
 	| forall a . Apply (PureIO' a) (PureIO' (a -> b))	-- while this can be written in terms of bind, an explicit apply allows for better automatic analysis
 	| ReadFile FilePath (String -> b)	-- Read a file from the FS
+	| FileExists FilePath (Bool -> b)
 	| WriteFile FilePath String b
 	| Fail String
 
@@ -53,6 +56,8 @@ runIO' (Apply pioA pioA2b)
 	= do	a	<- runIO' pioA
 		a2b	<- runIO' pioA2b
 		return $ a2b a
+runIO' (FileExists pth f)
+	= IO.doesFileExist pth |> f
 runIO' (ReadFile pth f)
 	= IO.readFile pth |> f
 runIO' (WriteFile pth contents b)
@@ -104,6 +109,9 @@ _runPure' input (Apply pioA pioA2B)
 	= do	(a, input0)	<- _runPure' input pioA
 		(f, input1)	<- _runPure' input0 pioA2B
 		return (f a, input1)
+_runPure' input (FileExists pth f)
+	= do	let exists	= pth `member` (get fileSystem input)
+		return (f exists, input & over filesRead (pth:))
 _runPure' input (ReadFile pth f)
 	= do	contents	<- checkExists pth (get fileSystem input) ("No file \""++pth++"\" found in the input")
 					& first (\msg -> (msg, input))
@@ -215,6 +223,8 @@ calculateEffects (Apply actA actA2B)
 	= _mergeEffects (calculateEffects actA) (calculateEffects actA2B)
 calculateEffects (ReadFile fp _)
 	= ([fp], [])
+calculateEffects (FileExists fp _)
+	= ([fp], [])
 calculateEffects (WriteFile fp _ _)
 	= ([], [fp])
 calculateEffects _
@@ -234,6 +244,19 @@ readFile' str	= ReadFile str id
 getFile'	:: FilePath -> PureIO' String
 getFile'	= readFile'
 
+doesFileExist'	:: FilePath -> PureIO' Bool
+doesFileExist' str
+		= FileExists str id
+
+
+safeReadFile	:: FilePath -> PureIO (Maybe String)
+safeReadFile fp
+	= do	doesEx	<- doesFileExist fp
+		if doesEx then
+			readFile fp |> Just
+		else	return Nothing
+
+
 putStr'		:: String -> PureIO' ()
 putStr' str	= Print str ()
 
@@ -241,12 +264,13 @@ putStrLn'	:: String -> PureIO' ()
 putStrLn' str	= putStr' (str ++ "\n")
 
 
-
 getLine		= ApplicIO getLine'
 getFile		= _monad getFile'
 putStr		= _monad putStr'
 putStrLn	= _monad putStrLn'
 readFile	= _monad readFile'
+doesFileExist	= _monad doesFileExist'
+
 
 _monad		:: (b -> PureIO' a) -> b -> PureIO a
 _monad applicIO

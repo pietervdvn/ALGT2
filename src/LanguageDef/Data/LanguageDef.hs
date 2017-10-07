@@ -104,11 +104,6 @@ instance Checkable' (FQName -> Failable FQName, FQName -> FQName -> Bool, [Name]
 			assert' (isNothing rules || isJust rels) "When rules are defined, a relation declaration section should be present"
 			checkM' (fromJust rels) rules & inMsg' "While validating the relation implementation"
 			
-typeBottom	= ([], "⊥")
-typeTop		= ([], "⊤")
-
-superType	= error "Did you mean to use typeTop?"
-
 
 isSubtypeOf	:: LanguageDef' ResolvedImport fr -> FQName -> FQName -> Bool
 isSubtypeOf ld	sub super
@@ -151,10 +146,10 @@ _checkCombiner	= check' metaSyntaxes (parseLangDef _fullFileCombiner)
 -- >>> _checkCombiner
 -- Success ()
 -- >>> import Graphs.Lattice
--- >>> parseFullFile ["TestLang"] "Test:Assets/TestLang" Assets._TestLanguage_language |> set langSupertypes (emptyLattice ([], "T") ([], "B"))
+-- >>> parseFullFile "Test:Assets/TestLang" Assets._TestLanguage_language |> set langSupertypes (emptyLattice ([], "T") ([], "B"))
 -- Success ...
-parseFullFile	:: [Name] -> FilePath -> String -> Failable (LanguageDef' () ())
-parseFullFile _ fp contents
+parseFullFile	:: FilePath -> String -> Failable (LanguageDef' () ())
+parseFullFile fp contents
 	= do	pt	<- parse fp (metaSyntaxes, ["ALGT"]) "langDef" contents
 		
 		(li, langDef)	<- interpret (parseLangDef _fullFileCombiner & withLocation (,)) pt
@@ -308,7 +303,7 @@ relationSyntax
 
 loadAssetsSyntax	:: Name -> String -> Syntax
 loadAssetsSyntax title contents
-	= parseFullFile [title] ("Assets."++title++".language") contents
+	= parseFullFile ("Assets."++title++".language") contents
 		& crash
 		& get langSyntax
 		& fromMaybe (error $ title ++ " asset does not contain syntax?")

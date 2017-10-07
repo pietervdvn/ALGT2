@@ -80,7 +80,8 @@ ident	::=IdentifierUpper "." Syntax.ident
 
 # Identifies a syntactic form; used as types for functions and relations.
 # Can be an identifier, fully qualified identiefier or builtin value
-typeIdent	::=$Syntax.builtin	
+typeIdent	::="\8869"		 # The bottom type, when a function will never yield a result
+	 | "\8868"		 # The top type, when a function might return any type.
 	 | Syntax.ident	
 
 

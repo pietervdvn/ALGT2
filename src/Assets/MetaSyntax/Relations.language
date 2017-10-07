@@ -50,7 +50,7 @@ mode	::="in"
 	 | "out"	
 
 
-type	::=Functions.ident "(" Relations.mode ")"	
+type	::=Syntax.typeIdent "(" Relations.mode ")"	
 
 # Full type: ` bool (in) * bool (out)`
 types	::=Relations.type Functions.typeSep Relations.types	

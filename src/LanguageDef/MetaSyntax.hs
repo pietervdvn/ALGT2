@@ -118,10 +118,16 @@ bnfSyntax
 		, syntForm "typeIdent"
 				("Identifies a syntactic form; used as types for functions and relations.\n"++
 				"Can be an identifier, fully qualified identiefier or builtin value")
-			[ choice "" [Group $ call "builtin"]
+			[ choice "The bottom type, when a function will never yield a result" [Literal $ snd typeBottom]
+			, choice "The top type, when a function might return any type." [Literal $ snd typeTop]
 			, choice "" [call "ident"]
 			]
 		]
+
+typeBottom	= ([], "⊥")
+typeTop		= ([], "⊤")
+superType	= error "Did you mean to use typeTop?"
+
 
 bi	= BuiltIn False
 
@@ -242,7 +248,8 @@ ident	= choices' "ident"
 typeIdent	:: Combiner ([Name], Name)
 typeIdent
 	= choices' "typeIdent"
-		[ capture |> ((,) [])
+		[ {-bottom-} capture |> const typeBottom
+		, {-top-} capture |> const typeTop
 		, ident
 		]
 

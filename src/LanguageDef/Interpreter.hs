@@ -1,4 +1,4 @@
-module LanguageDef.Interpreter where
+module LanguageDef.Interpreter (resolveAndRun, constructParseTree, VariableStore', VariableStore, patternMatchAll, evalExpression) where
 
 {- Interprets functions -}
 
@@ -97,7 +97,11 @@ type VariableStore	= VariableStore' SyntFormIndex
 
 -}
 resolveAndRun	:: LDScope -> FQName -> [ParseTree] -> Failable ParseTree
-resolveAndRun lds (targetLD, name) args
+resolveAndRun lds fqn@(targetLD, name) args
+ | fqn `M.member` builtinFuncs
+	= do	builtin	<- checkExists' fqn builtinFuncs "Wut? We just made sure this builtin function has this key?"
+		builtin args
+ | otherwise
 	= do	ld	<- checkExistsSugg' dots targetLD (get environment lds) ("The module "++dots targetLD++" was not found")
 		let ld'	= ld & get ldScope 	:: LanguageDef
 		let msg	= "The module "++dots targetLD++" does not have a function section and thus does not define "++name
@@ -120,6 +124,28 @@ runClause lds ld (i, FunctionClause pats result doc nm) args
 	= inMsg' ("While trying clause "++ nm ++ "." ++ show i) $ inLocation (get miLoc doc) $
 	  do	store	<- patternMatchAll lds M.empty pats args
 		constructParseTree lds store result
+
+
+
+-------------------------- THE BUILTIN FUNCTIONS -----------------------------------------------------
+
+
+
+builtinFuncs	:: Map FQName ([ParseTree] -> Failable ParseTree) 
+builtinFuncs 	= M.fromList
+			[ ((["ALGT", "Builtins"], "plus"), _intOp (+))
+			, ((["ALGT", "Builtins"], "min"), _intOp (-))
+			, ((["ALGT", "Builtins"], "mul"), _intOp (*))
+			, ((["ALGT", "Builtins"], "div"), _intOp div)
+			, ((["ALGT", "Builtins"], "mod"), _intOp mod)
+			]
+
+
+_intOp		:: (Int -> Int -> Int) -> [ParseTree] -> Failable ParseTree
+_intOp op [i, (Int j _ _)]
+		= i & over ptInt (`op` j) & return
+_intOp _	args	= failSugg $ ("Wrong arguments for a builtin function expecting numbers, namely:\n" ++ (args |> toParsable & commas & indent)
+				, "Use two integer arguments instead")
 
 
 ------------------------- ABOUT PARSETREE CONSTRUCTION/INTERPRETATION --------------------------------

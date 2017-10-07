@@ -37,7 +37,9 @@ makeLenses ''ReplState
 
 type Action	= StateT ReplState IO
 
-trepl	= repl "/home/pietervdvn/git/ALGT2/src/Assets" ["STFL"]
+trepl	= replAsset "TestLanguages" ["STFL"]
+replAsset fp fq
+	= repl ("/home/pietervdvn/git/ALGT2/src/Assets/" ++ fp) fq
 
 repl		:: FilePath -> [Name] -> IO ()
 repl fp path
@@ -45,6 +47,8 @@ repl fp path
 		let state	= ReplState ld fp path
 		runStateT _repl state
 		pass
+
+
 
 _repl		:: Action ()
 _repl	= do	line	<- liftIO $ prompt "※  "

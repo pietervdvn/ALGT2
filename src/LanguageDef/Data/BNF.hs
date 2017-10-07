@@ -103,8 +103,6 @@ isRuleCall _	= False
 getRuleCall	:: BNF -> Maybe FQName
 getRuleCall (RuleCall nm)
 		= Just nm
-getRuleCall (BuiltIn False bi)
-		= Just ([], get biName bi)
 getRuleCall _ 	= Nothing
 
 getRuleCalls	:: BNF -> [FQName]

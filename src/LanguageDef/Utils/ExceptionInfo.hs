@@ -10,7 +10,7 @@ import Text.PrettyPrint.ANSI.Leijen hiding (indent)
 import qualified Text.PrettyPrint.ANSI.Leijen as ANSI
 
 import Data.Maybe (isJust, catMaybes, maybeToList)
-import Data.Map (Map, member, (!), keys)
+import Data.Map (Map, member, (!), keys, fromList, toList)
 import Data.List (partition, sortOn, sort, nub)
 
 import qualified Text.Parsec as Parsec
@@ -216,6 +216,11 @@ legacy (Success a)
 
 allGood	:: [Failable a] -> Failable [a]
 allGood	= foldr (\ x -> (<*>) (x |> (:))) (Success [])
+
+
+allGoodMap	:: (Ord k) => Map k (Failable v) -> Failable (Map k v)
+allGoodMap dict
+	= dict & toList |> sndEffect & allGood |> fromList 
 
 
 fromParseError	:: Either Parsec.ParseError a -> Failable a

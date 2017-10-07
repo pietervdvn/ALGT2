@@ -1,51 +1,86 @@
+import ALGT.Builtins
 
  STFL
 ******
 
+# A simply typed functional language; mainly used for testing purposes
 
  Syntax
 ========
 
-typeTerm	::= "Int" | "Bool" | "(" type ")"
-type		::= typeTerm "->" type | typeTerm
+
+baseType	::= "Bool" | "Int" | "(" type ")"
+type		::= baseType "->" type | baseType
+
+bool	::= "True" | "False"
+
+var	::= Identifier
+
+lambda	::= "(" "\\" var ":" type "." expr ")"
+
+canon	::= bool | number | var | lambda
+
+baseExpr ::= canon | "(" expr ")"
+
+intOp	::= "+" 
+boolOp	::= "&" 
+sameOp	::= "="
+
+op	::= intOp | boolOp | sameOp
+
+expr	::= baseExpr op expr | "If" expr "Then" expr "Else" expr | baseExpr
+
+typingEnv	::= var ":" type typingEnv | "[]"
 
 
-bool		::= "False" | "True"
-number		::= Number
-var		::= Identifier
+ Functions
+===========
 
-value		::= bool | number | var | "(" "\\" var ":" type "." expr ")"
+not	: bool -> bool
+not("True")	= "False"
+not("False")	= "True"
 
-term		::= "If" expr "Then" expr "Else" expr
-		| "(" expr ")"
-		| value
-expr		::= term expr 
-		| term "::" type
-		| term "+" expr
-		| term "=" expr
+
+# Searches the typing environment
+search	: var * typingEnv -> type
+search(x, x ":" t _)
+	= t
+search(x, _ _ _ te)
+	= search(x, te)
+
 
  Relations
 ===========
 
-(→) : expr (in) * expr (out); Pronounced as "Smallstep"
+(→)	: expr (in) * expr (out)
 
+(::) : expr (in) * type (out) ; Pronounced as "empty env"
+(⊢) : typingEnv (in) * expr (in) * type (out)
 
  Rules
-=======
+========
 
 
-
--------------------- [EvalPar]
- (→) "(" e ")", e
-
-
-
------------------------------------------ [EvalIfTrue]
- (→) "If" "True" "Then" e1 "Else" e2, e1
+ (⊢) "[]", expr, type
+---------------------- [ Type in empty environment ]
+ (::) expr, type
 
 
-------------------------------------------- [EvalIfFalse]
- (→) "If" "False" "Then" e1 "Else" e2, e2
+ expr : bool
+---------------------- [TTrue]
+ (⊢) _, expr, "Bool"
 
 
+ expr : number
+---------------------- [TNumber]
+ (⊢) _, expr, "Int"
 
+
+ x : var
+----------------------------- [TVar]
+ (⊢) env, x, search(x, env)
+
+
+ (⊢) x ":" typeDom env, expr, typeCod
+-------------------------------------------------------------------- [TLambda]
+ (⊢) env, "(" "\\" x ":" typeDom "." expr ")", typeDom "->" typeCod

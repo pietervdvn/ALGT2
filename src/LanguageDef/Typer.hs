@@ -22,6 +22,8 @@ import LanguageDef.Data.Function
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Relation
 import LanguageDef.Data.SyntFormIndex
+import LanguageDef.MetaSyntax (typeTop, typeBottom)
+
 
 
 

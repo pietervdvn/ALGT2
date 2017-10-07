@@ -9,6 +9,8 @@ This module defines a finite lattice structure.
 
 It allows easy lookup of direct suprema/infima and a chaining
 
+TODO: rewrite entirely
+
 -}
 
 import Utils.Utils
