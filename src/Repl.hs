@@ -9,6 +9,8 @@ import LanguageDef.API
 import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
 
+import LanguageDef.Data.Expression
+
 import qualified Utils.PureIO as PureIO
 import Utils.PureIO (runIO)
 
@@ -75,6 +77,7 @@ actions continuation
 		, ([":r"]			, continue $ noArg reload)
 		, ([":*"]			, continue $ noArg infoAboutAll)
 		, ([":i"]			, continue infoAboutAct)
+		, ([":t"]			, continue printType)	
 		, ([":st"]			, continue $ noArg supertypeInfo)
 		, (["help", ":h", ":help"]	, continue help)
 		, (["\ESC[A", "\ESC[B", "\ESC[C", "\ESC[D"]
@@ -88,6 +91,13 @@ help	:: String -> Action ()
 help _	= let	cmds	= actions (error "hi") |> fst |> filter (all isPrint) |> commas & filter (not . null)	:: [String] in
 		putStrLn' $ "Supported commands are:\n"++ (cmds & unlines & indent)
 
+
+printType	:: String -> Action ()
+printType str
+	= do	ld	<- getLd
+		let typed	= createTypedExpression ld "interactive" str typeTop	:: Failable Expression
+		typed & handleFailure (putStrLn' . toParsable) 
+			(\expr -> expr & get expAnnot & toParsable & putStrLn')
 
 printEscCode	:: String -> Action ()
 printEscCode msg
@@ -166,6 +176,7 @@ putColored color msg
 putColored' c m
 	= liftIO $ putColored c m
 
+putStrLn'	:: String -> Action ()
 putStrLn'
 	= liftIO . putStrLn
 

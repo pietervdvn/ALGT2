@@ -26,6 +26,8 @@ import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Data.Function
 import LanguageDef.Data.Rule
 import LanguageDef.Data.Relation
+import LanguageDef.MetaSyntax (typeTop, typeBottom)
+import qualified LanguageDef.Builtins as Builtins
 
 
 import Graphs.Lattice (makeLattice, Lattice, debugLattice)
@@ -151,22 +153,24 @@ fullyQualifyConcl scope (Conclusion relName args)
 
 
 type Resolver' fr x
-		= (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper x))
+		= (String, LanguageDef' ResolvedImport fr -> Maybe (Grouper x), [(FQName, x)])
 type Resolver x
 		= Resolver' SyntFormIndex x
 
+
+
 syntaxCall	:: Resolver' fr SyntacticForm
-syntaxCall	= ("the syntactic form", get langSyntax)
+syntaxCall	= ("the syntactic form", get langSyntax, Builtins.syntaxExtras)
 
 functionCall	:: Resolver' fr (Function' fr)
-functionCall	= ("the function", get langFunctions)
+functionCall	= ("the function", get langFunctions, [])
 
 
 relationCall	:: Resolver' fr Relation
-relationCall	= ("the relation", get langRelations)
+relationCall	= ("the relation", get langRelations, [])
 
 ruleCall	:: Resolver' fr (Rule' fr)
-ruleCall	= ("the rule", get langRules)
+ruleCall	= ("the rule", get langRules, [])
 
 
 resolveGlobal	:: Eq x => LDScope  -> Resolver x-> FQName -> Failable (FQName, x)
@@ -186,7 +190,7 @@ resolve_ scope resolver fqn
 resolve'	:: Eq x => LDScope' fr ->  Resolver' fr x -> FQName -> Failable (FQName, x)
 resolve' scope resolver fqn
 	= do	let resDict	= resolutionMap scope resolver
-		let name	= over _head toUpper (fst resolver) ++ " " ++ show (showFQ fqn)
+		let name	= over _head toUpper (fst3 resolver) ++ " " ++ show (showFQ fqn)
 		results	<- checkExistsSuggDist' distFQ fqn resDict (name ++ " was not found within the namespace "++dots (fst fqn))
 		assert' (length results == 1) $ name ++ " could resolve to multiple entities:\n"++(results |> fst |> showFQ & unlines & indent)
 		return $ head results
@@ -237,11 +241,11 @@ _mergeImport scopes resolver (fq, ImportFlags _ isSelf knownNames)
 
 
 _allKnownLocally	:: ([Name], LanguageDef' ResolvedImport fr) -> Resolver' fr b -> [(FQName, b)]
-_allKnownLocally (fq, ld) (_, getWhole)
+_allKnownLocally (fq, ld) (_, getWhole, extras)
 	= let	dict	= ld 	& getWhole |> get grouperDict
 				& maybe [] M.toList
 		in
-		dict |> first ((,) fq)
+		extras ++ dict |> first ((,) fq)
 		
 	
 

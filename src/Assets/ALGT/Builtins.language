@@ -7,19 +7,43 @@
  Syntax
 ========
  
-number		::= Number
+# Zero or more whitespace characters. Always produces a token in the parsetree (even if no whitespace was present); [ \t]*
 whitespace	::= Whitespace
+
+# An identifier starting with an uppercase letter; [A-Z][a-zA-Z0-9]*
 identifierUpper	::= IdentifierUpper
+
+# An identifier starting with a lowercase letter; [a-z][a-zA-Z0-9]*
 identifier	::= Identifier
+
+
 string		::= String
+
+# Any single character; .
 any		::= Any
+
+# Any single unicode character that is not a standard ascii-character; [^a-zA-Z0-9\ascii]
 unicodeChar	::= UnicodeChar
+
+# Any upper character; [A-Z]
 upper		::= Upper
+
+# Any lower character; [a-z]
 lower		::= Lower
+
+# Any digit; [0-9]
 digit		::= Digit
+
+# Any single character that is not a newline. This includes \r.; [^\n]
 lineChar	::= LineChar
+
+# Any single character that is not a whitespace or newline; [^ \t\n]
 wordChar	::= WordChar
+
+# Matches an (possibly negative) integer. Integers parsed by this might be passed into the builtin arithmetic functions.; -?[0-9]+
 integer		::= Integer
+
+# Matches an positive number. Integers parsed by this might be passed into the builtin arithmetic functions.; [0-9]+
 number		::= Number
 
 
@@ -28,31 +52,31 @@ number		::= Number
 ===========
 
 # Addition of two numbers
-plus		: number * number -> number
+plus		: integer * integer -> integer
 plus(x, y)	= x # Substituted by real implementation at runtime
 
 # Subtraction of two numbers
-min		: number * number -> number
+min		: integer * integer -> integer
 min(x, y)	= x # Substituted by real implementation at runtime
 
 # Multiplication of two numbers
-mul		: number * number -> number
+mul		: integer * integer -> integer
 mul(x, y)	= x # Substituted by real implementation at runtime
 
 # Integer division of two numbers, floored towards zero 
 # > div(-1,2)  	= 0
-div		: number * number -> number
+div		: integer * integer -> integer
 div(x, y)	= x  # Substituted by real implementation at runtime
 
 # Fraction after division 
-mod		: number * number -> number
+mod		: integer * integer -> integer
 mod(x, y)	= x  # Substituted by real implementation at runtime
 
 
 # Given a string, parses it accoring to the syntax
 # Use with a type ascription: 
 # > parse("True & False": string) : boolExpr = "True" "&" "False"
-parse		: string -> ⊤
+parse		: ⊤ -> ⊤
 parse(x)	= x	# Substituted by real implementation at runtime
 
 # Given a complex structure, simplifies it to a string
@@ -62,6 +86,11 @@ parse(x)	= x	# Substituted by real implementation at runtime
 
 
 # A function which fails with the given error message
-error		: string -> ⊥
+error		: ⊤ -> ⊥
 error(msg)	= msg	# Substituted by real implementation at runtime
+
+# A function which fails with the given error message and gives a suggestion on how the user might fix the error
+errorSugg		: ⊤ * ⊤ -> ⊥
+errorSugg(msg, sugg)
+	= msg	# Substituted by real implementation at runtime
 

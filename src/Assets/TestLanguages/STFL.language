@@ -49,6 +49,17 @@ search(x, _ _ _ te)
 	= search(x, te)
 
 
+typeEq	: type * type -> type
+typeEq(t, t)
+	= t
+typeEq("(" t ")", t)
+	= t
+typeEq(t, "(" t ")")
+	= t
+typeEq(ta0 "->" tr0, ta1 "->" tr1)
+	= typeEq(ta0, ta1) "->" typeEq (tr0, tr1)
+
+
  Relations
 ===========
 
@@ -84,3 +95,28 @@ search(x, _ _ _ te)
  (⊢) x ":" typeDom env, expr, typeCod
 -------------------------------------------------------------------- [TLambda]
  (⊢) env, "(" "\\" x ":" typeDom "." expr ")", typeDom "->" typeCod
+
+
+ (⊢) env, expr, type
+------------------------------ [TPar]
+ (⊢) env, "(" expr ")", type
+
+
+ op : boolOp	(⊢) env, expr0, "Bool"		(⊢) env, expr1, "Bool"		
+---------------------------------------------------------------------------- [TBoolInfix]
+ (⊢) env, expr0 op expr1, "Bool"
+
+
+
+ (⊢) env, expr0, "Int"	(⊢) env, expr1, "Int"		op : intOp
+---------------------------------------------------------------------------- [TIntInfix]
+ (⊢) env, expr0 op expr1, "Int"
+
+
+ (⊢) env, expr0, t0	(⊢) env, expr1, t1
+-------------------------------------------- [TSameInfix]
+ (⊢) env, expr0 op expr1, typeEq(t0, t1)
+
+------------------------------------------------------------------------- [TIf]
+ (⊢) env, "If" cond "Then" e0 "Else" e1, typeEq(t0, t1)
+

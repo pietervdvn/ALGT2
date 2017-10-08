@@ -121,7 +121,7 @@ infoAbout' lds names
 
 {- | Dumps all info about all entries in scope
 >>> inScope testLanguage |> fst |> fst |> showFQ & unlines
-"TestLanguage.bool\nTestLanguage.expr\nTestLanguage.exprSum\nTestLanguage.int\nTestLanguage.op\nTestLanguage.tuple\nTestLanguage.and\nTestLanguage.nand\nTestLanguage.not\nTestLanguage.or\nTestLanguage.\8594\nTestLanguage.and\n"
+"\8868\n\8869\nTestLanguage.bool\nTestLanguage.expr\nTestLanguage.exprSum\nTestLanguage.int\nTestLanguage.op\nTestLanguage.tuple\nTestLanguage.and\nTestLanguage.nand\nTestLanguage.not\nTestLanguage.or\nTestLanguage.\8594\nTestLanguage.and\n"
 
 -}	
 inScope		:: LDScope -> [((FQName, [FQName]), AllInfo)]
@@ -206,9 +206,7 @@ Success "TestLanguage.and(\"True\", \"True\")"
 createTypedExpression	:: LDScope -> FilePath -> String -> FQName -> Failable Expression
 createTypedExpression ld source str typ@(loc, nm)
 	= do	expr	<- createExpression ld source str
-		scope	<- checkExistsSugg' dots loc (get environment ld)
-				("Module "++dots loc++ " not found")
-		typeExpression scope typ expr ||>> snd
+		typeExpression ld typ expr ||>> snd
 
 
 

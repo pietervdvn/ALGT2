@@ -12,9 +12,10 @@ import LanguageDef.Data.Function
 import LanguageDef.Data.Expression 
 import LanguageDef.Utils.LocationInfo
 import LanguageDef.Utils.ExceptionInfo
+import LanguageDef.Utils.Grouper
 
 import LanguageDef.LangDefs
-import LanguageDef.Utils.Grouper
+import qualified LanguageDef.Builtins as Builtins
 
 import qualified Data.Map as M
 import Data.Map (Map)
@@ -98,8 +99,8 @@ type VariableStore	= VariableStore' SyntFormIndex
 -}
 resolveAndRun	:: LDScope -> FQName -> [ParseTree] -> Failable ParseTree
 resolveAndRun lds fqn@(targetLD, name) args
- | fqn `M.member` builtinFuncs
-	= do	builtin	<- checkExists' fqn builtinFuncs "Wut? We just made sure this builtin function has this key?"
+ | fqn `M.member` Builtins.functions
+	= do	builtin	<- checkExists' fqn Builtins.functions "Wut? We just made sure this builtin function has this key?"
 		builtin args
  | otherwise
 	= do	ld	<- checkExistsSugg' dots targetLD (get environment lds) ("The module "++dots targetLD++" was not found")
@@ -126,26 +127,6 @@ runClause lds ld (i, FunctionClause pats result doc nm) args
 		constructParseTree lds store result
 
 
-
--------------------------- THE BUILTIN FUNCTIONS -----------------------------------------------------
-
-
-
-builtinFuncs	:: Map FQName ([ParseTree] -> Failable ParseTree) 
-builtinFuncs 	= M.fromList
-			[ ((["ALGT", "Builtins"], "plus"), _intOp (+))
-			, ((["ALGT", "Builtins"], "min"), _intOp (-))
-			, ((["ALGT", "Builtins"], "mul"), _intOp (*))
-			, ((["ALGT", "Builtins"], "div"), _intOp div)
-			, ((["ALGT", "Builtins"], "mod"), _intOp mod)
-			]
-
-
-_intOp		:: (Int -> Int -> Int) -> [ParseTree] -> Failable ParseTree
-_intOp op [i, (Int j _ _)]
-		= i & over ptInt (`op` j) & return
-_intOp _	args	= failSugg $ ("Wrong arguments for a builtin function expecting numbers, namely:\n" ++ (args |> toParsable & commas & indent)
-				, "Use two integer arguments instead")
 
 
 ------------------------- ABOUT PARSETREE CONSTRUCTION/INTERPRETATION --------------------------------

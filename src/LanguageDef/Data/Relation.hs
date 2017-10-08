@@ -135,7 +135,7 @@ predicate
 predicates	:: Combiner [Predicate' ()]
 predicates
 	= choices' "predicates"
-		[ cmb (:) predicate (lit "\t" **> predicates)
+		[ cmb (:) predicate (skip {-tabs-} **> predicates)
 		, predicate |> (:[])
 		]
 
@@ -181,7 +181,7 @@ rules	= _rules |||>>> const () |> asGrouper ("rule", "rules") (get ruleName)
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty/Relations" ["UnknownTypeRelation"] & toCoParsable
-"| While fully qualifiying the relation form \"~\" in Faulty/Relations/UnknownTypeRelation.language at lines 11 - 13\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, UnknownTypeRelation.a\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, UnknownTypeRelation.a"
+"| While fully qualifiying the relation form \"~\" in Faulty/Relations/UnknownTypeRelation.language at lines 11 - 13\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, \8868, \8869, UnknownTypeRelation.a, UnknownTypeRelation.\8868\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, \8868, \8869, UnknownTypeRelation.a, UnknownTypeRelation.\8868"
 >>> loadAssetLangDef "Faulty/Relations" ["DuplicateRelation"] & toCoParsable
 "| While validating the relation declarations while validating \nError: \n  \8226 The relation \"~\" is defined multiple times"
 >>> loadAssetLangDef "Faulty/Relations" ["AllOutRel"] & toCoParsable

@@ -63,7 +63,9 @@ conclusion	::= "(" relIdent ")" commaSepExpr
 # A predicate with a relation should hold
 predicate	::= conclusion
 		| Functions.expression
-predicates	~~= predicate "\t" predicates | predicate
+
+tab		~~= "\t" tabs | "\t"
+predicates	~~= predicate tabs predicates | predicate
 
 
 ruleChar	::= Lower | Upper | Digit

@@ -203,7 +203,10 @@ typeConclusion lds (Conclusion rel args)
 
 typeFunction	:: Eq fr => LDScope' fr -> Function' x -> Failable Function
 typeFunction ld f
-	= inMsg' ("While typing "++ get funcName f) $
+ | "/src/Assets/TestLanguages/ALGT/Builtins.language" `isSuffixOf` (ld & get (ldScope . langLocation . miFile))
+	= f & set funcClauses [] & return
+ | otherwise
+	= inMsg' ("While typing the function "++ show (get funcName f)) $
 	  do	let clauses	= get funcClauses f
 		let tps		= (get funcArgTypes f, get funcRetType f)
 		clauses'	<- clauses & mapi |> typeClause ld tps & allGood
@@ -219,7 +222,7 @@ Typing of the clause. Checks for:
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "" ["Faulty","FunctionTyperTest"] & toCoParsable
-"| While typing f \n| While typing clause f.0 in /Faulty/FunctionTyperTest.language at lines 25 - 26\n| The clause is: (f(x)\t = y) in /Faulty/FunctionTyperTest.language at lines 25 - 26\nError: \n  \8226 The variable \"y\" was not defined\n| While typing g \n| While typing clause g.0 in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| The clause is: (g(x)\t = not(x)) in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| While typing the return expression of the function, namely not(x) in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\n| While typing not(x) while typing in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\nError: \n  \8226 Unexpected type of 'not(x)', namely Faulty.FunctionTyperTest.bool\n  \8226 Use an expression which returns a Faulty.FunctionTyperTest.int (or a subset of that type)\n| While typing h \n  | While typing clause h.0 in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  | The clause is: (h(x:int)\t = bool) in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  Error: \n    \8226 The variable \"bool\" was not defined\n  | While typing clause h.1 in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  | The clause is: (h(x)\t = not(x)) in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  Error: \n    \8226   The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader"
+"| While typing the function \"f\" \n| While typing clause f.0 in /Faulty/FunctionTyperTest.language at lines 25 - 26\n| The clause is: (f(x)\t = y) in /Faulty/FunctionTyperTest.language at lines 25 - 26\nError: \n  \8226 The variable \"y\" was not defined\n| While typing the function \"g\" \n| While typing clause g.0 in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| The clause is: (g(x)\t = not(x)) in /Faulty/FunctionTyperTest.language at lines 28 - 29\n| While typing the return expression of the function, namely not(x) in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\n| While typing not(x) while typing in /Faulty/FunctionTyperTest.language at line 28, columns 8 - 14\nError: \n  \8226 Unexpected type of 'not(x)', namely Faulty.FunctionTyperTest.bool\n  \8226 Use an expression which returns a Faulty.FunctionTyperTest.int (or a subset of that type)\n| While typing the function \"h\" \n  | While typing clause h.0 in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  | The clause is: (h(x:int)\t = bool) in /Faulty/FunctionTyperTest.language at lines 31 - 32\n  Error: \n    \8226 The variable \"bool\" was not defined\n  | While typing clause h.1 in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  | The clause is: (h(x)\t = not(x)) in /Faulty/FunctionTyperTest.language at lines 32 - 33\n  Error: \n    \8226   The variable \"x\" is used as a Faulty.FunctionTyperTest.bool, but could be a Faulty.FunctionTyperTest.expr which is broader"
 
 -}
 
@@ -361,7 +364,7 @@ _typeExpression ld expectation (SeqExp exprs a li)
 typeExpressionIndexed	:: Eq fr => LDScope' fr -> SyntForm -> [Expression' a] -> Failable ([Expression' (a, SyntFormIndex)], SyntFormIndex)
 typeExpressionIndexed ld syntForm exprs
  | syntForm == typeTop
-	= do	let all		= allKnowns ld syntaxCall |> fst3 |> fst	:: [FQName]
+	= do	let all		= allKnowns ld syntaxCall |> fst3 |> fst & filter (`notElem` [typeTop, typeBottom])	:: [FQName]
 		let tries	= all |> (\expectation -> typeExpressionIndexed ld expectation exprs)
 		let isSubtypeOf'	= isSubtypeOf (get ldScope ld)
 		let successfull	= successess tries & selectSmallest isSubtypeOf' -- [([Expression' (a, SyntFormIndex)], SyntFormIndex)]
@@ -420,7 +423,11 @@ typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
 						" was expected; ascriptions can only match rulecalls"
 		s@SeqExp{}		-> fail $
 						"Found a sequence "++toParsable s++" where a literal value of the form "++toParsable bnf++
-						" was expected; ascriptions can only match rulecalls"
+						" was expected; sequences can only match rulecalls"
+		fc@FuncCall{}		-> fail $ "Found a function call "++toParsable fc++" where a literal value of the form "++toParsable bnf++
+						" was expected; functions can only match rulecalls"
+		ft			-> error $ "BUG: Fallthrough!: " ++ debug  ft
+
 
 _compareBNFPT	:: BNF -> ParseTree' a -> Failable ()
 _compareBNFPT (BNF.Literal str) (Literal token li _ _)
