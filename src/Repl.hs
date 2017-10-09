@@ -16,11 +16,12 @@ import Utils.PureIO (runIO)
 
 import System.IO
 import System.Console.ANSI
-import Text.PrettyPrint.ANSI.Leijen (text, red, yellow, bold, dullgreen, green)
+import Text.PrettyPrint.ANSI.Leijen (text, red, yellow, bold, dullgreen, green, onred)
 import Utils.GetLine
 
 import Data.List
 import Data.Char
+import Data.Maybe
 
 import Graphs.Lattice (debugLattice)
 
@@ -30,9 +31,10 @@ import Control.Monad.State hiding (get)
 
 
 data ReplState	= ReplState 
-	{ _currentModule	:: LDScope
+	{ _currentModule	:: Maybe LDScope
 	, _currentPath		:: FilePath
 	, _currentModulePath	:: [FilePath]
+	, _currentPromptMsg	:: String -> String
 	}
 makeLenses ''ReplState
 
@@ -45,16 +47,20 @@ replAsset fp fq
 
 repl		:: FilePath -> [Name] -> IO ()
 repl fp path
-	= do	ld	<- runIO (loadLangDef fp path) |> crash
-		let state	= ReplState ld fp path
-		runStateT _repl state
+	= do	let state	= ReplState Nothing fp path (show . onred . text)
+		runStateT (reload >> _repl) state
 		pass
 
 
 
 _repl		:: Action ()
-_repl	= do	line	<- liftIO $ prompt "※  "
-		if null $ stripL line then
+_repl	= do	promptMsg	<- gets' currentPromptMsg
+		ld	<- gets' currentModule
+		line	<- liftIO $ prompt' ("※  ", putStr . promptMsg)
+		if isNothing ld then do
+			reload
+			_repl
+		else if null $ stripL line then
 			_repl
 		else do
 			let foundActions	= actions _repl & filter (\(keys, _) -> keys & any (`isPrefixOf` line))
@@ -151,14 +157,21 @@ interpret line
 
 reload	:: Action ()
 reload
-	= do	ld	<- getLd
-		fp	<- gets' currentPath
+	= do	fp	<- gets' currentPath
 		fq	<- gets' currentModulePath
 		putStrLn' ("Reloading " ++ fp ++ "/" ++ intercalate "/" fq)
 		mLd	<- liftIO $ runIO (loadLangDef fp fq)
-		let recover e	= do	liftIO $ printPars e
+		let recover e	= do	putStrLn' $ toParsable e
+					old	<- gets' currentModule
+					let effect 	= if isNothing old then onred else red
+					puts' currentPromptMsg (show . effect . text)
 					putStrLn' "Using the old definition"
-		mLd & handleFailure recover (puts' currentModule)			
+
+		let success ld	= do	puts' currentPromptMsg (show . green . text)
+					puts' currentModule $ Just ld
+					putStrLn' "Loading successfull!"
+
+		mLd & handleFailure recover success			
 
 
 noArg	:: Action () -> String -> Action ()
@@ -183,7 +196,8 @@ putStrLn'
 gets' lens
 	= gets (get lens)
 
-getLd	= gets' currentModule
+getLd	= do	mld	<- gets' currentModule
+		maybe (fail "Initial load of the language definition failed") return mld
 
 puts' lens x
 	= modify (set lens x)
