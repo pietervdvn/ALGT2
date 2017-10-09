@@ -17,6 +17,7 @@ import Utils.PureIO (runIO)
 import System.IO
 import System.Console.ANSI
 import Text.PrettyPrint.ANSI.Leijen (text, red, yellow, bold, dullgreen, green, onred)
+import qualified Text.PrettyPrint.ANSI.Leijen as Ansi
 import Utils.GetLine
 
 import Data.List
@@ -63,40 +64,49 @@ _repl	= do	promptMsg	<- gets' currentPromptMsg
 		else if null $ stripL line then
 			_repl
 		else do
-			let foundActions	= actions _repl & filter (\(keys, _) -> keys & any (`isPrefixOf` line))
+			let foundActions	= actions _repl & filter (\(keys, _, _) -> keys & any (`isPrefixOf` line))
 			if null foundActions then do
 				interpret line
 				_repl
 			else do
-				let matchingString	= head foundActions & fst & filter (`isPrefixOf` line) & head	:: String
+				let matchingString	= head foundActions & fst3 & filter (`isPrefixOf` line) & head	:: String
 				let cleanString	= stripL $ drop (length matchingString) line
-				(head foundActions & snd) cleanString
+				(head foundActions & snd3) cleanString
 		
 
 
 -- Mapping of prefix -> action. Some actions might pass control flow to the given continuation
-actions	:: Action () -> [([String], String -> Action ())]
+actions	:: Action () -> [([String], String -> Action (), String)]
 actions continuation
  	= let continue action str	= action str >> continuation in
-		[ ([":l", "\f"]			, continue (noArg clearScreenAct))
-		, ([":quit",":q", "\EOT"]	, const pass)
-		, ([":r"]			, continue $ noArg reload)
-		, ([":*"]			, continue $ noArg infoAboutAll)
-		, ([":i"]			, continue infoAboutAct)
-		, ([":t"]			, continue printType)	
-		, ([":st"]			, continue $ noArg supertypeInfo)
-		, (["help", ":h", ":help"]	, continue help)
-		, (["\ESC[A", "\ESC[B", "\ESC[C", "\ESC[D"]
-						, continue $ const pass)	-- We ignore going up, down, left 
-		, (["\ESC"]			, continue printEscCode)
+		[ ([":l", "\f"]			, continue (noArg clearScreenAct),
+			"Clears the screen")
+		, ([":quit",":q", "\EOT"]	, const pass,
+			"Exit the interpreter")
+		, ([":r"]			, continue $ noArg reload,
+			"Reload the language definition")
+		, ([":*"]			, continue $ noArg infoAboutAll,
+			"Show what is in scope")
+		, ([":i"]			, continue infoAboutAct,
+			"Give info about some entity which is in scope")
+		, ([":t"]			, continue printType,
+			"Give the type of an expression")	
+		, ([":st"]			, continue $ noArg supertypeInfo,
+			"Gives the supertyping relationship")
+		, (["help", ":h", ":help"]	, continue help,
+			"Print this help message")
 		]
 
 
 
 help	:: String -> Action ()
-help _	= let	cmds	= actions (error "hi") |> fst |> filter (all isPrint) |> commas & filter (not . null)	:: [String] in
-		putStrLn' $ "Supported commands are:\n"++ (cmds & unlines & indent)
+help _	= putStrLn' $ "Supported commands are:\n"++ (actions (error "no continuation") |> showAction & unlines & indent)
 
+
+showAction	:: ([String], a, String) -> String
+showAction (comms, _, help)
+	= let	comms'	= comms |> filter isPrint & filter (not . null) |> text |> bold |> show in
+		commas comms' ++ "\t"++help
 
 printType	:: String -> Action ()
 printType str
@@ -104,12 +114,6 @@ printType str
 		let typed	= createTypedExpression ld "interactive" str typeTop	:: Failable Expression
 		typed & handleFailure (putStrLn' . toParsable) 
 			(\expr -> expr & get expAnnot & toParsable & putStrLn')
-
-printEscCode	:: String -> Action ()
-printEscCode msg
-	= do	putColored' red "Unhandled escape code"
-		liftIO $ print msg
-
 
 clearScreenAct	:: Action ()
 clearScreenAct
@@ -153,7 +157,11 @@ infoAboutAct entry
 interpret	:: String -> Action ()
 interpret line
 	= do	ld	<- getLd
-		liftIO $ handleFailure printPars printPars $ runPredicate' ld "<interactive>" line
+		let failed err	= do	setColor yellow
+					liftIO $ printPars err
+		let success exp	= do	setColor green
+					liftIO $ printPars exp
+		handleFailure failed success $ runPredicate' ld "<interactive>" line
 
 reload	:: Action ()
 reload
@@ -163,11 +171,10 @@ reload
 		mLd	<- liftIO $ runIO (loadLangDef fp fq)
 		let recover e	= do	putStrLn' $ toParsable e
 					old	<- gets' currentModule
-					let effect 	= if isNothing old then onred else red
-					puts' currentPromptMsg (show . effect . text)
+					setColor $ if isNothing old then onred else red
 					putStrLn' "Using the old definition"
 
-		let success ld	= do	puts' currentPromptMsg (show . green . text)
+		let success ld	= do	setColor green
 					puts' currentModule $ Just ld
 					putStrLn' "Loading successfull!"
 
@@ -182,6 +189,10 @@ noArg action str
 		action
 
 
+setColor	:: (Ansi.Doc -> Ansi.Doc) -> Action ()
+setColor color
+	= puts' currentPromptMsg (show . color . text)
+					
 
 putColored color msg
 	= putStrLn $ show $ color $ text msg

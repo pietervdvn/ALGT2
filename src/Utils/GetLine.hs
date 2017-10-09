@@ -126,7 +126,8 @@ eotAction
 
 clearLineAct	:: Action Bool
 clearLineAct
-	= do	over' curText (const "")
+	= do	put' curText ""
+		put' relPos 0		
 		return True
 
 
