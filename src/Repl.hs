@@ -58,7 +58,7 @@ _repl		:: Action ()
 _repl	= do	promptMsg	<- gets' currentPromptMsg
 		ld	<- gets' currentModule
 		line	<- liftIO $ prompt' ("※  ", putStr . promptMsg)
-		if isNothing ld then do
+		if isNothing ld && line /= "\EOT" then do
 			reload
 			_repl
 		else if null $ stripL line then

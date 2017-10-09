@@ -46,7 +46,7 @@ isBuiltinFunction ld f
  	= "ALGT/Builtins.language" `isSuffixOf` (ld & get (langLocation . miFile))
 
 
-functions	:: Map FQName ([ParseTree] -> Failable ParseTree) 
+functions	:: Map FQName ((String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree) 
 functions 	= M.fromList
 			[ ((["ALGT", "Builtins"], "plus"), _intOp (+))
 			, ((["ALGT", "Builtins"], "min"), _intOp (-))
@@ -54,33 +54,35 @@ functions 	= M.fromList
 			, ((["ALGT", "Builtins"], "div"), _intOp div)
 			, ((["ALGT", "Builtins"], "mod"), _intOp mod)
 			
-			, ((["ALGT", "Builtins"], "parse"), _intOp mod)
+			, ((["ALGT", "Builtins"], "parse"), _fParse)
 			, ((["ALGT", "Builtins"], "group"), _fGroup)
 			, ((["ALGT", "Builtins"], "error"), _fError)
 			, ((["ALGT", "Builtins"], "errorSugg"), _fError)
 
 			]
 
-_fParse		:: [ParseTree] -> Failable ParseTree
-_fParse [pt]
-	= fail "TODO: create parsing!" -- TODO
+_fParse		:: (String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree
+_fParse parseString [ptArg, ptParseAs]
+	= do	let toParse	= contents ptArg
+		let typeAs	= contents ptParseAs
+		parseString toParse typeAs
 
 
-_fError		:: [ParseTree] -> Failable ParseTree
-_fError [pt]
+_fError		:: a -> [ParseTree] -> Failable ParseTree
+_fError _ [pt]
 	= fail $ contents pt
-_fError [ptMsg, ptErr]
+_fError _ [ptMsg, ptErr]
 	= failSugg (contents ptMsg, contents ptErr) 
 
 
-_fGroup		:: [ParseTree] -> Failable ParseTree
-_fGroup [pt]
+_fGroup		:: a -> [ParseTree] -> Failable ParseTree
+_fGroup _ [pt]
 	= return $ Literal (contents pt) (get ptLocation pt) (NoIndex ([], "String")) False
 
 
-_intOp		:: (Int -> Int -> Int) -> [ParseTree] -> Failable ParseTree
-_intOp op [i, (Int j _ _)]
+_intOp		:: (Int -> Int -> Int) -> a -> [ParseTree] -> Failable ParseTree
+_intOp op _ [i, (Int j _ _)]
 		= i & over ptInt (`op` j) & return
-_intOp _	args	= failSugg $ ("Wrong arguments for a builtin function expecting numbers, namely:\n" ++ (args |> toParsable & commas & indent)
+_intOp _ _	args	= failSugg $ ("Wrong arguments for a builtin function expecting numbers, namely:\n" ++ (args |> toParsable & commas & indent)
 				, "Use two integer arguments instead")
 

@@ -74,10 +74,10 @@ mod(x, y)	= x  # Substituted by real implementation at runtime
 
 
 # Given a string, parses it accoring to the syntax
-# Use with a type ascription: 
-# > parse("True & False": string) : boolExpr = "True" "&" "False"
-parse		: ⊤ -> ⊤
-parse(x)	= x	# Substituted by real implementation at runtime
+# The second argument is a string containing the typename (which is resolved using the scope you call it in): 
+# > parse("True & False", "string") : boolExpr = "True" "&" "False"
+parse		: ⊤ * ⊤ -> ⊤
+parse(toParse, parseAs)	= x	# Substituted by real implementation at runtime
 
 # Given a complex structure, simplifies it to a string
 # > group("True" "&" "False) = "True&False"

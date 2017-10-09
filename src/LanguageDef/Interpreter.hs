@@ -93,6 +93,19 @@ type VariableStore	= VariableStore' SyntFormIndex
 -------------------------- ABOUT RUNNING A FUNCTION ------------------------------------
 
 
+{- 
+This function is passed to the builtins, which select it when appropriate
+It provides the implementation of parsing a string at runtime
+-}
+parseDynamic	:: LDScope -> String -> String -> Failable ParseTree
+parseDynamic lds contents fqnString
+	= inMsg' "While using the builtin parsing-at-runtime function:" $
+	  do	let fqn'	= fqnString & uncalate '.'
+		let fqn		= (init fqn', last fqn')
+		resolvedFQN	<- resolve lds syntaxCall fqn
+		inMsg' ("While parsing "++showFQ resolvedFQN) $
+			parseTarget lds resolvedFQN "<runtime invocation>" contents
+		
 
 {- | Resolves the function, executes it. The first arguments adds an annotation to the parsetree, based on the type of the parsetree
 
@@ -101,7 +114,7 @@ resolveAndRun	:: LDScope -> FQName -> [ParseTree] -> Failable ParseTree
 resolveAndRun lds fqn@(targetLD, name) args
  | fqn `M.member` Builtins.functions
 	= do	builtin	<- checkExists' fqn Builtins.functions "Wut? We just made sure this builtin function has this key?"
-		builtin args
+		builtin (parseDynamic lds) args
  | otherwise
 	= do	ld	<- checkExistsSugg' dots targetLD (get environment lds) ("The module "++dots targetLD++" was not found")
 		let ld'	= ld & get ldScope 	:: LanguageDef
