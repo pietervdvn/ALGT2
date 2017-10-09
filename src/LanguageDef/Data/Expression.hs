@@ -113,14 +113,8 @@ expression'
 	= choices' "expression"
 		[ascription	|> (:[])
 		, splitExpression |> (:[])
-		, cmb (:) expressionTerm expression'
+		, concatExpressions
 		, expressionTerm |> (:[])]
-
-splitExpression	:: Combiner (Expression' ())
-splitExpression
-	= choices' "splitExpression"
-		[(expressionTerm <+> (lit "&" **> expression))
-			& withLocation (\li (exp1, exp2) -> Split exp1 exp2 () li)]
 
 
 ascription	:: Combiner (Expression' ())
@@ -129,6 +123,16 @@ ascription
 		[(expressionTerm <+> (lit ":" **> typeIdent))
 			& withLocation (\li (exp, typ) -> Ascription exp typ () li) ]
 
+splitExpression	:: Combiner (Expression' ())
+splitExpression
+	= choices' "splitExpression"
+		[(expressionTerm <+> (lit "&" **> expression))
+			& withLocation (\li (exp1, exp2) -> Split exp1 exp2 () li)]
+
+concatExpressions	:: Combiner [Expression' ()]
+concatExpressions
+	= choices' "concatExpressions"
+		[cmb (:) expressionTerm (lit " " **> expression') ]
 
 funcCall	:: Combiner (Expression' ())
 funcCall

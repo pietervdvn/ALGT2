@@ -64,7 +64,7 @@ conclusion	::= "(" relIdent ")" commaSepExpr
 predicate	::= conclusion
 		| Functions.expression
 
-tab		~~= "\t" tabs | "\t"
+tabs		~~= "\t" tabs | "\t"
 predicates	~~= predicate tabs predicates | predicate
 
 

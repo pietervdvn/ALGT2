@@ -240,43 +240,7 @@ metaSyntaxes
 		syntaxes 
 
 
-		
-saveMetaSyntaxes	:: IO ()
-saveMetaSyntaxes
-	= do	putStrLn "Saving metasyntaxes to the asset files..."
-		dir	<- getCurrentDirectory |> (++"/src/Assets/MetaSyntax")
-		putStrLn $ "Directory is: "++dir
-		dirExists	<- doesDirectoryExist dir
-		when dirExists $ removeDirectoryRecursive dir
-		createDirectory dir
-		metaSyntaxes & M.toList |+> uncurry (_saveMetaSyntax dir)
-		pass
 
-
-_saveMetaSyntax	:: FilePath -> [Name] -> Syntax -> IO ()
-_saveMetaSyntax dir nm syntax
-	= do	let target	= dir ++"/" ++ dots nm ++ ".language"
-		print target
-		let imports	= metaSyntaxes & M.keys |> dots |> ("import "++) & unlines
-		let contents	= imports ++ 
-				  inHeader " " (dots nm) '*' 
-				  ("# Automatically generated; do not edit" ++ 
-				  inHeader' "Syntax"
-				  (toParsable syntax))
-		writeFile target contents
-
-
--- Tests parsing of a rule against a given string
-testSyntax	:: Name -> String -> IO ()
-testSyntax rule string
-	= do	let found	= metaSyntaxes & M.filter (\s -> rule `M.member` get grouperDict s) & M.keys
-		unless (L.null found) $ error $ "No rule "++rule++" does exist within any syntax"
-		when (length found > 1) $ error $ "Rule "++rule ++" does exist in "++(found |> dots & commas)
-		let fqn	= found & head
-		putStrLn $ showFQ (fqn, rule)
-		let parsed	=  parse "testSyntax" (metaSyntaxes, fqn) rule string
-					& legacy & either error id
-		printPars parsed
 
 ------------------------------------- EXTERNAL Definitions ----------------------------------------
 

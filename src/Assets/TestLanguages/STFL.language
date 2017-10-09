@@ -102,13 +102,13 @@ typeEq(ta0 "->" tr0, ta1 "->" tr1)
  (⊢) env, "(" expr ")", type
 
 
- op : boolOp	(⊢) env, expr0, "Bool"		(⊢) env, expr1, "Bool"		
+ (⊢) env, expr0, "Bool"	(⊢) env, expr1, "Bool"		op : boolOp       
 ---------------------------------------------------------------------------- [TBoolInfix]
  (⊢) env, expr0 op expr1, "Bool"
 
 
 
- (⊢) env, expr0, "Int"	(⊢) env, expr1, "Int"		op : intOp
+ (⊢) env, expr0, "Int"		(⊢) env, expr1, "Int"		op : intOp
 ---------------------------------------------------------------------------- [TIntInfix]
  (⊢) env, expr0 op expr1, "Int"
 
@@ -117,6 +117,8 @@ typeEq(ta0 "->" tr0, ta1 "->" tr1)
 -------------------------------------------- [TSameInfix]
  (⊢) env, expr0 op expr1, typeEq(t0, t1)
 
-------------------------------------------------------------------------- [TIf]
+
+ (⊢) env, cond, "Bool"		(⊢) env, e0, t0		(⊢) env, e1, t1
+--------------------------------------------------------------------------------- [TIf]
  (⊢) env, "If" cond "Then" e0 "Else" e1, typeEq(t0, t1)
 

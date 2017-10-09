@@ -15,8 +15,12 @@ import LanguageDef.Data.SyntFormIndex
 import LanguageDef.MetaSyntax (typeTop, typeBottom)
 import LanguageDef.Data.SyntacticForm
 import LanguageDef.Data.ParseTree
+import LanguageDef.Data.Function
+import LanguageDef.Data.LanguageDef
 
 import Data.Map as M
+
+import Data.List
 
 syntaxExtras	= [ (typeTop, _topSF)
 		  , (typeBottom, _bottomSF)
@@ -37,7 +41,9 @@ _topSF	= SyntacticForm "⊤" [] [] $ MetaInfo biLocations $
 
 
 
-
+isBuiltinFunction	:: LanguageDef' ResolvedImport fr -> Function' x -> Bool
+isBuiltinFunction ld f
+ 	= "ALGT/Builtins.language" `isSuffixOf` (ld & get (langLocation . miFile))
 
 
 functions	:: Map FQName ([ParseTree] -> Failable ParseTree) 

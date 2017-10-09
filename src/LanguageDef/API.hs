@@ -6,7 +6,7 @@ module LanguageDef.API
 		, LDScope.LDScope, FQName, showFQ
 		, resolveGlobal'
 		, infoAbout, infoAbout', inScope, infoImports
-		, testLanguage
+		, testLanguage, stfl
 		, runFunction, runExpression, runExpression', runPredicate, runPredicate'
 		, typeTop, typeBottom, supertypes
 		) where
@@ -67,6 +67,8 @@ loadAssetLangDef fp names
 
 
 testLanguage 	= loadAssetLangDef "" ["TestLanguage"] & crash'
+
+stfl		= loadAssetLangDef "TestLanguages" ["STFL"] & crash'
 
 {- | Gives info about any entry, resolved globally
 >>> infoAbout testLanguage ["TestLanguage", "bool"] |> uncurry toParsable' & unlines

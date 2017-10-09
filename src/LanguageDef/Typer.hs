@@ -23,7 +23,7 @@ import LanguageDef.Data.Rule
 import LanguageDef.Data.Relation
 import LanguageDef.Data.SyntFormIndex
 import LanguageDef.MetaSyntax (typeTop, typeBottom)
-
+import LanguageDef.Builtins as Builtins
 
 
 
@@ -203,7 +203,7 @@ typeConclusion lds (Conclusion rel args)
 
 typeFunction	:: Eq fr => LDScope' fr -> Function' x -> Failable Function
 typeFunction ld f
- | "/src/Assets/TestLanguages/ALGT/Builtins.language" `isSuffixOf` (ld & get (ldScope . langLocation . miFile))
+ | Builtins.isBuiltinFunction (get ldScope ld) f
 	= f & set funcClauses [] & return
  | otherwise
 	= inMsg' ("While typing the function "++ show (get funcName f)) $
@@ -372,8 +372,9 @@ typeExpressionIndexed ld syntForm exprs
 			inMsg' ("Tried the types: "++all |> showFQ & commas' "and") $
 			when (null successfull) (fails tries & Aggregate & Failed)
 
-		assertSugg' (length successfull < 2) $ ("The sequence "++ unwords (exprs |> toParsable)++" could be typed in multiple ways, namely as:\n"
-			++ (successfull |> (\(_, sfi) -> "Via choice "++toParsable sfi) & unlines & indent), "Try adding a type ascription to disambiguate the typing")
+		assertSugg' (length successfull < 2) $ ("The sequence '"++ unwords (exprs |> toParsable)++"' could be typed in multiple ways, namely:\n"
+			++ (successfull |> snd |> toParsable & unlines & indent)
+				, "Try adding a type ascription to disambiguate the typing")
 		let found	= head successfull
 		return found
 		
@@ -389,8 +390,12 @@ typeExpressionIndexed ld syntForm exprs
 		when (null successfull) $ 
 			fails tries & Aggregate & Failed & inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as a "++showFQ syntForm)
 
-		assertSugg' (length successfull < 2) $ ("The sequence "++ unwords (exprs |> toParsable)++" could be typed in multiple ways, namely as:\n"
-			++ (successfull |> (\(i, exprs) -> "Via choice "++show i) & unlines & indent), "Try adding a type ascription to disambiguate the typing")
+
+		let toManySuccessMsg (i, exprSeq)
+			= "Via choice "++ showFQ fqname ++ "." ++ show i++ ", resulting in "++
+					exprSeq |> (\expr -> toParsable expr ++ ": " ++ (get expAnnot expr & snd & toParsable) ) |> inParens & unwords
+		assertSugg' (length successfull < 2) $ ("The sequence '"++ unwords (exprs |> toParsable)++"' could be typed in multiple ways, namely as:\n"
+			++ (successfull |> toManySuccessMsg & unlines & indent), "Try adding a type ascription to disambiguate the typing")
 		let (foundInd, foundExprs)	= head successfull
 		(foundExprs, SyntFormIndex fqname foundInd Nothing) & return
 
@@ -410,6 +415,11 @@ typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
 typeExprBNF		:: Eq fr => LDScope' fr -> (SyntForm, Int) -> (Int, BNF) -> Expression' a -> Failable (Expression' (a, SyntFormIndex))
 typeExprBNF ldscope (form, choiceInd) (seqIndex, BNF.RuleCall fqname) expr
 	= typeExpression ldscope fqname expr
+typeExprBNF ldscope (form, choiceInd) (seqIndex, BNF.Literal str) (Var nm _ _)
+	= failSugg ("Unexpected variable "++show nm, "Expected a literal "++show str++" instead")
+typeExprBNF ldscope (form, choiceInd) (seqIndex, BNF.Literal str) (FuncCall fqn _ _ _)
+	= failSugg ("Unexpected function call "++showFQ fqn, "Expected a literal "++show str++" instead")
+
 typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
 	-- At this point, the bnf can not be: RuleCall (prev. case), Seq (BNF.unsequence was run in typeExpressionIndexed)
 	-- Still resting: Literal, Builtin, Group -- which all should have a matching parsetree (or dontcare)

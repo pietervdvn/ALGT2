@@ -41,6 +41,9 @@ funcCall	::= Syntax.ident "(" arguments ")"
 ascription	::= expressionTerm ":" Syntax.typeIdent
 splitExpression	::= expressionTerm "&" expression
 
+# Concatation of expressions; tabs are not allowed
+concatExpressions	~~= expressionTerm " " expression
+
 # The metaExpressions/patterns that can be used (note: the comments are in a special format: example, name, behaviour in patterns, behaviour in arguments)
 # If a function can not match any expression, an error is generated
 expressionTerm	::= funcCall	# "f(a, 5)", "Function call", "Evaluates the function, matches if the argument equals the result. Can only use variables which are declared left of this pattern. If the function fails (gives an error), the pattern fails too and the next clause is tried", "Evaluate this function"
@@ -50,10 +53,11 @@ expressionTerm	::= funcCall	# "f(a, 5)", "Function call", "Evaluates the functio
 		| String 	# "Token", "Literal", "Argument should be exactly this string", "This string"
 		| "(" expression ")"	# "(x y z)", "Parens", "Groups a pattern", "Groups an expression"
 
+
 # A full expression, eventually a sequence
 expression	::=  ascription	# "a:type", "Ascription", "Check that the argument is an element of `type`", "Checks that an expression is of a type. Bit useless to use within expressions"
 		| splitExpression # "x&y", "Capture", "Match the argument against both patterns", "Execute both `x` and `y`, check that they are the same"
-		| expressionTerm expression
+		| concatExpressions
 		| expressionTerm
 
 # A single clause in a metafunction
