@@ -1,0 +1,47 @@
+import ALGT.Builtins
+
+
+ Template  # The name of your language
+**********
+
+# Some comments here
+
+# Commans in the repl:
+# Type
+# :h
+
+
+ Syntax
+========
+
+a	::= "T" | "F" | a
+
+
+builtins	::= identifier | identifierUpper | string | unicode
+		| upper | lower | digit | lineChar | wordChar
+		| number | integer
+
+whitespaceSensitiveLine
+		~~= a a
+
+ Functions
+===========
+
+
+and	:: a * a -> a
+and("T", "T")	= "T"
+and(_, _)	= "F"
+
+
+
+ Relations
+============
+
+(→)	: a (in) * a (out); Pronounced as "some name"
+
+ Rules
+=======
+
+ (→) x, y	y : a
+---------------------- [Name of the Rule]
+(→) x, and(y, "T")

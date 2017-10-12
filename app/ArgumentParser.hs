@@ -39,7 +39,7 @@ class ActionSpecified a where
 -- Arguments which stay locally, such as printing the version number
 data MainArgs	= MainArgs 
 			{ showVersionNr	:: () -> ()
-			, args'		:: Args
+			, args		:: Args
 			}
 
 
@@ -48,11 +48,18 @@ instance ActionSpecified MainArgs where
 		= False
 
 data Args	= Args 
+	{ _replOpts	:: Maybe ReplOpts
+	, _dumpTemplate	:: Bool
+	}
+
+
+data ReplOpts	= ReplOpts
 	{ _replPath	:: FilePath
 	, _replModule	:: String
 	}
 
 makeLenses ''Args
+makeLenses ''ReplOpts
 
 parseArgs	:: ([Int], String) -> [String] -> IO Args
 parseArgs version strs	
@@ -76,15 +83,21 @@ mainArgs versionMsg
 			(long "version"
 			<> short 'v'
 			<> help "Show the version number and text")
-		   <*> args
+		   <*> argsP
 
 
 
-args	= Args <$> argument str
+argsP	= Args <$> optional replOptsP
+		<*> switch
+			(long "template"
+			<> help "Save a template to a local file")	
+
+
+replOptsP	
+	= ReplOpts <$> 	argument str
 			(metavar "Filepath"
 			<> help "The filepath to the root of the module"
 			<> action "file")
 		<*> argument str
 			(metavar "module"
 			<> help "The module to load")
-		
