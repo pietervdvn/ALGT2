@@ -252,7 +252,7 @@ Grouper {_grouperDict = fromList [("arguments",SyntacticForm ...
 
 functionSyntax	:: Syntax
 functionSyntax
-	= loadAssetsSyntax "Functions" Assets._Functions_language
+	= loadAssetsSyntax "Functions" Assets._ALGT_Native_Functions_language
 
 
 {- | The syntax that declares relations, as defined in the Assets
@@ -261,7 +261,7 @@ Grouper {_grouperDict = fromList [("commaSepExpr",SyntacticForm ...
 -}
 relationSyntax	:: Syntax
 relationSyntax
-	= loadAssetsSyntax "Relations" Assets._Relations_language
+	= loadAssetsSyntax "Relations" Assets._ALGT_Native_Relations_language
 
 
 

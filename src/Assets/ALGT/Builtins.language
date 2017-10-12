@@ -73,6 +73,7 @@ mod		: integer * integer -> integer
 mod(x, y)	= x  # Substituted by real implementation at runtime
 
 
+
 # Given a string, parses it accoring to the syntax
 # The second argument is a string containing the typename (which is resolved using the scope you call it in): 
 # > parse("True & False", "string") : boolExpr = "True" "&" "False"

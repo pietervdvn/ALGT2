@@ -328,8 +328,9 @@ checkExistsSuggDist' (show, score) k dict msg
 			(zeroScores, otherScores)
 				= kys & partition ((==) 0 . snd) |> sortOn snd |> take 5
 			suggs	= (zeroScores ++ otherScores) |> fst |> show & commas
+			msg	= if null suggs then Nothing else Just $ "Perhaps you meant: "++ suggs
 			in
-			Failed $ ExceptionInfo msg Error $ (if null suggs then Nothing else Just $ "Perhaps you meant: "++ suggs)
+			Failed $ ExceptionInfo msg Error msg
 
 
 checkExistsSugg' show

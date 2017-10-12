@@ -110,7 +110,7 @@ _runPure' input (Apply pioA pioA2B)
 		(f, input1)	<- _runPure' input0 pioA2B
 		return (f a, input1)
 _runPure' input (FileExists pth f)
-	= do	let exists	= pth `member` (get fileSystem input)
+	= do	let exists	= pth `member` get fileSystem input
 		return (f exists, input & over filesRead (pth:))
 _runPure' input (ReadFile pth f)
 	= do	contents	<- checkExists pth (get fileSystem input) ("No file \""++pth++"\" found in the input")

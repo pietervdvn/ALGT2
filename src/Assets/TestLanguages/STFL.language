@@ -19,7 +19,7 @@ lambda	::= "(" "\\" var ":" type "." expr ")"
 
 canon	::= bool | number | var | lambda
 
-baseExpr ::= canon | "(" expr ")"
+baseExpr ::= canon | "(" expr ")" | "If" expr "Then" expr "Else" expr 
 
 intOp	::= "+" 
 boolOp	::= "&" 
@@ -27,7 +27,7 @@ sameOp	::= "="
 
 op	::= intOp | boolOp | sameOp
 
-expr	::= baseExpr op expr | "If" expr "Then" expr "Else" expr | baseExpr
+expr	::= baseExpr op expr | baseExpr expr| baseExpr
 
 typingEnv	::= var ":" type typingEnv | "[]"
 
@@ -38,6 +38,11 @@ typingEnv	::= var ":" type typingEnv | "[]"
 not	: bool -> bool
 not("True")	= "False"
 not("False")	= "True"
+
+
+and	: bool * bool -> bool
+and("True", "True")	= "True"
+and(_, _)		= "False"
 
 
 # Searches the typing environment
@@ -56,7 +61,23 @@ typeEq("(" t ")", t)
 typeEq(t, "(" t ")")
 	= t
 typeEq(ta0 "->" tr0, ta1 "->" tr1)
-	= typeEq(ta0, ta1) "->" typeEq (tr0, tr1)
+	= typeEq(ta0, ta1) "->" typeEq(tr0, tr1)
+
+
+
+
+subs	: var * expr * expr -> expr
+subs(x, x, replacement)
+	= replacement
+subs(x, "(" "\\" x ":" type "." expr ")", _)
+	= "(" "\\" x ":" type "." expr ")"
+subs(x, "(" expr ")", replacement)
+	= "(" subs(x, expr, replacement) ")"
+subs(x, expr0 op expr1, replacement)
+	= subs(x, expr0, replacement) op subs(x, expr1, replacement)
+subs(x, "If" cond "Then" exprT "Else" exprF, replacement)
+	= "If" subs(x, cond, replacement) "Then" subs(x, exprT, replacement) "Else" subs(x, exprF, replacement)
+
 
 
  Relations
@@ -69,6 +90,47 @@ typeEq(ta0 "->" tr0, ta1 "->" tr1)
 
  Rules
 ========
+
+
+
+----------------------------------------------------------------- [EApp]
+ (→) ("(" "\\" x ":" typeDom "." expr ")") arg, subs(x, arg, expr)
+
+
+------------------------------ [EPar]
+ (→) "(" expr ")", expr
+
+
+ expr0 : bool	expr1 : bool    
+------------------------------------------ [EBoolAnd]
+ (→) expr0 "&" expr1, and(expr0, expr1)
+
+
+ expr0 : int	expr1 : int    
+------------------------------------------ [EIntPlus]
+ (→) expr0 "+" expr1, plus(expr0, expr1)
+
+
+
+----------------------------------------- [EIfTrue]
+ (→) "If" "True" "Then" e0 "Else" e1, e0
+
+
+
+----------------------------------------- [EIfFalse]
+ (→) "If" "False" "Then" e0 "Else" e1, e1
+
+
+sameOp	::= "="
+
+op	::= intOp | boolOp | sameOp
+
+
+
+
+
+
+### ------------------------- Rules about Typing ---------------------
 
 
  (⊢) "[]", expr, type
@@ -94,6 +156,11 @@ typeEq(ta0 "->" tr0, ta1 "->" tr1)
  (⊢) x ":" typeDom env, expr, typeCod
 -------------------------------------------------------------------- [TLambda]
  (⊢) env, "(" "\\" x ":" typeDom "." expr ")", typeDom "->" typeCod
+
+
+ (⊢) env, f, tDom "->" tCod	(⊢) env, arg, tArg
+------------------------------------------------------- [TApp]
+ (⊢) env, f arg, typeEq(tCod, tArg)
 
 
  (⊢) env, expr, type

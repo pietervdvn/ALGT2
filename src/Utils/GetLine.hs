@@ -11,6 +11,7 @@ import System.Console.ANSI
 import qualified Control.Monad.State as St
 import Control.Monad.State (StateT, liftIO, runStateT)
 import Control.Monad
+import Control.Arrow (first)
 
 import Lens.Micro (ASetter, Getting, over)
 import qualified Lens.Micro
@@ -65,7 +66,7 @@ setupPrompt showMsg curText
 		hFlush stdout
 
 
-actions	:: [([Char], Action Bool)]
+actions	:: [(String, Action Bool)]
 actions
       = [ ("\n", enterAction)
 	, ("\EOT", eotAction)
@@ -112,7 +113,7 @@ delAction'
 
 clearScrAct	:: Action Bool
 clearScrAct
-	= do	liftIO $ clearScreen
+	= do	liftIO clearScreen
 		liftIO $ setCursorPosition 0 0
 		return True
 
@@ -143,7 +144,7 @@ selectEsc log _ []
 	= liftIO $ putStrLn $ "Prompt: Unknown escape sequence/keypress "++show log
 selectEsc log c possActions
 	= do	let possActions'	= possActions & filter ((==) c . head . fst)
-						|> (\(k, v) -> (tail k, v))
+						|> first tail
 		let foundActions	= possActions' & filter (null . fst)
 		if null foundActions then do
 			c'	<- liftIO getChar

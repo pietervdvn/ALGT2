@@ -1,0 +1,11 @@
+import ALGT.Builtins
+
+ Syntax
+********
+
+# The sugared syntax edition for ALGT
+
+ Syntax
+========
+
+a	::= "a"

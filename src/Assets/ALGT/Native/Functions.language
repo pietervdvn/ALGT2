@@ -36,7 +36,7 @@ signature	::= Identifier ":" types lastTypeSep Syntax.typeIdent
 
 
 arguments	::= expression "," arguments | expression
-funcCall	::= Syntax.ident "(" arguments ")"
+funcCall	~~= Syntax.ident "(" Whitespace arguments Whitespace ")"
 
 ascription	::= expressionTerm ":" Syntax.typeIdent
 splitExpression	::= expressionTerm "&" expression

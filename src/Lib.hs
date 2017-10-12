@@ -1,6 +1,4 @@
-module Lib
-    ( someFunc
-    ) where
+module Lib where
 
 import Utils.All
 
@@ -25,7 +23,3 @@ import Repl (repl, trepl, replAsset)
 import Data.Map as M
 
 
-import Utils.Version
-
-someFunc :: IO ()
-someFunc = putStrLn versionString

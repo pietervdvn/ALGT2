@@ -29,7 +29,7 @@ import Control.Monad
 saveMetaSyntaxes	:: IO ()
 saveMetaSyntaxes
 	= do	putStrLn "Saving metasyntaxes to the asset files..."
-		dir	<- getCurrentDirectory |> (++"/src/Assets/MetaSyntax")
+		dir	<- getCurrentDirectory |> (++"/src/Assets/")
 		putStrLn $ "Directory is: "++dir
 		dirExists	<- doesDirectoryExist dir
 		when dirExists $ removeDirectoryRecursive dir
@@ -42,7 +42,7 @@ _saveMetaSyntax	:: FilePath -> [Name] -> Syntax -> IO ()
 _saveMetaSyntax dir nm syntax
 	= do	let target	= dir ++"/" ++ dots nm ++ ".language"
 		print target
-		let imports	= metaSyntaxes & M.keys |> dots |> ("import "++) & unlines
+		let imports	= metaSyntaxes & M.keys |> (["ALGT","Native"] ++) |> dots |> ("import "++) & unlines
 		let contents	= imports ++ 
 				  inHeader " " (dots nm) '*' 
 				  ("# Automatically generated; do not edit" ++ 

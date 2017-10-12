@@ -171,7 +171,7 @@ selectModed lds concl mode as
 				& resolve' lds relationCall
 				|> snd
 		let modes	= get relTypes rel |> snd
-		assertSugg' (length as == length modes) $ ("Unexpected number of arguments, namely "++show (length as), "Give "++show (length modes)++" arguments instead")
+		assertSugg' (length as == length modes) ("Unexpected number of arguments, namely "++show (length as), "Give "++show (length modes)++" arguments instead")
 		zip modes as
 			& filter ((==) mode . fst) 
 			|> snd
@@ -372,7 +372,7 @@ typeExpressionIndexed ld syntForm exprs
 			inMsg' ("Tried the types: "++all |> showFQ & commas' "and") $
 			when (null successfull) (fails tries & Aggregate & Failed)
 
-		assertSugg' (length successfull < 2) $ ("The sequence '"++ unwords (exprs |> toParsable)++"' could be typed in multiple ways, namely:\n"
+		assertSugg' (length successfull < 2) ("The sequence '"++ unwords (exprs |> toParsable)++"' could be typed in multiple ways, namely:\n"
 			++ (successfull |> snd |> toParsable & unlines & indent)
 				, "Try adding a type ascription to disambiguate the typing")
 		let found	= head successfull
@@ -394,7 +394,7 @@ typeExpressionIndexed ld syntForm exprs
 		let toManySuccessMsg (i, exprSeq)
 			= "Via choice "++ showFQ fqname ++ "." ++ show i++ ", resulting in "++
 					exprSeq |> (\expr -> toParsable expr ++ ": " ++ (get expAnnot expr & snd & toParsable) ) |> inParens & unwords
-		assertSugg' (length successfull < 2) $ ("The sequence '"++ unwords (exprs |> toParsable)++"' could be typed in multiple ways, namely as:\n"
+		assertSugg' (length successfull < 2) ("The sequence '"++ unwords (exprs |> toParsable)++"' could be typed in multiple ways, namely as:\n"
 			++ (successfull |> toManySuccessMsg & unlines & indent), "Try adding a type ascription to disambiguate the typing")
 		let (foundInd, foundExprs)	= head successfull
 		(foundExprs, SyntFormIndex fqname foundInd Nothing) & return

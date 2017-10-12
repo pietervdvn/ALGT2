@@ -43,8 +43,8 @@ makeLenses ''ReplState
 type Action	= StateT ReplState IO
 
 trepl	= replAsset "TestLanguages" ["STFL"]
-replAsset fp fq
-	= repl ("/home/pietervdvn/git/ALGT2/src/Assets/" ++ fp) fq
+replAsset fp
+	= repl $ "/home/pietervdvn/git/ALGT2/src/Assets/" ++ fp
 
 repl		:: FilePath -> [Name] -> IO ()
 repl fp path
@@ -185,7 +185,7 @@ noArg	:: Action () -> String -> Action ()
 noArg action ""
 	= action
 noArg action str
-	= do	putColored' yellow $ "No argument is required for this action; the argument is ignored"
+	= do	putColored' yellow "No argument is required for this action; the argument is ignored"
 		action
 
 
@@ -195,7 +195,7 @@ setColor color
 					
 
 putColored color msg
-	= putStrLn $ show $ color $ text msg
+	= print $ color $ text msg
 
 putColored' c m
 	= liftIO $ putColored c m

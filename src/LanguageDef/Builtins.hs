@@ -65,7 +65,7 @@ _fParse		:: (String -> String -> Failable ParseTree) -> [ParseTree] -> Failable 
 _fParse parseString [ptArg, ptParseAs]
 	= do	let toParse	= contents ptArg
 		let typeAs	= contents ptParseAs
-		parseString toParse typeAs
+		parseString toParse typeAs |> removeHidden |> removeRuleEnters
 
 
 _fError		:: a -> [ParseTree] -> Failable ParseTree
