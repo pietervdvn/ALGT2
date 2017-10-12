@@ -31,11 +31,11 @@ biLocations	= LocationInfo 0 0 0 0 "ALGT/Builtins.language"
 
 _bottomSF	:: SyntacticForm
 _bottomSF
-	= SyntacticForm "⊥" [] [] $ MetaInfo biLocations $
+	= SyntacticForm "⊥" [] [] $ MetaInfo biLocations
 		"The bottom type (⊥) represents values which can not exist (or the intersection of all types). For example, a function which always returns an error; or gets stuck in an infinite loop, is said to have type \"bottom\". An intersection between two types (e.g. \"bool\" ∩ \"int\") does not have a result, and is represented with type bottom"
 
 _topSF		:: SyntacticForm
-_topSF	= SyntacticForm "⊤" [] [] $ MetaInfo biLocations $
+_topSF	= SyntacticForm "⊤" [] [] $ MetaInfo biLocations
 		"The top type (⊤) represents all possible values (or: the union of all types). For example, a function which accepts any value, will be declared as having ⊤ as input argument"
 		
 
@@ -81,8 +81,8 @@ _fGroup _ [pt]
 
 
 _intOp		:: (Int -> Int -> Int) -> a -> [ParseTree] -> Failable ParseTree
-_intOp op _ [i, (Int j _ _)]
+_intOp op _ [i, Int j _ _]
 		= i & over ptInt (`op` j) & return
-_intOp _ _	args	= failSugg $ ("Wrong arguments for a builtin function expecting numbers, namely:\n" ++ (args |> toParsable & commas & indent)
+_intOp _ _	args	= failSugg ("Wrong arguments for a builtin function expecting numbers, namely:\n" ++ (args |> toParsable & commas & indent)
 				, "Use two integer arguments instead")
 

@@ -97,7 +97,7 @@ showProofWith opts (Proof concl proverRule predicates)
 		in
 		(preds ++ [line', concl'])
 showProofWith opts (ProofExpr pt)
-	= [(sp opts) pt]
+	= [sp opts pt]
 
 
 showProofWithDepth		:: String -> Name -> ProofOptions -> Proof' a -> String

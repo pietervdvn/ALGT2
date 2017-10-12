@@ -21,6 +21,7 @@ import Data.Set (Set)
 import Data.Maybe 
 import Data.Either
 import Data.Bifunctor
+import Data.Function (on)
 
 import Text.Parsec hiding (Error)
 
@@ -42,7 +43,7 @@ data Combiner a	= LiteralC Doc (ParseTree' () -> String -> Failable a)
 
 instance Checkable' Syntaxes (Combiner a) where
 	check' syntaxes cmb
-		= (inPhase Validating $ _check syntaxes S.empty cmb) >> pass
+		= inPhase Validating (_check syntaxes S.empty cmb) >> pass
 
 
 {-
@@ -69,7 +70,7 @@ _check synts ac (Annot fqname@(ns, syntForm) choices)
 	= return ac	-- Already checked
  | otherwise
 	= do	let noNSMsg	= "No namespace found: "++ (if null ns then "(empty namespace)" else show $ dots ns)++" (it should have contained: "++show syntForm
-		syntax		<- checkExistsSuggDist' (dots, \nms nms' -> levenshtein (last nms) (last nms') ) ns synts noNSMsg
+		syntax		<- checkExistsSuggDist' (dots, levenshtein `on` last) ns synts noNSMsg
 
 		let noSFMsg	= "Syntactic form "++show syntForm++" not found within "++intercalate "." ns
 		choices'	<- checkExistsSuggDist' (show, levenshtein) syntForm (syntax & get grouperDict) noSFMsg

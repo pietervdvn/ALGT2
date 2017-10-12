@@ -17,7 +17,7 @@ var	::= Identifier
 
 lambda	::= "(" "\\" var ":" type "." expr ")"
 
-canon	::= bool | number | var | lambda
+canon	::= bool | integer | var | lambda
 
 baseExpr ::= canon | "(" expr ")" | "If" expr "Then" expr "Else" expr 
 
@@ -106,7 +106,7 @@ subs(x, "If" cond "Then" exprT "Else" exprF, replacement)
  (→) expr0 "&" expr1, and(expr0, expr1)
 
 
- expr0 : int	expr1 : int    
+ expr0 : integer	expr1 : integer    
 ------------------------------------------ [EIntPlus]
  (→) expr0 "+" expr1, plus(expr0, expr1)
 
@@ -119,12 +119,6 @@ subs(x, "If" cond "Then" exprT "Else" exprF, replacement)
 
 ----------------------------------------- [EIfFalse]
  (→) "If" "False" "Then" e0 "Else" e1, e1
-
-
-sameOp	::= "="
-
-op	::= intOp | boolOp | sameOp
-
 
 
 
@@ -143,7 +137,7 @@ op	::= intOp | boolOp | sameOp
  (⊢) _, expr, "Bool"
 
 
- expr : number
+ expr : integer
 ---------------------- [TNumber]
  (⊢) _, expr, "Int"
 

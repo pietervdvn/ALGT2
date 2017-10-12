@@ -115,7 +115,7 @@ _checkAllIdentsExist resolve sf
 _checkNoTrivial	:: SyntacticForm -> Check
 _checkNoTrivial sf
 	= do	let replacedBy	= get syntChoices sf & head & getRuleCall & fromJust
-		assertSugg' (not $ isTrivial sf) $
+		assertSugg' (not $ isTrivial sf)
 			("The syntactic form "++get syntName sf++" is trivial", "Remove this rule and replace it by "++showFQ replacedBy)
 	
 
@@ -136,7 +136,7 @@ _checkDeadClauses isSubtypeOf fq sf
 		let sBNF (i, bnf)	= (bnf & removeWS & toParsable) ++ " (choice "++show i++")"
 		let choicesMsg (a, b)
 				= sBNF a++ " shadows "++ sBNF b
-		assertSugg' (L.null dead) $
+		assertSugg' (L.null dead)
 			("In syntactic form "++showFQ (fq, get syntName sf) ++"\n"++ (dead |> choicesMsg & unlines & indent), "Swap the choices")
 
 

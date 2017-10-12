@@ -1,3 +1,4 @@
+ {-# LANGUAGE TemplateHaskell #-}
 module ArgumentParser where
 
 {-
@@ -35,21 +36,31 @@ headerText v
 class ActionSpecified a where
 	actionSpecified	:: a -> Bool
 
-
+-- Arguments which stay locally, such as printing the version number
 data MainArgs	= MainArgs 
 			{ showVersionNr	:: () -> ()
+			, args'		:: Args
 			}
+
 
 instance ActionSpecified MainArgs where
 	actionSpecified args
 		= False
 
-parseArgs	:: ([Int], String) -> [String] -> IO ()
+data Args	= Args 
+	{ _replPath	:: FilePath
+	, _replModule	:: String
+	}
+
+makeLenses ''Args
+
+parseArgs	:: ([Int], String) -> [String] -> IO Args
 parseArgs version strs	
 	= do	let result	= execParserPure defaultPrefs (parserInfo version) strs
-		MainArgs doShowVersion 
+		MainArgs doShowVersion args
 				<- handleParseResult result
 		return $ doShowVersion ()
+		return args
 
 
 parserInfo v	= parserInfo' (mainArgs $ showVersion v) v
@@ -65,4 +76,15 @@ mainArgs versionMsg
 			(long "version"
 			<> short 'v'
 			<> help "Show the version number and text")
+		   <*> args
+
+
+
+args	= Args <$> argument str
+			(metavar "Filepath"
+			<> help "The filepath to the root of the module"
+			<> action "file")
+		<*> argument str
+			(metavar "module"
+			<> help "The module to load")
 		

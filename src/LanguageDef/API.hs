@@ -96,7 +96,7 @@ infoAbout lds names
 					|> get ldScope |> getInfo |> (,) (names, "") & maybeToList
 
 		-- The language def to actually work in
-		otherInfo'	= do	inPhase Resolving $ assert' (length names > 1) $
+		otherInfo'	= do	inPhase Resolving $ assert' (length names > 1)
 						"To get information about entries which are globally resolved, a scope qualifier is needed" 
 					ld		<- lds & enterScope (init names)
 					return $ infoAbout' ld names
@@ -166,8 +166,7 @@ runExpression' lds file expectedType input
 
 
 runPredicate	:: LDScope -> Predicate -> Failable Proof
-runPredicate lds predicate
-	= proofThat lds predicate
+runPredicate	= proofThat
 
 
 

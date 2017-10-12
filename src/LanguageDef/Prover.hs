@@ -29,7 +29,7 @@ import Control.Monad
 
 proofThat	:: LDScope -> Predicate -> Failable Proof
 proofThat lds pred	
-	= inContext ("While proving "++toParsable pred, Evaluating, get predLocation pred) $
+	= inContext ("While proving "++toParsable pred, Evaluating, get predLocation pred)
 		(constructProof lds M.empty pred |> fst)
 
 
@@ -52,13 +52,13 @@ constructProof lds vars (PredConcl concl _)
 		let concls@(proof:rest)
 				= successfull |> get proofConcl
 		
-		assert' (all ((==) proof) rest) $
+		assert' (all (== proof) rest) $
 			"The proof is divergent; the rules can be interpreted in multiple ways yielding multiple results, namely: \n" ++
 			(concls & nub |> toParsable' ", " & intercalate "\n" & indent)
 		
 		outExprs	<- modedArgs lds' Out concl
 		outArgs		<- proof & selectModed lds' concl Out	:: Failable [ParseTree]
-		vars'		<- inMsg' ("While calculating the final variable store") $ patternMatchAll lds' vars outExprs outArgs
+		vars'		<- inMsg' "While calculating the final variable store" $ patternMatchAll lds' vars outExprs outArgs
 		return (head successfull, vars')
 
 
@@ -89,7 +89,7 @@ interleaveArgs (Out:modes) ins (out:outs)
 interleaveArgs [] [] []
 		= []
 interleaveArgs _ _ _
-		= error $ "Number of arguments does not match"
+		= error "Number of arguments does not match"
 
 
 rulesAbout	:: LDScope -> FQName -> Failable [Rule]

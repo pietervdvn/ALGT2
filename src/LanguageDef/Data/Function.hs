@@ -13,8 +13,7 @@ import LanguageDef.Data.Expression hiding (choices')
 import LanguageDef.Data.SyntFormIndex hiding (choices')
 
 import LanguageDef.Combiner
-import LanguageDef.MetaSyntax (nls, nl)
-import LanguageDef.MetaSyntax (ident, typeIdent)
+import LanguageDef.MetaSyntax (nls, nl, ident, typeIdent)
 
 import Data.Maybe
 import Data.Map as M

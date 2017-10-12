@@ -69,7 +69,7 @@ asLangDefs defs	= do	scopes		<- defs & M.toList |> (fst &&& _scopeFor defs) |> s
 						& M.fromList 
 						& knotScopes 
 			ld'	<- typeLD ldDict
-			inPhase Validating $ (ld' & M.toList |> uncurry check' & allGood )
+			inPhase Validating (ld' & M.toList |> uncurry check' & allGood )
 			return ld'
 
 

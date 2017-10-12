@@ -61,7 +61,7 @@ testSyntax rule string
 					& M.filter isJust |> fromJust	:: Map [Name] SyntacticForm
 		let foundKeys	= M.keys foundRules
 		assert' (length foundKeys < 2) $ "The rule was found in multiple syntaxes: "++(foundKeys |> dots & commas)
-		let syntForm	= foundRules ! (head foundKeys)
+		let syntForm	= foundRules ! head foundKeys
 		parse "DebugAPI.testSyntax" (metaSyntaxes, head foundKeys) rule string
 
 {-

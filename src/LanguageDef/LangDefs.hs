@@ -70,7 +70,7 @@ updateEnv (scope, env) (LDScope _ imps _)
 enterScope	::  [Name] -> LDScope' fr -> Failable (LDScope' fr)
 enterScope names lds
 	= do	let allScopes	= get environment lds
-		let dist	= (dots, \ref v -> levenshtein (last ref) (last v))	:: ([Name] -> String, [Name] -> [Name] -> Int)
+		let dist	= (dots, levenshtein `on` last)	:: ([Name] -> String, [Name] -> [Name] -> Int)
 		checkExistsSuggDist' dist names (get environment lds)
 			("The scope "++dots names++" was not found")
 		

@@ -49,7 +49,7 @@ instance Normalizable (ParseTree' a) where
 	normalize pt =  pt 
 
 
-deAnnot	:: ParseTree' a -> (ParseTree' ())
+deAnnot	:: ParseTree' a -> ParseTree' ()
 deAnnot pt
 	= pt |> const ()
 
@@ -86,7 +86,7 @@ mostSpecificRuleEnter pt
 
 {-  | Removes all superfluous information (location info and such), so that parsetrees can be compared to the bare structure and contents
 -}
-bareInformation	:: ParseTree' a -> (ParseTree' ())
+bareInformation	:: ParseTree' a -> ParseTree' ()
 bareInformation pt
 	= pt & deAnnot & removeLocationInfo & removeRuleEnters
 
@@ -125,7 +125,7 @@ removeHidden pt
 >>> simplePT "abc"
 Literal {_ptToken = "abc", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}
 -}
-simplePT	:: String -> (ParseTree' ())
+simplePT	:: String -> ParseTree' ()
 simplePT string	= Literal string unknownLocation () False
 
 

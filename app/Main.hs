@@ -1,5 +1,7 @@
 module Main where
 
+import Utils.All
+
 import Lib
 import Repl
 
@@ -14,5 +16,5 @@ version		= (versionCount, versionMessage)
 
 main :: IO ()
 main = do	args	<- getArgs
-		parseArgs version args
-		putStrLn "Hello world"
+		args'	<- parseArgs version args
+		repl (get replPath args') (get replModule args' & uncalate '.')
