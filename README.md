@@ -2,7 +2,7 @@
 
 Get started by
 
-- Downloading [ALGT](ALGT) (the executable)
+- Downloading [ALGT](https://github.com/pietervdvn/ALGT2/raw/master/ALGT) (the executable)
 - Running `ALGT --template` to create a barebones framework
 - Rename `Template.language` to `SomethingOfYourChoice.language`
 - Running `ALGT . SomethingOfYourChoice`s
