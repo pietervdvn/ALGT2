@@ -1,7 +1,9 @@
 import ALGT.Builtins
 
 
- Template  # The name of your language
+# The name of your language
+
+ Template
 **********
 
 # Some comments here
@@ -14,21 +16,20 @@ import ALGT.Builtins
  Syntax
 ========
 
-a	::= "T" | "F" | a
+a	::= "T" | "F" | "(" a ")"
 
 
-builtins	::= identifier | identifierUpper | string | unicode
+builtins	::= identifier | identifierUpper | string | unicodeChar
 		| upper | lower | digit | lineChar | wordChar
 		| number | integer
 
-whitespaceSensitiveLine
-		~~= a a
+whitespaceSensitiveLine		~~= a a
 
  Functions
 ===========
 
 
-and	:: a * a -> a
+and		: a * a -> a
 and("T", "T")	= "T"
 and(_, _)	= "F"
 
