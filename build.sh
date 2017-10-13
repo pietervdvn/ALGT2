@@ -39,3 +39,7 @@ cp ALGT "binaries/ALGT-$VERSION"
 cp ALGT "ALGT-$VERSION"
 echo "Moved new build to binaries"
 
+git add "binaries/ALGT-$VERSION"
+git add "ALGT-$VERSION"
+
+git commit -m "Build #$VERSION"

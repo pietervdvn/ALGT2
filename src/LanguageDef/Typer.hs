@@ -388,7 +388,7 @@ typeExpressionIndexed ld syntForm exprs
 		let successfull	= successess tries		--	:: [(Int, [Expression' (a, SyntFormIndex)])]
 		let li		= exprs & head & get expLocation
 		when (null successfull) $ 
-			fails tries & Aggregate & Failed & inMsg' ("Could not type the sequence "++ unwords (exprs |> toParsable)++" as a "++showFQ syntForm)
+			fails tries & Aggregate & Failed & inMsg' ("Could not type the sequence "++ (exprs |> toParsable & unwords & inParens)++" as a "++showFQ syntForm)
 
 
 		let toManySuccessMsg (i, exprSeq)
@@ -406,8 +406,9 @@ typeExpressionIndexed' ld syntForm exprs (choiceIndex, choiceElems)
 	= do	let [BNF.RuleCall fqname]	= choiceElems
 		typeExpressionIndexed ld fqname exprs |> fst 
  | length exprs /= length choiceElems
-	= fail $"Can not match choice "++show choiceIndex++": this choice has "++show (length choiceElems) ++ 
-		" elements, whereas the expression has "++show (length exprs)
+	= failSugg ("Can not match choice "++show choiceIndex++": this choice has "++show (length choiceElems) ++ 
+			" elements, whereas the expression has "++show (length exprs)
+		, "Use something matching '"++(choiceElems |> toParsable |> inParens & unwords) ++ "'")
  | otherwise
 	= zip (mapi choiceElems) exprs |> uncurry (typeExprBNF ld (syntForm, choiceIndex)) & allGood
 

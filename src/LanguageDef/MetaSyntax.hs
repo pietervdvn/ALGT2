@@ -198,8 +198,17 @@ bnfTerm
 
 bnfSeq	:: Combiner BNF
 bnfSeq	= choices' "bnfSeq"
-		[ cmb (\h t -> BNF.Seq [h, t]) bnfTerm bnfSeq
-		, bnfTerm ]
+		[ cmb _merge bnfTerm bnfSeq
+		, bnfTerm ] 
+
+
+_merge	:: BNF -> BNF -> BNF
+_merge (Seq bnfs) (Seq bnfs')
+		= Seq (bnfs ++ bnfs')
+_merge bnf (Seq bnfs)
+		= Seq (bnf:bnfs)
+
+_merge bnf bnf'	= Seq [bnf, bnf']
 
 barC	:: Combiner (Maybe String)
 barC	= choices' "bar"

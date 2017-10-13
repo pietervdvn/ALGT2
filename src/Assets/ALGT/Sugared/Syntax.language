@@ -15,8 +15,11 @@ bnfTerm		::= string					 # Literal value
 		  | Native.Syntax.ident				 # Syntactic form call in some namespace
 		  | "$" bnfTerm					 # Grouping an entire parsetree to a single token
 
+bnfOp		::= "?" | "*" | "+"
+
 # A sequence of BNF-terms
-bnfSeq		::= bnfTerm bnfSeq	
+bnfSeq		~~= bnfTerm bnfOp whitespace bnfSeq
+		  | bnfTerm whitespace bnfSeq	
 		  | bnfTerm	
 
 # One or more choices in BNF
@@ -36,17 +39,12 @@ syntax		::= bnfDecl syntax
 ===========
 
 
-desChoices	: bnfChoices -> ALGT.Native.Syntax.bnfChoices
-desChoices(sq bar ch)
-		= desSeq(sq) bar desChoices(ch)
-desChoices(sq nl)
-		= desSeq(sq) nl
 
-
-desSeq		: bnfSeq -> ALGT.Native.Syntax.bnfSeq
-desSeq(term sq)	= desBNFTerm(term) desSeq(sq)
+desSeq		: bnfSeq -> ALGT.Native.Syntax.bnfChoices
 desSeq(term : bnfTerm)
-		= desBNFTerm(term)
+		= desBNFTerm(term) "\n"
+
+
 
 desBNFTerm		: bnfTerm -> ALGT.Native.Syntax.bnfTerm
 desBNFTerm(i : ident)	= i

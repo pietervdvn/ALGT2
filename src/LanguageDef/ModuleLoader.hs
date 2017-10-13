@@ -14,19 +14,20 @@ import LanguageDef.LangDefs
 import LanguageDef.LangDefsFix
 
 import Data.Map as M
+import Data.Time.Clock
 
 import Control.Monad hiding (fail)
 
 import qualified Assets
 
 
-
-
+type Cache	= Map FilePath (UTCTime, LanguageDef' () ())
 
 data LoadingStatus = LS
 	{ _rootModule	:: [Name]
 	, _rootPath	:: FilePath
 	, _currentlyKnown	:: Map [Name] (FilePath, Failable (LanguageDef' () ()))
+	, _cache	:: Cache
 	}
 makeLenses ''LoadingStatus
 
@@ -52,11 +53,13 @@ Success (["TestInput","Nested","X"],"x")
 -}
 
 
-loadAll	:: FilePath -> [Name] -> PureIO (Failable LDScope)
-loadAll fp plzLoad
-	= do	defs	<- _loadAll (LS [] fp M.empty) plzLoad |> get currentlyKnown
-		return $ _fixAll plzLoad defs
-		
+loadAll	:: Cache -> FilePath -> [Name] -> PureIO (Failable LDScope, Cache)
+loadAll cach fp plzLoad
+	= do	loadingSt	<- _loadAll (LS [] fp M.empty cach) plzLoad
+		let lds		= loadingSt & get currentlyKnown & _fixAll plzLoad
+		let cach'	= loadingSt & get cache
+		return (lds, cach')
+
 
 _fixAll	:: [Name] -> Map [Name] (FilePath, Failable (LanguageDef' () ())) -> Failable LDScope
 _fixAll plzLoad defs

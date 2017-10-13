@@ -13,7 +13,7 @@ import System.IO
 
 import Control.Monad
 
-versionCount	= [0,2,0]
+versionCount	= [0,2,0,1]
 versionMessage	= "Hello World, again"
 version		= (versionCount, versionMessage)
 

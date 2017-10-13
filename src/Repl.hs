@@ -10,6 +10,7 @@ import LanguageDef.Utils.ExceptionInfo
 import LanguageDef.Utils.LocationInfo
 
 import LanguageDef.Data.Expression
+import LanguageDef.Data.LanguageDef
 
 import qualified Utils.PureIO as PureIO
 import Utils.PureIO (runIO)
@@ -23,12 +24,13 @@ import Utils.GetLine
 import Data.List
 import Data.Char
 import Data.Maybe
+import Data.Time.Clock
 
 import Graphs.Lattice (debugLattice)
 
 import Control.Monad.State hiding (get)
-
-
+import qualified Data.Map as M
+import Data.Map (Map)
 
 
 data ReplState	= ReplState 
@@ -36,19 +38,20 @@ data ReplState	= ReplState
 	, _currentPath		:: FilePath
 	, _currentModulePath	:: [FilePath]
 	, _currentPromptMsg	:: String -> String
+	, _cache		:: Map FilePath (UTCTime, LanguageDef' () ())
 	}
 makeLenses ''ReplState
 
 
 type Action	= StateT ReplState IO
 
-trepl	= replAsset "TestLanguages" ["STFL"]
+trepl	= replAsset "" ["ALGT", "Sugared", "Syntax"]
 replAsset fp
 	= repl $ "/home/pietervdvn/git/ALGT2/src/Assets/" ++ fp
 
 repl		:: FilePath -> [Name] -> IO ()
 repl fp path
-	= do	let state	= ReplState Nothing fp path (show . onred . text)
+	= do	let state	= ReplState Nothing fp path (show . onred . text) M.empty
 		runStateT (reload >> _repl) state
 		pass
 
@@ -168,7 +171,7 @@ reload
 	= do	fp	<- gets' currentPath
 		fq	<- gets' currentModulePath
 		putStrLn' ("Reloading " ++ fp ++ "/" ++ intercalate "/" fq)
-		mLd	<- liftIO $ runIO (loadLangDef fp fq)
+		mLd	<- liftIO $ runIO (loadLangDef fp fq)	-- TODO use cache
 		let recover e	= do	putStrLn' $ toParsable e
 					old	<- gets' currentModule
 					setColor $ if isNothing old then onred else red
