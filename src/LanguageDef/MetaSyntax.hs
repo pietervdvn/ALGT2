@@ -83,8 +83,7 @@ bnfSyntax
 			(knownBuiltins |> (\bisf -> choice (get biDocs bisf++"; "++get biRegex bisf) [Literal $ get biName bisf] ))
 		, syntForm "bnfTerm" "A single term of BNF, thus either a literal, syntactic form call or builtin"
 			[ choice "Literal value" [bi string]
-			, choice "Syntactic form call in some namespace" [bi identifierUpper, Literal ".", bi identifier ]
-			, choice "Syntactic form call" [bi identifier]
+			, choice "Syntactic form call in some namespace"  [call "ident" ]
 			, choice "Call of a builtin" [call "builtin"]
 			, choice "Grouping an entire parsetree to a single token" [Literal "$", call "bnfTerm"]
 			]
@@ -191,8 +190,7 @@ bnfTerm	:: Combiner BNF
 bnfTerm
 	= choices' "bnfTerm"
 		[ capture |> unescape |> BNF.Literal
-		, cmb (curry BNF.RuleCall) (capture {-identifier-} |> (:[])) (cmb seq (lit ".") capture {-identifier-})
-		, capture |> (\nm -> BNF.RuleCall ([], nm))
+		, ident |> BNF.RuleCall
 		, builtinValue
 		, cmb seq (lit "$") (bnfTerm |> BNF.Group) 
 		]

@@ -1,7 +1,7 @@
 
-import Functions
-import Syntax
-import ALGT
+import ALGT.Native.Functions
+import ALGT.Native.Syntax
+import ALGT.Native.ALGT
 
  Relations 
 ***********

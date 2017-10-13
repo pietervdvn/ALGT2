@@ -1,8 +1,8 @@
-import ALGT
-import Functions
-import Helper
-import Relations
-import Syntax
+import ALGT.Native.ALGT
+import ALGT.Native.Functions
+import ALGT.Native.Helper
+import ALGT.Native.Relations
+import ALGT.Native.Syntax
 
   Helper 
  ********
@@ -13,18 +13,18 @@ import Syntax
 
 
 # The contents of comments, such as what you are reading right now
-commentContents	::=LineChar Syntax.commentContents		 # Body of the comment
-	 | "\n"		 # Closing of the comment
+commentContents	::= LineChar Syntax.commentContents		 # Body of the comment
+	  | "\n"		 # Closing of the comment
 
 # A comment
-comment	::="#" $Syntax.commentContents	
+comment	::= "#" $Syntax.commentContents	
 
 # A newline, possibly with a single comment
-nl	::=Syntax.comment	
-	 | "\n"	
+nl	::= Syntax.comment	
+	  | "\n"	
 
 # Multiple nls, possibly with comments
-nls	::=Syntax.nl Syntax.nls	
-	 | Syntax.nl	
+nls	::= Syntax.nl Syntax.nls	
+	  | Syntax.nl	
 
 

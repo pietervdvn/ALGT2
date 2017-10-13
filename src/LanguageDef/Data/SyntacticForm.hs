@@ -225,9 +225,9 @@ instance ToString SyntacticForm where
 		= let	docStr		= toParsable meta
 			chMeta'		= chMeta |> toCoParsable |> ("\t"++)
 			choices'	= choices |> removeWS |> toParsable & zipWith (flip (++)) chMeta'
-			allChoices	= choices' & intercalate "\n\t | "
+			allChoices	= choices' & intercalate "\n\t  | "
 			assgn	= if all (\bnf -> containsHidden bnf || isSingle bnf) choices then "::=" else "~~="
 			in
-			["", docStr, nm ++ "\t" ++ assgn ++ allChoices] & intercalate "\n"
+			["", docStr, nm ++ "\t" ++ assgn ++ " " ++ allChoices] & intercalate "\n"
 
 

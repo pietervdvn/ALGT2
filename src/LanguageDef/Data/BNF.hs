@@ -316,11 +316,18 @@ instance ToString Builtin where
 	toParsable 	= get biName
 
 
-
+showC	:: Char -> String
+showC '\t'
+	= "\\t"
+showC '\\'
+	= "\\\\"
+showC '\n'
+	= "\\n"
+showC c	= [c]
 
 instance ToString BNF where
 	toParsable (Literal string)
-			= show string
+			= "\""++(string >>= showC)++"\""
 	toParsable (BuiltIn _ b)
 			= toParsable b
 	toParsable (RuleCall fq)

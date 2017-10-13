@@ -473,8 +473,8 @@ fromList [("x",fromList [(["TestLanguage"],"bool"),(["TestLanguage"],"int")])]
 
 -}
 typingTable	:: Expression -> Map Name (Set FQName)
-typingTable (Var nm (NoIndex sf) _)
-	= M.singleton nm (S.singleton sf)
+typingTable (Var nm sfi _)
+	= M.singleton nm (S.singleton $ get syntIndForm sfi)
 typingTable DontCare{}
 	= M.empty
 typingTable ParseTree{}
@@ -485,6 +485,8 @@ typingTable (Ascription expr _ _ _)
 	= typingTable expr
 typingTable (SeqExp exprs _ _)
 	= exprs |> typingTable & M.unionsWith S.union
+typingTable (Split e1 e2 _ _)
+	= M.unionWith S.union (typingTable e1) $ typingTable e2
 
 typingTable'	:: Expression' (a, SyntFormIndex) -> Map Name (Set FQName)
 typingTable' e

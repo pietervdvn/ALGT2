@@ -72,13 +72,13 @@ stfl		= loadAssetLangDef "TestLanguages" ["STFL"] & crash'
 
 {- | Gives info about any entry, resolved globally
 >>> infoAbout testLanguage ["TestLanguage", "bool"] |> uncurry toParsable' & unlines
-"\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n"
+"\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::= \"True\"\t\n\t  | \"False\"\t\n\n"
 
 
 >>> infoAbout testLanguage ["TestLanguage", "and"] |> uncurry toParsable' & unlines
 "\n TestLanguage.and (Function) \n=============================\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\n\n TestLanguage.and (Rule) \n=========================\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n"
 >>> infoAbout testLanguage ["TestLanguage"]|> uncurry toParsable' & unlines
-"\n TestLanguage. (Language Definition) \n=====================================\n\n\n Test Language \n***************\n\n# Blabla\n\n\n Syntax \n========\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n\nint\t::=Number\t\n\n\nexpr\t::=TestLanguage.bool\t\n\t | TestLanguage.int\t\n\n\nexprSum\t::=TestLanguage.expr TestLanguage.op TestLanguage.exprSum\t\n\t | TestLanguage.expr\t\n\n\nop\t::=\"&\"\t\n\t | \"+\"\t\n\n\ntuple\t::=TestLanguage.expr TestLanguage.expr\t\n\n\n\n Functions \n===========\n\n# Inverts a boolean\n# \nnot\t : TestLanguage.bool \8594 TestLanguage.bool\nnot(\"True\")\t = \"False\"\nnot(\"False\")\t = \"True\"\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\nnand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nnand(a, b)\t = TestLanguage.not(TestLanguage.and(a, b))\n\n\nor\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nor(TestLanguage.not(\"True\"), TestLanguage.not(\"True\"))\t = \"False\"\nor(_, _)\t = \"True\"\n\n\n\n\n Relations \n===========\n\n\n(\8594)\tTestLanguage.exprSum (in) \215 TestLanguage.exprSum (out); Pronounced as \"smallstep\"\n\n\n\n\n Rules \n=======\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n\n\n\n\n"
+"\n TestLanguage. (Language Definition) \n=====================================\n\n\n Test Language \n***************\n\n# Blabla\n\n\n Syntax \n========\n\n\n\nbool\t::= \"True\"\t\n\t  | \"False\"\t\n\n\nint\t::= Number\t\n\n\nexpr\t::= TestLanguage.bool\t\n\t  | TestLanguage.int\t\n\n\nexprSum\t::= TestLanguage.expr TestLanguage.op TestLanguage.exprSum\t\n\t  | TestLanguage.expr\t\n\n\nop\t::= \"&\"\t\n\t  | \"+\"\t\n\n\ntuple\t::= TestLanguage.expr TestLanguage.expr\t\n\n\n\n Functions \n===========\n\n# Inverts a boolean\n# \nnot\t : TestLanguage.bool \8594 TestLanguage.bool\nnot(\"True\")\t = \"False\"\nnot(\"False\")\t = \"True\"\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\nnand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nnand(a, b)\t = TestLanguage.not(TestLanguage.and(a, b))\n\n\nor\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nor(TestLanguage.not(\"True\"), TestLanguage.not(\"True\"))\t = \"False\"\nor(_, _)\t = \"True\"\n\n\n\n\n Relations \n===========\n\n\n(\8594)\tTestLanguage.exprSum (in) \215 TestLanguage.exprSum (out); Pronounced as \"smallstep\"\n\n\n\n\n Rules \n=======\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n\n\n\n\n"
 
 >>> infoAbout testLanguage ["~"]
 []
@@ -105,9 +105,9 @@ infoAbout lds names
 
 {- | Gives info about any entry, resolved from within the module. An entity could be not in scope or could be info about an import
 >>> infoAbout' testLanguage ["TestLanguage", "bool"] |> uncurry toParsable' & unlines
-"\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n"
+"\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::= \"True\"\t\n\t  | \"False\"\t\n\n"
 >>> infoAbout' testLanguage ["bool"] |> uncurry toParsable' & unlines
-"\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::=\"True\"\t\n\t | \"False\"\t\n\n"
+"\n TestLanguage.bool (Syntactic Form) \n====================================\n\n\n\nbool\t::= \"True\"\t\n\t  | \"False\"\t\n\n"
 >>> infoAbout' testLanguage ["and"] |> uncurry toParsable' & unlines
 "\n TestLanguage.and (Function) \n=============================\n\n\nand\t : TestLanguage.bool \215 TestLanguage.bool \8594 TestLanguage.bool\nand(\"True\", \"True\")\t = \"True\"\nand(_, _)\t = \"False\"\n\n\n\n TestLanguage.and (Rule) \n=========================\n\n\n \n---------------------------------------------- [ and ]\n (TestLanguage.\8594) (\"True\" \"&\" \"True\"), \"True\"\n\n\n"
 -}

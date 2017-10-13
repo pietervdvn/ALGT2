@@ -1,8 +1,8 @@
-import ALGT
-import Functions
-import Helper
-import Relations
-import Syntax
+import ALGT.Native.ALGT
+import ALGT.Native.Functions
+import ALGT.Native.Helper
+import ALGT.Native.Relations
+import ALGT.Native.Syntax
 
   Syntax 
  ********
@@ -13,75 +13,74 @@ import Syntax
 
 
 # The contents of comments, such as what you are reading right now
-commentContents	::=LineChar Syntax.commentContents		 # Body of the comment
-	 | "\n"		 # Closing of the comment
+commentContents	::= LineChar Syntax.commentContents		 # Body of the comment
+	  | "\n"		 # Closing of the comment
 
 # A comment
-comment	::="#" $Syntax.commentContents	
+comment	::= "#" $Syntax.commentContents	
 
 # A newline, possibly with a single comment
-nl	::=Syntax.comment	
-	 | "\n"	
+nl	::= Syntax.comment	
+	  | "\n"	
 
 # Multiple nls, possibly with comments
-nls	::=Syntax.nl Syntax.nls	
-	 | Syntax.nl	
+nls	::= Syntax.nl Syntax.nls	
+	  | Syntax.nl	
 
 # The names of syntactic forms that are available as builtins
-builtin	::="Whitespace"		 # Zero or more whitespace characters. Always produces a token in the parsetree; [ \t]*
-	 | "IdentifierUpper"		 # An identifier starting with an uppercase letter; [A-Z][a-zA-Z0-9]*
-	 | "Identifier"		 # An identifier starting with a lowercase letter; [a-z][a-zA-Z0-9]*
-	 | "String"		 # A double quoted string, where \" is a literal double quote and \\ is a literal backslash; "([^"]|\[nt"\])"
-	 | "Any"		 # Any single character; .
-	 | "UnicodeChar"		 # Any single unicode character that is not a standard ascii-character; [^a-zA-Z0-9\ascii]
-	 | "Upper"		 # Any upper character; [A-Z]
-	 | "Lower"		 # Any lower character; [a-z]
-	 | "Digit"		 # Any digit; [0-9]
-	 | "LineChar"		 # Any single character that is not a newline. This includes \r.; [^\n]
-	 | "WordChar"		 # Any single character that is not a whitespace or newline; [^ \t\n]
-	 | "Integer"		 # Matches an (possibly negative) integer. Integers parsed by this might be passed into the builtin arithmetic functions.; -?[0-9]+
-	 | "Number"		 # Matches an positive number. Integers parsed by this might be passed into the builtin arithmetic functions.; [0-9]+
+builtin	::= "Whitespace"		 # Zero or more whitespace characters. Always produces a token in the parsetree; [ \t]*
+	  | "IdentifierUpper"		 # An identifier starting with an uppercase letter; [A-Z][a-zA-Z0-9]*
+	  | "Identifier"		 # An identifier starting with a lowercase letter; [a-z][a-zA-Z0-9]*
+	  | "String"		 # A double quoted string, where \" is a literal double quote and \\ is a literal backslash; "([^"]|\[nt"\])"
+	  | "Any"		 # Any single character; .
+	  | "UnicodeChar"		 # Any single unicode character that is not a standard ascii-character; [^a-zA-Z0-9\ascii]
+	  | "Upper"		 # Any upper character; [A-Z]
+	  | "Lower"		 # Any lower character; [a-z]
+	  | "Digit"		 # Any digit; [0-9]
+	  | "LineChar"		 # Any single character that is not a newline. This includes \r.; [^\n]
+	  | "WordChar"		 # Any single character that is not a whitespace or newline; [^ \t\n]
+	  | "Integer"		 # Matches an (possibly negative) integer. Integers parsed by this might be passed into the builtin arithmetic functions.; -?[0-9]+
+	  | "Number"		 # Matches an positive number. Integers parsed by this might be passed into the builtin arithmetic functions.; [0-9]+
 
 # A single term of BNF, thus either a literal, syntactic form call or builtin
-bnfTerm	::=String		 # Literal value
-	 | IdentifierUpper "." Identifier		 # Syntactic form call in some namespace
-	 | Identifier		 # Syntactic form call
-	 | Syntax.builtin		 # Call of a builtin
-	 | "$" Syntax.bnfTerm		 # Grouping an entire parsetree to a single token
+bnfTerm	::= String		 # Literal value
+	  | Syntax.ident		 # Syntactic form call in some namespace
+	  | Syntax.builtin		 # Call of a builtin
+	  | "$" Syntax.bnfTerm		 # Grouping an entire parsetree to a single token
 
 # A sequence of BNF-terms
-bnfSeq	::=Syntax.bnfTerm Syntax.bnfSeq	
-	 | Syntax.bnfTerm	
+bnfSeq	::= Syntax.bnfTerm Syntax.bnfSeq	
+	  | Syntax.bnfTerm	
 
 # The separator of choices
-bar	~~="|"		 # A simple bar
-	 | Syntax.nl "\t" Whitespace "|"		 # Jumping to a newline
+bar	~~= "|"		 # A simple bar
+	  | Syntax.nl "\t" Whitespace "|"		 # Jumping to a newline
 
 # One or more choices in BNF
-bnfChoices	::=Syntax.bnfSeq Syntax.bar Syntax.bnfChoices	
-	 | Syntax.bnfSeq Syntax.nl	
+bnfChoices	::= Syntax.bnfSeq Syntax.bar Syntax.bnfChoices	
+	  | Syntax.bnfSeq Syntax.nl	
 
 # The declaration operator, used to indicate the whitespace mode
-assign	::="::="		 # Assigment using implicit whitespace
-	 | "~~="		 # Assignment where the programmer is responsible for whitespace
+assign	::= "::="		 # Assigment using implicit whitespace
+	  | "~~="		 # Assignment where the programmer is responsible for whitespace
 
 # A line declaring bnf
-bnfDecl	::=Syntax.nls Identifier Syntax.assign Syntax.bnfChoices		 # With comment or leading newlines
-	 | Identifier Syntax.assign Syntax.bnfChoices	
+bnfDecl	::= Syntax.nls Identifier Syntax.assign Syntax.bnfChoices		 # With comment or leading newlines
+	  | Identifier Syntax.assign Syntax.bnfChoices	
 
 # An entire syntax declaration
-syntax	::=Syntax.bnfDecl Syntax.syntax	
-	 | Syntax.bnfDecl	
+syntax	::= Syntax.bnfDecl Syntax.syntax	
+	  | Syntax.bnfDecl	
 
 # Identifies something (such as a function, rule, relation, syntactic form, ...);
 #  can be fully qualified or not
-ident	::=IdentifierUpper "." Syntax.ident	
-	 | Identifier	
+ident	::= IdentifierUpper "." Syntax.ident	
+	  | Identifier	
 
 # Identifies a syntactic form; used as types for functions and relations.
 # Can be an identifier, fully qualified identiefier or builtin value
-typeIdent	::="\8869"		 # The bottom type, when a function will never yield a result
-	 | "\8868"		 # The top type, when a function might return any type.
-	 | Syntax.ident	
+typeIdent	::= "⊥"		 # The bottom type, when a function will never yield a result
+	  | "⊤"		 # The top type, when a function might return any type.
+	  | Syntax.ident	
 
 

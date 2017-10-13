@@ -1,5 +1,7 @@
 import ALGT.Builtins
 
+import ALGT.Native.Syntax
+
  Syntax
 ********
 
@@ -8,4 +10,46 @@ import ALGT.Builtins
  Syntax
 ========
 
-a	::= "a"
+# A single term of BNF, thus either a literal, syntactic form call or builtin
+bnfTerm		::= string					 # Literal value
+		  | Native.Syntax.ident				 # Syntactic form call in some namespace
+		  | "$" bnfTerm					 # Grouping an entire parsetree to a single token
+
+# A sequence of BNF-terms
+bnfSeq		::= bnfTerm bnfSeq	
+		  | bnfTerm	
+
+# One or more choices in BNF
+bnfChoices	::= bnfSeq bar bnfChoices	
+		  | bnfSeq nl	
+
+# A line declaring bnf
+bnfDecl		::= nls Identifier assign bnfChoices		 # With comment or leading newlines
+		  | Identifier assign bnfChoices	
+
+# An entire syntax declaration
+syntax		::= bnfDecl syntax	
+		  | bnfDecl	
+	
+
+ Functions
+===========
+
+
+desChoices	: bnfChoices -> ALGT.Native.Syntax.bnfChoices
+desChoices(sq bar ch)
+		= desSeq(sq) bar desChoices(ch)
+desChoices(sq nl)
+		= desSeq(sq) nl
+
+
+desSeq		: bnfSeq -> ALGT.Native.Syntax.bnfSeq
+desSeq(term sq)	= desBNFTerm(term) desSeq(sq)
+desSeq(term : bnfTerm)
+		= desBNFTerm(term)
+
+desBNFTerm		: bnfTerm -> ALGT.Native.Syntax.bnfTerm
+desBNFTerm(i : ident)	= i
+desBNFTerm("$" t)	= "$" desBNFTerm(t)
+desBNFTerm(s)		= dynType(s)
+

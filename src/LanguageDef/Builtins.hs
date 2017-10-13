@@ -58,8 +58,12 @@ functions 	= M.fromList
 			, ((["ALGT", "Builtins"], "group"), _fGroup)
 			, ((["ALGT", "Builtins"], "error"), _fError)
 			, ((["ALGT", "Builtins"], "errorSugg"), _fError)
+			, ((["ALGT", "Builtins"], "dynType"), _fId)
 
 			]
+
+_fId		:: a -> [ParseTree] -> Failable ParseTree
+_fId _ [pt]	= return pt
 
 _fParse		:: (String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree
 _fParse parseString [ptArg, ptParseAs]

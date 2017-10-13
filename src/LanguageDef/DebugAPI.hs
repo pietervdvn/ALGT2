@@ -29,11 +29,10 @@ import Control.Monad
 saveMetaSyntaxes	:: IO ()
 saveMetaSyntaxes
 	= do	putStrLn "Saving metasyntaxes to the asset files..."
-		dir	<- getCurrentDirectory |> (++"/src/Assets/")
+		dir	<- getCurrentDirectory |> (++"/src/Assets/MetaSyntax")
 		putStrLn $ "Directory is: "++dir
 		dirExists	<- doesDirectoryExist dir
-		when dirExists $ removeDirectoryRecursive dir
-		createDirectory dir
+		unless dirExists $ createDirectory dir
 		metaSyntaxes & M.toList |+> uncurry (_saveMetaSyntax dir)
 		pass
 
