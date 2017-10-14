@@ -14,7 +14,7 @@ import LanguageDef.LangDefs
 import LanguageDef.LangDefsFix
 
 import Data.Map as M
-import Data.Time.Clock
+import Data.Time.Clock (UTCTime)
 
 import Control.Monad hiding (fail)
 
@@ -22,11 +22,12 @@ import qualified Assets
 
 
 type Cache	= Map FilePath (UTCTime, LanguageDef' () ())
+type Dirty	= Bool
 
 data LoadingStatus = LS
 	{ _rootModule	:: [Name]
 	, _rootPath	:: FilePath
-	, _currentlyKnown	:: Map [Name] (FilePath, Failable (LanguageDef' () ()))
+	, _currentlyKnown	:: Map [Name] (FilePath, UTCTime, Failable (LanguageDef' () (), Dirty))
 	, _cache	:: Cache
 	}
 makeLenses ''LoadingStatus
@@ -56,9 +57,13 @@ Success (["TestInput","Nested","X"],"x")
 loadAll	:: Cache -> FilePath -> [Name] -> PureIO (Failable LDScope, Cache)
 loadAll cach fp plzLoad
 	= do	loadingSt	<- _loadAll (LS [] fp M.empty cach) plzLoad
-		let lds		= loadingSt & get currentlyKnown & _fixAll plzLoad
-		let cach'	= loadingSt & get cache
-		return (lds, cach')
+		let lds		= loadingSt & get currentlyKnown |> dropSnd3 |||>>> fst & _fixAll plzLoad
+		let cach'	= loadingSt & get currentlyKnown & M.elems 
+					|> merge3r 
+					||>> sndEffect
+					|> sndEffect & successess	:: [(FilePath, (UTCTime, (LanguageDef' () (), Dirty)))]
+		let cache'	= cach' & M.fromList ||>> fst
+		return (lds, cache')
 
 
 _fixAll	:: [Name] -> Map [Name] (FilePath, Failable (LanguageDef' () ())) -> Failable LDScope
@@ -89,11 +94,20 @@ _fixImports langDefs
 _loadAll	:: LoadingStatus -> [Name] -> PureIO LoadingStatus
 _loadAll ls toLoad
  | toLoad `member` get currentlyKnown ls
-	= do	putStrLn $ "Already loaded "++dots toLoad
-		return ls
+	= return ls
  | otherwise
 	= do	let path	= ((get rootPath ls : toLoad) & intercalate "/") ++ ".language"
-		let msgs	= [ "Target", intercalate "." toLoad
+		_loadFromFile ls toLoad path
+
+
+-- Attempts to load from the cache. On cache miss or later modification, laods from file
+_loadFromCache	:: LoadingStatus -> [Name] -> FilePath -> PureIO LoadingStatus
+_loadFromCache ls toLoad pth
+	= do	get cache ls
+
+_loadFromFile	:: LoadingStatus -> [Name] -> FilePath -> PureIO LoadingStatus
+_loadFromFile ls toLoad path
+	= do	let msgs	= [ "Target", intercalate "." toLoad
 				  , "Root filepath", get rootPath ls
 				  , "Relative namespace", intercalate "." (get rootModule ls)
 				  , "Target path", path
@@ -101,27 +115,28 @@ _loadAll ls toLoad
 		let isInjected	= toLoad `member` injectedFiles
 		let msg	= "\nLoading:\n"++msgs
 		if isInjected then putStrLn ("Loading builtin module "++dots toLoad) else putStrLn msg
-		
 		contents	<- if isInjected then 
 					return $ Just (injectedFiles ! toLoad)
 					else safeReadFile path
 
 		let loadedLD	= _handleFile (get rootModule ls) toLoad path contents
 		let absName	= get rootModule ls ++ toLoad
-		let ls'	= ls & over currentlyKnown (M.insert absName (path, loadedLD |> fst))
+		time		<- getCurrentTime
+		let ls'	= ls & over currentlyKnown (M.insert absName (path, time, loadedLD |> fst))
 
 		loadedLD |> snd & handleFailure (\e -> putStrLn (toParsable e) >> return ls')   
 			(foldM (_loadImport toLoad) ls')
 
 
-_handleFile	:: [Name] -> [Name] -> FilePath -> Maybe String -> Failable (LanguageDef' () (), [Import ()])
+
+_handleFile	:: [Name] -> [Name] -> FilePath -> Maybe String -> Failable ((LanguageDef' () (), Dirty), [Import ()])
 _handleFile _ _ toLoad Nothing
 	= fail $ "The file "++toLoad++" was not found"
 _handleFile root fq path (Just contents)
 	= do	ld		<- parseFullFile path contents
 		let ld'		= ld & resolveLocalImports (root, init fq {- The second parameter is the relative offset; thus init -})
 		let toLoad	= ld & get langImports
-		return (ld', toLoad)
+		return ((ld', True), toLoad)
 
 -- Loads the imports recursively
 _loadImport	:: [Name] -> LoadingStatus -> Import x -> PureIO LoadingStatus

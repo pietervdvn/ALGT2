@@ -2,13 +2,12 @@ module Assets where
 
 
 import System.IO.Unsafe (unsafePerformIO)
-import Control.DeepSeq
-import System.IO
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Builder as B
 import Data.ByteString.Lazy (toStrict)
 import System.IO
 import Control.DeepSeq
+import Data.Time
 
 -- Automatically generated
 -- This file contains all assets, loaded via 'unsafePerformIO' or hardcoded as string, not to need IO for assets
@@ -18,6 +17,9 @@ readFile' str = do	h <- openFile str ReadMode
 			s <- hGetContents h
 			s `deepseq` hClose h
 			return s
+
+timeCreated	:: UTCTime
+timeCreated	= read "2017-10-13 15:20:12.029434 UTC"
 allAssets	:: [(FilePath, String)]
 allAssets	= [("Functions.language", _Functions_language)
 			, ("TestLanguage.language", _TestLanguage_language)

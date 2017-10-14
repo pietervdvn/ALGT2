@@ -11,7 +11,7 @@ import ALGT.Native.Syntax
 ========
 
 # A single term of BNF, thus either a literal, syntactic form call or builtin
-bnfTerm		::= string					 # Literal value
+bnfTerm		::= ALGT.Native.Syntax.string					 # Literal value
 		  | Native.Syntax.ident				 # Syntactic form call in some namespace
 		  | "$" bnfTerm					 # Grouping an entire parsetree to a single token
 
@@ -49,5 +49,6 @@ desSeq(term : bnfTerm)
 desBNFTerm		: bnfTerm -> ALGT.Native.Syntax.bnfTerm
 desBNFTerm(i : ident)	= i
 desBNFTerm("$" t)	= "$" desBNFTerm(t)
-desBNFTerm(s)		= dynType(s)
+desBNFTerm(s : Native.Syntax.string)
+			= s
 

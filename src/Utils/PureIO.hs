@@ -4,7 +4,8 @@ module Utils.PureIO (PureIO', PureIO
 	, runIO, runIO', runPure', runPure, runPureStatus
 	, readFile, getLine, getFile, putStr, putStrLn, fail
 	, readFile', getLine', getFile', putStr', putStrLn'
-	, doesFileExist', doesFileExist, safeReadFile
+	, doesFileExist', doesFileExist, safeReadFile, getModificationTime, getModificationTime'
+	, getCurrentTime
 	) where
 
 import Utils.All
@@ -15,6 +16,7 @@ import qualified System.Directory as IO
 import Data.Map as M
 
 import Data.Bifunctor (first)
+import Data.Time.Clock (UTCTime)
 
 {-
 PureIO' is an explicit representation of the 'real' IO monad in an applicative way.
@@ -29,8 +31,10 @@ data PureIO' b
 	| forall a . Apply (PureIO' a) (PureIO' (a -> b))	-- while this can be written in terms of bind, an explicit apply allows for better automatic analysis
 	| ReadFile FilePath (String -> b)	-- Read a file from the FS
 	| FileExists FilePath (Bool -> b)
+	| FileModified FilePath (Maybe UTCTime -> b)
 	| WriteFile FilePath String b
 	| Fail String
+	| GetTime (UTCTime -> b)
 
 {-
 Allows monadic operations on PureIO'
@@ -79,20 +83,21 @@ runIO (Bind ioA a2ioB)
 data IOState	= IOState 
 	{ _inputResting	:: [String]
 	, _output	:: [String]
-	, _fileSystem 	:: Map Name String
+	, _fileSystem 	:: Map Name (String, UTCTime)
 	, _filesRead	:: [FilePath]
 	, _filesWritten	:: [FilePath]
+	, _currentTime	:: UTCTime
 	}
 makeLenses ''IOState
 
 
-runPure'	:: ([String], Map Name String) -> PureIO' a -> Either String (a, [String])
+runPure'	:: ([String], Map Name (String, UTCTime), UTCTime) -> PureIO' a -> Either String (a, [String])
 runPure' input io
 		= _runPure' (_asIOState input) io ||>> get output & first fst
 
-_asIOState	:: ([String], Map Name String) -> IOState
-_asIOState (inp, fs)
-	= IOState inp [] fs [] []
+_asIOState	:: ([String], Map Name (String, UTCTime), UTCTime) -> IOState
+_asIOState (inp, fs, time)
+	= IOState inp [] fs [] [] time
 
 
 
@@ -112,12 +117,16 @@ _runPure' input (Apply pioA pioA2B)
 _runPure' input (FileExists pth f)
 	= do	let exists	= pth `member` get fileSystem input
 		return (f exists, input & over filesRead (pth:))
+_runPure' input (FileModified pth f)
+	= do	let fileInfo	= get fileSystem input & M.lookup pth |> snd
+		return (f fileInfo, input & over filesRead (pth:))
 _runPure' input (ReadFile pth f)
 	= do	contents	<- checkExists pth (get fileSystem input) ("No file \""++pth++"\" found in the input")
 					& first (\msg -> (msg, input))
-		return (f contents, input & over filesRead (pth:))
+		return (f $ fst contents, input & over filesRead (pth:))
 _runPure' input (WriteFile pth contents b)
-	= do	let fs'	= M.insert pth contents (input & get fileSystem)
+	= do	let time	= input & get currentTime
+		let fs'	= M.insert pth (contents, time) (get fileSystem input)
 		return (b, input & set fileSystem fs' & over filesWritten (pth:))
 _runPure' input (Fail str)
 	= Left (str, input)
@@ -125,13 +134,13 @@ _runPure' input (Fail str)
 
 
 
-runPure		:: ([String], Map Name String) -> PureIO a -> Either String (a, [String])
+runPure		:: ([String], Map Name (String, UTCTime), UTCTime) -> PureIO a -> Either String (a, [String])
 runPure input io
 		= _runPure (_asIOState input) io & first fst ||>> get output 
 
 
 -- Runs the given IO pure, but prints output + status reports afterwards
-runPureStatus	:: ([String], Map Name String) -> PureIO a -> IO a
+runPureStatus	:: ([String], Map Name (String, UTCTime), UTCTime) -> PureIO a -> IO a
 runPureStatus input io
 	= do	let (state, a)	= _runPure (_asIOState input) io
 						& either	(\(msg, state) -> (state, Left msg)) 
@@ -248,6 +257,15 @@ doesFileExist'	:: FilePath -> PureIO' Bool
 doesFileExist' str
 		= FileExists str id
 
+getCurrentTime'	:: PureIO' UTCTime
+getCurrentTime'
+	= GetTime id
+
+
+getModificationTime'	:: FilePath -> PureIO' (Maybe UTCTime)
+getModificationTime' fp
+	= FileModified fp id
+
 
 safeReadFile	:: FilePath -> PureIO (Maybe String)
 safeReadFile fp
@@ -270,6 +288,10 @@ putStr		= _monad putStr'
 putStrLn	= _monad putStrLn'
 readFile	= _monad readFile'
 doesFileExist	= _monad doesFileExist'
+getModificationTime
+		= _monad getModificationTime'
+
+getCurrentTime	= ApplicIO getCurrentTime'
 
 
 _monad		:: (b -> PureIO' a) -> b -> PureIO a

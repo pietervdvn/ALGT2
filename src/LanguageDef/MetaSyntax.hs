@@ -79,10 +79,12 @@ helperSyntax'	= [ syntForm "commentContents" "The contents of comments, such as 
 bnfSyntax	:: Syntax
 bnfSyntax	
 	= createSyntax $ helperSyntax' ++
-		[ syntForm "builtin" "The names of syntactic forms that are available as builtins"
+		[ syntForm "string" "A wrapper around the String builtin, for ease of use with the typesystem"
+			[choice "" [bi string]]
+		, syntForm "builtin" "The names of syntactic forms that are available as builtins"
 			(knownBuiltins |> (\bisf -> choice (get biDocs bisf++"; "++get biRegex bisf) [Literal $ get biName bisf] ))
 		, syntForm "bnfTerm" "A single term of BNF, thus either a literal, syntactic form call or builtin"
-			[ choice "Literal value" [bi string]
+			[ choice "Literal value" [call "string"]
 			, choice "Syntactic form call in some namespace"  [call "ident" ]
 			, choice "Call of a builtin" [call "builtin"]
 			, choice "Grouping an entire parsetree to a single token" [Literal "$", call "bnfTerm"]
@@ -186,10 +188,16 @@ builtinValue	:: Combiner BNF
 builtinValue	= choices' "builtin"
 			(knownBuiltins |> BNF.BuiltIn False |> Value)
 
+stringC	:: Combiner String
+stringC
+	= choices' "string"
+		[ capture |> unescape]
+
+
 bnfTerm	:: Combiner BNF
 bnfTerm
 	= choices' "bnfTerm"
-		[ capture |> unescape |> BNF.Literal
+		[ stringC |> BNF.Literal
 		, ident |> BNF.RuleCall
 		, builtinValue
 		, cmb seq (lit "$") (bnfTerm |> BNF.Group) 

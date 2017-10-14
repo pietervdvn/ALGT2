@@ -10,33 +10,13 @@ import Data.Map as M
 import LanguageDef.ModuleLoader
 import LanguageDef.LangDefs
 
-
 allAssets'
 	= let	noPrefix	= M.fromList allAssets
-		slashPrefix	= M.mapKeys ("/"++) $ M.fromList allAssets in
-		([], M.union noPrefix slashPrefix)
+		slashPrefix	= M.mapKeys ("/"++) $ M.fromList allAssets 
+		files		= M.union noPrefix slashPrefix
+					|> (flip (,) Assets.timeCreated)
+		in
+		([], files, Assets.timeCreated)
 
 
-{-
-testType	:: Name -> FQName
-testType t	= (["TestLanguage"], t)
-
-testLDScope
-	= getScope ["TestLanguage"]
--- Test language as LangDefs
-testLangDefs	:: LangDefs
-testLangDefs
-	= getLangDefs ["TestLanguage"]
-
-getScope	:: [Name] -> LDScope
-getScope nm
-	= getLangDefs nm & get langdefs & (! nm)
-
-getLangDefs'	:: [Name] -> Either String LangDefs
-getLangDefs' nm
-	= loadAll "" nm & runPure allAssets' |> fst
-
-getLangDefs nm
-	= getLangDefs' nm & either error id
--}
 

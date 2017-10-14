@@ -12,6 +12,8 @@ import Data.Foldable
 import Data.Char
 import qualified Data.ByteString as B
 
+import Data.Time
+
 import Control.Monad
 
 (|>)		= flip fmap
@@ -50,16 +52,17 @@ name origDir fp	= let 	repl	= fp |> replace & ("_"++)
 			in drop (1 + length origDir) repl
 
 
-header dev
+header dev time
       = ["module Assets where"
 	, ""
 	, ""
-	, if dev then "import System.IO.Unsafe (unsafePerformIO)\nimport Control.DeepSeq\nimport System.IO" else ""
+	, if dev then "import System.IO.Unsafe (unsafePerformIO)" else ""
 	, "import qualified Data.ByteString as B"
 	, "import qualified Data.ByteString.Builder as B"
 	, "import Data.ByteString.Lazy (toStrict)"
 	, "import System.IO"
 	, "import Control.DeepSeq"
+	, "import Data.Time"
 	, ""
 	, "-- Automatically generated"
 	, "-- This file contains all assets, loaded via 'unsafePerformIO' or hardcoded as string, not to need IO for assets"
@@ -69,6 +72,9 @@ header dev
     	, "\t\t\ts <- hGetContents h"
    	, "\t\t\ts `deepseq` hClose h"
     	, "\t\t\treturn s"
+	, ""
+	, "timeCreated\t:: UTCTime"
+	, "timeCreated\t= read "++show (show time)
 	] & unlines
 
 
@@ -110,7 +116,8 @@ createAssets' dev fp
 		-- putStrLn $ "Creating assets for:\n"++(files |> ("   "++) & intercalate "\n")
 		contents	<- files |+> fileLine dev fp
 		let allA	= allAssets fp files
-		return $ header dev ++ allA ++ unlines contents
+		time		<- getCurrentTime
+		return $ header dev time ++ allA ++ unlines contents
 
 createAssets	:: Bool -> FilePath -> FilePath -> IO ()
 createAssets dev fp target

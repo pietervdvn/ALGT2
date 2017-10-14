@@ -27,6 +27,9 @@ nl	::= Syntax.comment
 nls	::= Syntax.nl Syntax.nls	
 	  | Syntax.nl	
 
+# A wrapper around the String builtin, for ease of use with the typesystem
+string	::= String	
+
 # The names of syntactic forms that are available as builtins
 builtin	::= "Whitespace"		 # Zero or more whitespace characters. Always produces a token in the parsetree; [ \t]*
 	  | "IdentifierUpper"		 # An identifier starting with an uppercase letter; [A-Z][a-zA-Z0-9]*
@@ -43,7 +46,7 @@ builtin	::= "Whitespace"		 # Zero or more whitespace characters. Always produces
 	  | "Number"		 # Matches an positive number. Integers parsed by this might be passed into the builtin arithmetic functions.; [0-9]+
 
 # A single term of BNF, thus either a literal, syntactic form call or builtin
-bnfTerm	::= String		 # Literal value
+bnfTerm	::= Syntax.string		 # Literal value
 	  | Syntax.ident		 # Syntactic form call in some namespace
 	  | Syntax.builtin		 # Call of a builtin
 	  | "$" Syntax.bnfTerm		 # Grouping an entire parsetree to a single token

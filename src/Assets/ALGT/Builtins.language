@@ -94,7 +94,3 @@ errorSugg		: ⊤ * ⊤ -> ⊥
 errorSugg(msg, sugg)
 	= msg	# Substituted by real implementation at runtime
 
-
-dynType			: ⊤ -> ⊥
-dynType(x)		= x
-
