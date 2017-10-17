@@ -176,6 +176,11 @@ ifJust _ Nothing	= return ()
 ifJust f (Just a)	= f a
 
 
+firstJust	:: Maybe a -> Maybe a -> Maybe a
+firstJust m@(Just _) _	= m
+firstJust _ m		= m
+
+
 -- Checks wether all are right, and returns those. Gives messages for failed values
 allRight	:: Show b => [Either String b] -> Either String [b]
 allRight eithers

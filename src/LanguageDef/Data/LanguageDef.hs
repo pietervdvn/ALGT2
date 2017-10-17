@@ -47,8 +47,8 @@ import qualified Assets
 
 
 data Import a = Import
-	{ _importName	:: [Name]
-	, _isLocal	:: Bool
+	{ _importName	:: [Name]	-- The written, potentially partially qualified module name
+	, _isLocal	:: Bool		-- If the import is local, thus should start looking from the current module
 	, _importMeta	:: MetaInfo
 	, _importA	:: a
 	} deriving (Show, Eq, Functor)
@@ -114,27 +114,42 @@ isSubtypeOf ld	sub super
 -------------------------------- IMPORT FIXING STUFF ------------------------------------
 
 
-resolveLocalImports	:: ([Name], [Name]) -> LanguageDef' x f -> LanguageDef' x f
-resolveLocalImports (offsetForAll, extraOffsetForLocal)
+resolveLocalImports	:: [Name] -> LanguageDef' x f -> LanguageDef' x f
+resolveLocalImports extraOffsetForLocal
 	= let	fixImport imp	= if get isLocal imp 
-					then imp & set isLocal False & over importName ((offsetForAll ++ extraOffsetForLocal) ++ )
-					else imp & over importName (offsetForAll ++)
+					then imp & set isLocal False & over importName (extraOffsetForLocal ++ )
+					else imp
 		in
 		over (langImports . mapped) fixImport
 
-fixImport		:: Map [Name] FilePath -> LanguageDef' () fr -> Either String (LanguageDef' ResolvedImport fr)  
+
+fixImport		:: Map [Name] FilePath -> LanguageDef' () fr -> Failable (LanguageDef' ResolvedImport fr)  
 fixImport resolver ld
-	= inMsg ("While fixing the import annotations for "++show (get langTitle ld)) $
+	= inMsg' ("While fixing the import annotations for "++show (get langTitle ld)) $
           do	let imps	= get langImports ld
-		imps'		<- imps |> _fixImport resolver & allRight
+		imps'		<- imps |> _fixImport resolver & allGood
 		return $ set langImports imps' ld 
 		
 
-_fixImport		:: Map [Name] FilePath -> Import () -> Either String (Import FilePath)
+_fixImport		:: Map [Name] FilePath -> Import () -> Failable (Import FilePath)
 _fixImport resolver imprt
-	= do	let nm		= get importName imprt	:: [Name]
-		resolved	<- checkExists nm resolver ("The import for "++intercalate "." nm++" was not found")
+	= inLocation (imprt & get importMeta & get miLoc) $
+	  do	let nm		= get importName imprt	:: [Name]
+		resolved	<- checkExists' nm resolver ("The import for "++intercalate "." nm++" was not found")
 		return (imprt |> const resolved)
+
+dependsOn	:: ([Name], LanguageDef' () ()) -> [[Name]]
+dependsOn (ldFQ, ld)
+	= get langImports ld |> fqForImport ldFQ
+		
+
+
+fqForImport	:: [Name] -> Import a -> [Name]
+fqForImport currentModule imprt
+ | get isLocal imprt
+	= init currentModule ++ get importName imprt
+ | otherwise
+	= get importName imprt
 
 
 ------------------------------ PARSING STUFF --------------------------------------------------------

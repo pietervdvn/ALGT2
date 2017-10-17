@@ -58,7 +58,7 @@ import Graphs.Lattice (Lattice)
 {- Loads a language definition from the filesystem; use with 'runIO'-}
 loadLangDef	:: FilePath -> [Name] -> PureIO (Failable LDScope)
 loadLangDef fp plzLoad
-		= loadAll empty fp plzLoad |> fst		
+		= loadAll fp plzLoad |> fst		
 
 
 {- Loads a language definition directly from the assets; is Pure -}

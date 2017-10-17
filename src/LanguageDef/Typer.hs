@@ -73,7 +73,7 @@ typeScope' ld
 
 >>> import LanguageDef.API
 >>> loadAssetLangDef "Faulty/Relations" ["TypeErr"] & toCoParsable
-"| While typing rule \"not\" in Faulty/Relations/TypeErr.language at lines 21 - 25\n| While typing \"5\" while typing in Faulty/Relations/TypeErr.language at line 24, columns 5 - 8\n| Could not type the sequence \"5\" as a TypeErr.bool \n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"True\"\n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"False\""
+"| While typing rule \"not\" in Faulty/Relations/TypeErr.language at lines 21 - 25\n| While typing \"5\" while typing in Faulty/Relations/TypeErr.language at line 24, columns 5 - 8\n| Could not type the sequence (\"5\") as a TypeErr.bool \n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"True\"\n  Error: \n    \8226 Unexpected literal \"5\"\n    \8226 Expected literal \"False\""
 
 
 -}

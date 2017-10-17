@@ -19,7 +19,7 @@ readFile' str = do	h <- openFile str ReadMode
 			return s
 
 timeCreated	:: UTCTime
-timeCreated	= read "2017-10-13 15:20:12.029434 UTC"
+timeCreated	= read "2017-10-17 00:20:34.995536 UTC"
 allAssets	:: [(FilePath, String)]
 allAssets	= [("Functions.language", _Functions_language)
 			, ("TestLanguage.language", _TestLanguage_language)
