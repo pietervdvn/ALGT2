@@ -64,7 +64,7 @@ loadAll	= loadAll' M.empty
 
 loadAll'	:: Cache -> FilePath -> [Name] -> PureIO (Failable LDScope, Cache)
 loadAll' cach fp plzLoad
-	= do	let startState	= (LS fp M.empty M.empty cach) 
+	= do	let startState	=  LS fp M.empty M.empty cach
 		loadingSt	<- runStateT (_loadAll plzLoad) startState |> snd
 		let lds		= _fixAll plzLoad loadingSt
 		let cache'	= _extractNewCache loadingSt
@@ -204,7 +204,7 @@ filepathFor toLoad
 
 
 
-get'	:: (Getting a LoadingStatus a) -> LoadingIO a
+get'	:: Getting a LoadingStatus a -> LoadingIO a
 get' lens
 	= State.gets (get lens)
 
