@@ -1,7 +1,9 @@
  Builtins
 ***********
 
-# Contains builtin BNFs and functions. As most of these functions are hardware supported; they do not contain an actual implementation
+# Contains builtin BNFs and functions.
+# The BNFs offer some often used tokens, such as identifiers, whitespace, or numbers
+# Some functions to perform math with these numbers are provided too. As most of these functions are hardware supported; they do not contain an actual implementation
 
 
  Syntax

@@ -1,3 +1,12 @@
+# Hello! Welcome in the ALGT template/tutorial.
+# Reading these comments will guide you through your first language
+#
+# Note that this tool is meant for programmers which have some experience, especially in the field of language design
+
+
+# First of all, we start with imports. An imports you'll need practically every time, are the builtin values
+# These contain some often used syntactic forms and functions to work with numbers (such as `plus`)
+
 import ALGT.Builtins
 
 

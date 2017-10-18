@@ -22,6 +22,8 @@ import Data.Map as M
 
 import Data.List
 
+import Debug.Trace
+
 syntaxExtras	= [ (typeTop, _topSF)
 		  , (typeBottom, _bottomSF)
 		  ]
@@ -43,7 +45,8 @@ _topSF	= SyntacticForm "⊤" [] [] $ MetaInfo biLocations
 
 isBuiltinFunction	:: LanguageDef' ResolvedImport fr -> Function' x -> Bool
 isBuiltinFunction ld f
- 	= "ALGT/Builtins.language" `isSuffixOf` (ld & get (langLocation . miFile))
+ 	= let msg	= "Testing "++ (get (langLocation . miFile) ld) in
+		trace msg "ALGT.Builtins" == (get (langLocation . miFile) ld)
 
 
 functions	:: Map FQName ((String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree) 

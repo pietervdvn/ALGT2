@@ -62,6 +62,8 @@ runIO' (Apply pioA pioA2b)
 		return $ a2b a
 runIO' (FileExists pth f)
 	= IO.doesFileExist pth |> f
+runIO' (FileModified fp f)
+	= IO.getModificationTime fp |> Just |> f
 runIO' (ReadFile pth f)
 	= IO.readFile pth |> f
 runIO' (WriteFile pth contents b)

@@ -131,6 +131,13 @@ If the file is already loaded, an empty list is returned
 -}
 loadFile'	:: [Name] -> LoadingIO [[Name]]
 loadFile' toLoad
+ | toLoad `M.member` injectedFiles
+	= do	let Just (modTime, ld)	= loadBuiltin toLoad
+		fp	<- filepathFor toLoad
+		insert' currentlyKnown toLoad (fp, return ld)
+		insert' lastModTimes fp modTime
+		return []
+ | otherwise
 	= do	alreadyLoaded	<- get' currentlyKnown |> (toLoad `M.member`)
 		if alreadyLoaded then
 			return []
@@ -146,10 +153,9 @@ Returns the direct dependencies of the language dep (module-names that are impor
 -}
 loadFile	:: [Name] -> LoadingIO [[Name]]
 loadFile toLoad
-	= do	let mInjected	= loadBuiltin toLoad
-		mCached		<- loadFromCache toLoad
+	= do	mCached		<- loadFromCache toLoad
 		(lastModTime, ld)	
-				<- firstJust mInjected mCached & maybe 
+				<- mCached & maybe 
 					(loadFromDisk toLoad) {- :: LoadingInfo (Failable (LanguageDef' () ())) -} 
 					(\(time, ld) -> return (time, return ld)) {- (UTCTime, LD) -> LoadingInfo (Failable LD) -}
 		fp		<- filepathFor toLoad

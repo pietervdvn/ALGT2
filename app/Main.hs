@@ -13,8 +13,8 @@ import System.IO
 
 import Control.Monad
 
-versionCount	= [0,2,0,2]
-versionMessage	= "Hi Reddit!"
+versionCount	= [0,2,0,4]
+versionMessage	= "Hi Reddit! Stuff should actually work now..."
 version		= (versionCount, versionMessage)
 
 main :: IO ()
