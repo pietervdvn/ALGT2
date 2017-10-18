@@ -28,6 +28,6 @@ main = do	args	<- getArgs
 			putStrLn "Template/Tutorial was written as Template.language in the current directory"
 		get replOpts args' & ifJust (\opts -> 
 		    do	let fp		= get replPath opts
-			let fp'		= if ".language" `isSuffixOf` (fp |> toLower) then take (length fp - 9) fp else fp
-			let modul	= get replModule opts & uncalate '.'
-			repl fp' modul)
+			let modul	= get replModule opts
+			let modul'	= if ".language" `isSuffixOf` modul then take (length modul - 9) modul else modul
+			repl fp (uncalate '.' modul'))

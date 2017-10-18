@@ -33,3 +33,5 @@ fi
 
 
 cp .stack-work/install/x86_64-linux/lts-8.15/8.0.2/bin/ALGT2-exe binaries/ALGT2-latest
+
+cp binaries/ALGT2-latest ALGT
