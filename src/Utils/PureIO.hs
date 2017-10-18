@@ -5,7 +5,6 @@ module Utils.PureIO (PureIO', PureIO
 	, readFile, getLine, getFile, putStr, putStrLn, fail
 	, readFile', getLine', getFile', putStr', putStrLn'
 	, doesFileExist', doesFileExist, safeReadFile, getModificationTime, getModificationTime'
-	, getCurrentTime
 	) where
 
 import Utils.All
@@ -34,7 +33,6 @@ data PureIO' b
 	| FileModified FilePath (Maybe UTCTime -> b)
 	| WriteFile FilePath String b
 	| Fail String
-	| GetTime (UTCTime -> b)
 
 {-
 Allows monadic operations on PureIO'
@@ -60,18 +58,17 @@ runIO' (Apply pioA pioA2b)
 	= do	a	<- runIO' pioA
 		a2b	<- runIO' pioA2b
 		return $ a2b a
+runIO' (ReadFile pth f)
+	= IO.readFile pth |> f
 runIO' (FileExists pth f)
 	= IO.doesFileExist pth |> f
 runIO' (FileModified fp f)
 	= IO.getModificationTime fp |> Just |> f
-runIO' (ReadFile pth f)
-	= IO.readFile pth |> f
 runIO' (WriteFile pth contents b)
 	= do	IO.writeFile pth contents
 		return b
 runIO' (Fail str)
 	= error str
-
 
 runIO	:: PureIO b -> IO b
 runIO (ApplicIO io)
@@ -259,10 +256,6 @@ doesFileExist'	:: FilePath -> PureIO' Bool
 doesFileExist' str
 		= FileExists str id
 
-getCurrentTime'	:: PureIO' UTCTime
-getCurrentTime'
-	= GetTime id
-
 
 getModificationTime'	:: FilePath -> PureIO' (Maybe UTCTime)
 getModificationTime' fp
@@ -292,8 +285,6 @@ readFile	= _monad readFile'
 doesFileExist	= _monad doesFileExist'
 getModificationTime
 		= _monad getModificationTime'
-
-getCurrentTime	= ApplicIO getCurrentTime'
 
 
 _monad		:: (b -> PureIO' a) -> b -> PureIO a
