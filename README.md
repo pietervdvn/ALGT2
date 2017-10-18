@@ -13,7 +13,7 @@ See an example implementation of a [simply typed lamda calculaus](ALGT2/blob/mas
 
 Get started by
 
-- Downloading [ALGT](https://github.com/pietervdvn/ALGT2/raw/master/ALGT) (the executable, linux only) or alternatively `./build.sh`. (There is some preprocessing needed for extra source files)
+- Downloading [ALGT](https://github.com/pietervdvn/ALGT2/raw/master/binaries/ALGT2-latest) (the executable, linux only) or alternatively `./build.sh`. (There is some preprocessing needed for extra source files)
 - Running `ALGT --template` to create a barebones framework
 - Rename `Template.language` to `SomethingOfYourChoice.language`
 - Running `ALGT . SomethingOfYourChoice`

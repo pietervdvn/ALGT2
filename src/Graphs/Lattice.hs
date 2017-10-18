@@ -1,5 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Graphs.Lattice (Lattice, bottom, top, makeLattice, makeLatticeInverted, addElement, addRelation,
+module Graphs.Lattice (Lattice
+			, bottom, top
+			, makeLattice, makeLatticeInverted
+			, addElement, addRelation,
 			subsetsOf, supersetsOf, allSubsetsOf, allSupersetsOf, isSubsetOf,
 			infimum, infimums, supremum, supremums, removeTransitive', removeTransitiveNoCycles,
 			debugLattice, emptyLattice) where

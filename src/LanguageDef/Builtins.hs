@@ -45,8 +45,8 @@ _topSF	= SyntacticForm "⊤" [] [] $ MetaInfo biLocations
 
 isBuiltinFunction	:: LanguageDef' ResolvedImport fr -> Function' x -> Bool
 isBuiltinFunction ld f
- 	= let msg	= "Testing "++ (get (langLocation . miFile) ld) in
-		trace msg "ALGT.Builtins" == (get (langLocation . miFile) ld)
+ 	= "ALGT.Builtins" == get (langLocation . miFile) ld
+		
 
 
 functions	:: Map FQName ((String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree) 

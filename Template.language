@@ -52,10 +52,10 @@ bool	::= "True" | "False"
 
 # A value, which can be a bool or a number
 value	::= bool
-	| integer	# integer is defined within the builtins
+	| number	# Number is defined within the builtins
 
 # An expression, which is a value, an operator and another expression
-expr	::= value "&" expr | value "+" expr | value "=" value | value
+expr	::= value "&" expr | value "+" expr | value "=" value
 
 # The types that our language has
 type	::= "Bool" | "Int"
@@ -73,7 +73,7 @@ type	::= "Bool" | "Int"
 and		: bool * bool -> bool
 and("True", "True")
 		= "True"
-and(_, _)	= "False"
+and(_, _)	= "F"
 
 
 
@@ -82,14 +82,14 @@ and(_, _)	= "False"
 eqBool		: bool * bool -> bool
 eqBool("True", "True")
 		= "True"
-eqBool("False", "False")
+eqBool("False", "False)
 		= "True"
 eqBool(_, _)	= "False"
 
 # Compares two numbers for equality
-eqInt		: integer * integer -> bool
+eqInt		: number * number -> bool
 eqInt(i, i)	= "True"		# Here, we use the pattern matching to check for equality
-eqInt(_, _)	= "False"
+eqInt(_, _)	= "False
 
 
 # No plus for numbers, as this is a builtin function
@@ -141,6 +141,33 @@ eqInt(_, _)	= "False"
 
 
 
+  a : number	b : number
+ ------------------------- [Eval Plus]
+  (→) a "+" b, plus(a, b)
+
+
+  a : bool	b : bool
+ ------------------------- [Eval Eq Bool]
+  (→) a "=" b, eqBool(a, b)
+
+
+  a : number	b : number
+ ------------------------- [Eval Eq Int]
+  (→) a "=" b, eqInt(a, b)
+
+
+
+
+# The typing relation
+
+    e : bool
+ ---------------- [Type Bool]
+  (::) e, "Bool"
+
+
+    e : number
+ ---------------- [Type Int]
+  (::) e, "Int"
 
   (::) a, "Bool"	(::) b, "Bool"
  -------------------------------------- [Type And]
@@ -152,9 +179,9 @@ eqInt(_, _)	= "False"
   (::) a "+" b, "Int"
 
 
-  (::) a, type		(::) b, type
--------------------------------------- [Type Eq]
-  (::) a "=" b, type
+  (::) a, T		(::) b, T
+ -------------------------------------- [Type Eq]
+  (::) a "=" b, T
 
 
 

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+dirs="lib/ test/"
+
+echo "Running stylish-haskell... fixing issues inline"
+find $dirs -name "*.hs" | xargs stack exec -- stylish-haskell -i
+
+echo "Running hlint..."
+stack exec hlint $dirs

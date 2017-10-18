@@ -1,6 +1,6 @@
 module Main where
 
-import Utils.Test
+import           Utils.Test
 
 main :: IO ()
 main = test
