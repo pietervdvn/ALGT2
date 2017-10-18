@@ -60,6 +60,7 @@ class Normalizable a where
 
 ------------------- Left to Right programming helpers -----------------------------------
 
+(&)	:: a -> (a -> b) -> b
 (&)	= flip ($)
 
 (|>)	:: Functor f => f a -> (a -> b) -> f b
@@ -197,9 +198,11 @@ allRight' eithers
 			unless (null failed) $ Left $ unlines failed
 			return $ rights eithers
 
+indent		:: String -> String
 indent		= indentWith "  "
 
-indentWith _ []	= []
+indentWith	:: String -> String -> String
+indentWith _ ""	= ""
 indentWith str msg	
 		= msg & lines |> (str++) & unlines & init
 
@@ -259,7 +262,10 @@ unmerge3l		:: ((a, b), c) -> (a, b, c)
 unmerge3l ((a, b), c)	= (a, b, c) 
 
 
+mapBoth			:: (a -> b) -> (a, a) -> (b, b)
 mapBoth f (a, a')	= (f a, f a')
+
+onBoth			:: (a -> b) -> (a, a) -> (b, b)
 onBoth			= mapBoth
 
 both f (a, a')		= f a && f a'
@@ -411,6 +417,7 @@ invertDict	= fmap Set.fromList . Map.fromList . merge . map swap . unmerge . Map
 invertDict'	:: (Ord a, Ord b, Eq b) => Map a b -> Map b [a]
 invertDict'	=  Map.fromList .  merge . map swap . Map.toList
 
+specialChars	:: String
 specialChars	= "+*?[]\\^$.()"
 
 translateRegex	:: String -> String
@@ -478,6 +485,7 @@ fancyString' withCounter endMsg as msgs
 		fancyString endMsg' as (mapi msgs' |> prepTuple)
 
 
+todo		:: a
 todo		= error "TODO"
 
 safeIndex	:: String -> Int -> [a] -> a
