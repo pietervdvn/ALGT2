@@ -111,6 +111,7 @@ eqInt(_, _)	= "False"
 
 # A single step in the evaluation
 # (To produce → on linux: type Ctrl+U, release them, type 2192, press enter or space)
+# (As this is a relation you declare yourself, you can also choose another symbol such as ->; -->; ...)
 (→)	: expr (in) * expr (out); Pronounced as "small step"
 
 # Type the expression
