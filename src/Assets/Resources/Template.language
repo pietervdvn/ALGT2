@@ -36,12 +36,14 @@ builtins	::= identifier | identifierUpper | string | unicodeChar
 		| upper | lower | digit | lineChar | wordChar
 		| number | integer
 
+
 # If you don't want whitespace insensitivity by default, use `~~=` instead of `::=`
 # This one would match `TT` and `TF`, but *not* `T T` or `T\tF`
+# Note that `a` itself might still contain whitespace, e.g. `(T )(F)` or `(T)(\tf\t)`
 whitespaceSensitiveLine		~~= a a
 
 # This one does match `T T`
-whitespaceInsensitiveLine		~~= a a
+whitespaceInsensitiveLine		::= a a
 
 
 # A small language could contain following syntactic forms:
