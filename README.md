@@ -7,7 +7,7 @@
 - Building a typechecker or evaluator, based on natural reduction
 - Running your functions/typechecker in an interactive environment
 
-See an example implementation of a [simply typed lamda calculaus](ALGT2/blob/master/src/Assets/TestLanguages/STFL.language)
+See an example implementation of a [simply typed lamda calculaus](https://github.com/pietervdvn/ALGT2/blob/master/src/Assets/TestLanguages/STFL.language)
 
 ## Getting started
 
