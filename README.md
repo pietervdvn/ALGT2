@@ -25,7 +25,7 @@ If you want to experiment with STFL (simply typed lambda calculus), run `ALGT sr
 Type any expression, function or relation to execute it, e.g.:
 
 	not("True")
-	"True" "&" True → x
+	"True" "&" "True" → x
 
 
 Type `help` for an overview of commands.

@@ -86,7 +86,7 @@ fileLine dev origDir file
 	= do	let name'	=  name origDir file
 		let pragma	= if dev then "\n{-# NOINLINE "++name'++" #-}\n" else ""
 		let devAssgn'	= if isBinary file then "unsafePerformIO $ B.readFile "++show file
-					else "unsafePerformIO $ readFile' "++show file
+					else "unsafePerformIO $ readFile' "++show ("src/"++file)
 		let devAssgn	= "let str = "++devAssgn'++" in seq str str"
 		contents	<- if dev then return devAssgn else
 					if isBinary file then  

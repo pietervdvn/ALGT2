@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Repl where
 
-{- An interactive Repl -}
+{- An interactive Repl, based on the shell -}
 
 import Utils.All
 
@@ -61,6 +61,7 @@ _repl		:: Action ()
 _repl	= do	promptMsg	<- gets' currentPromptMsg
 		ld	<- gets' currentModule
 		line	<- liftIO $ prompt' ("※  ", putStr . promptMsg)
+		liftIO $ putStrLn ""
 		if isNothing ld && line /= "\EOT" then do
 			reload
 			_repl
@@ -210,6 +211,7 @@ putStrLn'
 gets' lens
 	= gets (get lens)
 
+-- Gets the loaded module
 getLd	= do	mld	<- gets' currentModule
 		maybe (fail "Initial load of the language definition failed") return mld
 

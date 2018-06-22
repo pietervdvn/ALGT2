@@ -13,7 +13,7 @@ module LanguageDef.API
 
 {- 
 
-Creates all kinds of stuff based on strings, to test with, such as expressions of functions, parsetrees, ...
+Creates all kinds of data, based on strings, to test with, such as expressions of functions, parsetrees, ...
 
 This should all be based on some syntax
 
@@ -171,7 +171,9 @@ runPredicate	= proofThat
 
 
 
-{- >>> runPredicate' testLanguage "?" "not(\"True\")" & crash
+{- 
+
+>>> runPredicate' testLanguage "?" "not(\"True\")" & crash
 ProofExpr {_exprResult = Literal {_ptToken = "False", _ptLocation = LocationInfo {_liStartLine = -1, _liEndLine = -1, _liStartColumn = -1, _liEndColumn = -1, _miFile = ""}, _ptA = (), _ptHidden = False}}
 >>> runPredicate' testLanguage "?" "(→) \"True\" \"&\" \"True\", x" & crash
 "------------------------------- [and]\n(TestLanguage.\8594)True&True, True\n"
@@ -211,7 +213,8 @@ createTypedExpression ld source str typ@(loc, nm)
 		typeExpression ld typ expr ||>> snd
 
 
-
+{- | Creates a predicate based on the String, which can be typed
+-}
 createPredicate		:: LDScope -> FilePath -> String -> Failable Predicate
 createPredicate lds source str
 	= do	pt	<- parse source (metaSyntaxes, ["Relations"]) "predicate" str

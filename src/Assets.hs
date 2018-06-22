@@ -19,12 +19,13 @@ readFile' str = do	h <- openFile str ReadMode
 			return s
 
 timeCreated	:: UTCTime
-timeCreated	= read "2017-10-18 17:49:21.258723 UTC"
+timeCreated	= read "2018-06-22 23:05:19.33829599 UTC"
 allAssets	:: [(FilePath, String)]
 allAssets	= [("Functions.language", _Functions_language)
 			, ("TestLanguage.language", _TestLanguage_language)
 			, ("Resources/Template.language", _Resources_Template_language)
 			, ("Resources/RuleSimple.svg", _Resources_RuleSimple_svg)
+			, ("Resources/Help.md", _Resources_Help_md)
 			, ("TestInput/LoopingSupertypes.language", _TestInput_LoopingSupertypes_language)
 			, ("TestInput/Nested/Z.language", _TestInput_Nested_Z_language)
 			, ("TestInput/Nested/X.language", _TestInput_Nested_X_language)
@@ -66,164 +67,168 @@ allAssets	= [("Functions.language", _Functions_language)
 
 {-# NOINLINE _Functions_language #-}
 _Functions_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Functions.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Functions.language" in seq str str
 
 {-# NOINLINE _TestLanguage_language #-}
 _TestLanguage_language
-	 = let str = unsafePerformIO $ readFile' "Assets/TestLanguage.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestLanguage.language" in seq str str
 
 {-# NOINLINE _Resources_Template_language #-}
 _Resources_Template_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Resources/Template.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Resources/Template.language" in seq str str
 
 {-# NOINLINE _Resources_RuleSimple_svg #-}
 _Resources_RuleSimple_svg
-	 = let str = unsafePerformIO $ readFile' "Assets/Resources/RuleSimple.svg" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Resources/RuleSimple.svg" in seq str str
+
+{-# NOINLINE _Resources_Help_md #-}
+_Resources_Help_md
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Resources/Help.md" in seq str str
 
 {-# NOINLINE _TestInput_LoopingSupertypes_language #-}
 _TestInput_LoopingSupertypes_language
-	 = let str = unsafePerformIO $ readFile' "Assets/TestInput/LoopingSupertypes.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestInput/LoopingSupertypes.language" in seq str str
 
 {-# NOINLINE _TestInput_Nested_Z_language #-}
 _TestInput_Nested_Z_language
-	 = let str = unsafePerformIO $ readFile' "Assets/TestInput/Nested/Z.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestInput/Nested/Z.language" in seq str str
 
 {-# NOINLINE _TestInput_Nested_X_language #-}
 _TestInput_Nested_X_language
-	 = let str = unsafePerformIO $ readFile' "Assets/TestInput/Nested/X.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestInput/Nested/X.language" in seq str str
 
 {-# NOINLINE _TestInput_Nested_L_language #-}
 _TestInput_Nested_L_language
-	 = let str = unsafePerformIO $ readFile' "Assets/TestInput/Nested/L.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestInput/Nested/L.language" in seq str str
 
 {-# NOINLINE _TestInput_Nested_Y_language #-}
 _TestInput_Nested_Y_language
-	 = let str = unsafePerformIO $ readFile' "Assets/TestInput/Nested/Y.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestInput/Nested/Y.language" in seq str str
 
 {-# NOINLINE _Faulty_TitleMismatch_language #-}
 _Faulty_TitleMismatch_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/TitleMismatch.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/TitleMismatch.language" in seq str str
 
 {-# NOINLINE _Faulty_LeftRecursiveSyntax_language #-}
 _Faulty_LeftRecursiveSyntax_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/LeftRecursiveSyntax.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/LeftRecursiveSyntax.language" in seq str str
 
 {-# NOINLINE _Faulty_FunctionDuplicateNameTest_language #-}
 _Faulty_FunctionDuplicateNameTest_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/FunctionDuplicateNameTest.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/FunctionDuplicateNameTest.language" in seq str str
 
 {-# NOINLINE _Faulty_TestShadowing_language #-}
 _Faulty_TestShadowing_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/TestShadowing.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/TestShadowing.language" in seq str str
 
 {-# NOINLINE _Faulty_SyntaxUndeclared_language #-}
 _Faulty_SyntaxUndeclared_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/SyntaxUndeclared.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/SyntaxUndeclared.language" in seq str str
 
 {-# NOINLINE _Faulty_FunctionIncorrectNameTest_language #-}
 _Faulty_FunctionIncorrectNameTest_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/FunctionIncorrectNameTest.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/FunctionIncorrectNameTest.language" in seq str str
 
 {-# NOINLINE _Faulty_FunctionTyperTest_language #-}
 _Faulty_FunctionTyperTest_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/FunctionTyperTest.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/FunctionTyperTest.language" in seq str str
 
 {-# NOINLINE _Faulty_VariableTypingErrors_language #-}
 _Faulty_VariableTypingErrors_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/VariableTypingErrors.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/VariableTypingErrors.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_NotLocal_language #-}
 _Faulty_Relations_NotLocal_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/NotLocal.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/NotLocal.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_DuplicateRelation_language #-}
 _Faulty_Relations_DuplicateRelation_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/DuplicateRelation.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/DuplicateRelation.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_EmptyLine_language #-}
 _Faulty_Relations_EmptyLine_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/EmptyLine.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/EmptyLine.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_UnknownTypeRelation_language #-}
 _Faulty_Relations_UnknownTypeRelation_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/UnknownTypeRelation.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/UnknownTypeRelation.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_IncorrectRule_language #-}
 _Faulty_Relations_IncorrectRule_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/IncorrectRule.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/IncorrectRule.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_AllOutRel_language #-}
 _Faulty_Relations_AllOutRel_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/AllOutRel.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/AllOutRel.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_NotDeclared_language #-}
 _Faulty_Relations_NotDeclared_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/NotDeclared.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/NotDeclared.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_Relation_language #-}
 _Faulty_Relations_Relation_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/Relation.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/Relation.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_TypeErr_language #-}
 _Faulty_Relations_TypeErr_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/TypeErr.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/TypeErr.language" in seq str str
 
 {-# NOINLINE _Faulty_Relations_UnkownTypeRelation_language #-}
 _Faulty_Relations_UnkownTypeRelation_language
-	 = let str = unsafePerformIO $ readFile' "Assets/Faulty/Relations/UnkownTypeRelation.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/Faulty/Relations/UnkownTypeRelation.language" in seq str str
 
 {-# NOINLINE _ALGT_Builtins_language #-}
 _ALGT_Builtins_language
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Builtins.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Builtins.language" in seq str str
 
 {-# NOINLINE _ALGT_Readme_md #-}
 _ALGT_Readme_md
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Readme.md" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Readme.md" in seq str str
 
 {-# NOINLINE _ALGT_Native_Syntax_language #-}
 _ALGT_Native_Syntax_language
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Native/Syntax.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Native/Syntax.language" in seq str str
 
 {-# NOINLINE _ALGT_Native_Functions_language #-}
 _ALGT_Native_Functions_language
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Native/Functions.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Native/Functions.language" in seq str str
 
 {-# NOINLINE _ALGT_Native_ALGT_language #-}
 _ALGT_Native_ALGT_language
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Native/ALGT.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Native/ALGT.language" in seq str str
 
 {-# NOINLINE _ALGT_Native_Helper_language #-}
 _ALGT_Native_Helper_language
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Native/Helper.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Native/Helper.language" in seq str str
 
 {-# NOINLINE _ALGT_Native_Relations_language #-}
 _ALGT_Native_Relations_language
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Native/Relations.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Native/Relations.language" in seq str str
 
 {-# NOINLINE _ALGT_Sugared_Syntax_language #-}
 _ALGT_Sugared_Syntax_language
-	 = let str = unsafePerformIO $ readFile' "Assets/ALGT/Sugared/Syntax.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/ALGT/Sugared/Syntax.language" in seq str str
 
 {-# NOINLINE _MetaSyntax_Syntax_language #-}
 _MetaSyntax_Syntax_language
-	 = let str = unsafePerformIO $ readFile' "Assets/MetaSyntax/Syntax.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Syntax.language" in seq str str
 
 {-# NOINLINE _MetaSyntax_Functions_language #-}
 _MetaSyntax_Functions_language
-	 = let str = unsafePerformIO $ readFile' "Assets/MetaSyntax/Functions.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Functions.language" in seq str str
 
 {-# NOINLINE _MetaSyntax_ALGT_language #-}
 _MetaSyntax_ALGT_language
-	 = let str = unsafePerformIO $ readFile' "Assets/MetaSyntax/ALGT.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/ALGT.language" in seq str str
 
 {-# NOINLINE _MetaSyntax_Helper_language #-}
 _MetaSyntax_Helper_language
-	 = let str = unsafePerformIO $ readFile' "Assets/MetaSyntax/Helper.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Helper.language" in seq str str
 
 {-# NOINLINE _MetaSyntax_Relations_language #-}
 _MetaSyntax_Relations_language
-	 = let str = unsafePerformIO $ readFile' "Assets/MetaSyntax/Relations.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/MetaSyntax/Relations.language" in seq str str
 
 {-# NOINLINE _TestLanguages_STFL_language #-}
 _TestLanguages_STFL_language
-	 = let str = unsafePerformIO $ readFile' "Assets/TestLanguages/STFL.language" in seq str str
+	 = let str = unsafePerformIO $ readFile' "src/Assets/TestLanguages/STFL.language" in seq str str
