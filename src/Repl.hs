@@ -4,6 +4,7 @@ module Repl where
 {- An interactive Repl, based on the shell -}
 
 import Utils.All
+import Assets
 
 import LanguageDef.API
 import LanguageDef.Utils.ExceptionInfo
@@ -83,18 +84,18 @@ _repl	= do	promptMsg	<- gets' currentPromptMsg
 actions	:: Action () -> [([String], String -> Action (), String)]
 actions continuation
  	= let continue action str	= action str >> continuation in
-		[ ([":l", "\f"]			, continue (noArg clearScreenAct),
+		[ ([":l", "\f", "CTRL+L"]			, continue (noArg clearScreenAct),
 			"Clears the screen")
-		, ([":quit",":q", "\EOT"]	, const pass,
+		, ([":quit",":q", "\EOT", "CTRL+D"]	, const pass,
 			"Exit the interpreter")
 		, ([":r"]			, continue $ noArg reload,
 			"Reload the language definition")
 		, ([":*"]			, continue $ noArg infoAboutAll,
 			"Show what is in scope")
 		, ([":i"]			, continue infoAboutAct,
-			"Give info about some entity which is in scope")
+			"Give info about an entity in scope (needs an argument)")
 		, ([":t"]			, continue printType,
-			"Give the type of an expression")	
+			"Give the type of an expression (needs an argument)")	
 		, ([":st"]			, continue $ noArg supertypeInfo,
 			"Gives the supertyping relationship")
 		, (["help", ":h", ":help"]	, continue help,
@@ -104,7 +105,10 @@ actions continuation
 
 
 help	:: String -> Action ()
-help _	= putStrLn' $ "Supported commands are:\n"++ (actions (error "no continuation") |> showAction & unlines & indent)
+help _	= putStrLn' $ generalHelp ++ (actions (error "no continuation") |> showAction & unlines & indent)
+
+
+generalHelp = Assets._Resources_InterpreterHelp_md
 
 
 showAction	:: ([String], a, String) -> String

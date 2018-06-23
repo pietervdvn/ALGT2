@@ -127,7 +127,7 @@ isTrivial sf
 
 {- | Checks for dead clauses
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty" ["TestShadowing"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty" ["TestShadowing"] & toCoParsable
 "| While validating the syntax while validating \n  Error: \n    \8226 In syntactic form TestShadowing.x\n    \"a\" (choice 0) shadows \"a\" \"b\" (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.y\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool TestShadowing.bool (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.z\n    TestShadowing.bool (choice 0) shadows TestShadowing.bool (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.dead1\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool (choice 1)\n    \8226 Swap the choices\n  Error: \n    \8226 In syntactic form TestShadowing.dead2\n    TestShadowing.expr (choice 0) shadows TestShadowing.bool \";\" (choice 1)\n    \8226 Swap the choices"
 -}
 _checkDeadClauses	:: (FQName -> FQName -> Bool) -> [Name] -> SyntacticForm -> Check
@@ -166,7 +166,7 @@ deadChoices isSubtypeOf sf
 >>> import Data.Maybe (fromJust)
 >>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
->>> let unit = loadAssetLangDef "Faulty" fqname & crash' & enterScope fqname & crash
+>>> let unit = loadAssetLangDef "TestInput/Faulty" fqname & crash' & enterScope fqname & crash
 >>> let synt = unit & get (ldScope . langSyntax) & fromJust
 >>> _checkLeftRecursion fqname synt
 Failed (ExceptionInfo {_errMsg = "Left recursive calls detected:\nLeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b\n\n", _errSeverity = Error, _errSuggestion = Nothing})
@@ -186,7 +186,7 @@ _checkLeftRecursion fq s
 >>> import LanguageDef.LangDefs
 >>> import LanguageDef.Data.LanguageDef
 >>> let fqname = ["LeftRecursiveSyntax"]
->>> let unit = loadAssetLangDef "Faulty" fqname & crash' & enterScope fqname & crash'
+>>> let unit = loadAssetLangDef "TestInput/Faulty" fqname & crash' & enterScope fqname & crash'
 >>> let synt = unit & get (ldScope . langSyntax) & fromJust
 >>> leftRecursiveCalls fqname synt ||>> showFQ |> commas
 ["LeftRecursiveSyntax.b, LeftRecursiveSyntax.a, LeftRecursiveSyntax.b"]

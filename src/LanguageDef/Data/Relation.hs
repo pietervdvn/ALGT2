@@ -180,11 +180,11 @@ rules	= _rules |||>>> const () |> asGrouper ("rule", "rules") (get ruleName)
 {- | Checks the relation. Duplicate relation check is done by the grouper; unknown type check is done by the qualfier
 
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty/Relations" ["UnknownTypeRelation"] & toCoParsable
-"| While fully qualifiying the relation form \"~\" in Faulty/Relations/UnknownTypeRelation.language at lines 11 - 13\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, \8868, \8869, UnknownTypeRelation.a, UnknownTypeRelation.\8868\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, \8868, \8869, UnknownTypeRelation.a, UnknownTypeRelation.\8868"
->>> loadAssetLangDef "Faulty/Relations" ["DuplicateRelation"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty/Relations" ["UnknownTypeRelation"] & toCoParsable
+"| While fully qualifiying the relation form \"~\" in TestInput/Faulty/Relations/UnknownTypeRelation.language at lines 11 - 13\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, \8868, \8869, UnknownTypeRelation.a, UnknownTypeRelation.\8868\n  Error: \n    \8226 The syntactic form \"x\" was not found within the namespace \n    \8226 Perhaps you meant: a, \8868, \8869, UnknownTypeRelation.a, UnknownTypeRelation.\8868"
+>>> loadAssetLangDef "TestInput/Faulty/Relations" ["DuplicateRelation"] & toCoParsable
 "| While validating the relation declarations while validating \nError: \n  \8226 The relation \"~\" is defined multiple times"
->>> loadAssetLangDef "Faulty/Relations" ["AllOutRel"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty/Relations" ["AllOutRel"] & toCoParsable
 "| While validating the relation declarations while validating \nError: \n  \8226 Relation (~) should have at least one input type"
 -}
 instance Checkable Relation where
@@ -197,12 +197,12 @@ instance Checkable Relation where
 
 {- |
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty/Relations" ["EmptyLine"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty/Relations" ["EmptyLine"] & toCoParsable
 "| While validating the relation implementation while validating \nError: \n  \8226 This rule has no name. Add a name after the line, in square brackets\n  \n   predicate\n  ----------- [ name ]\n   (~) args"
->>> loadAssetLangDef "Faulty/Relations" ["NotDeclared"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty/Relations" ["NotDeclared"] & toCoParsable
 "| While validating \nError: \n  \8226 When rules are defined, a relation declaration section should be present"
->>> loadAssetLangDef "Faulty/Relations" ["NotLocal"] & toCoParsable
-"| While fully qualifiying the rule \"abc\" in Faulty/Relations/NotLocal.language at lines 18 - 22\n| While fully qualifiying a conclusion using ([],\"~\") in Faulty/Relations/NotLocal.language at line 21, columns 4 - 5\nError: \n  \8226 The relation \"~\" was not found within the namespace \n  \8226 Perhaps you meant: \8594, NotLocal.\8594"
+>>> loadAssetLangDef "TestInput/Faulty/Relations" ["NotLocal"] & toCoParsable
+"| While fully qualifiying the rule \"abc\" in TestInput/Faulty/Relations/NotLocal.language at lines 18 - 22\n| While fully qualifiying a conclusion using ([],\"~\") in TestInput/Faulty/Relations/NotLocal.language at line 21, columns 4 - 5\nError: \n  \8226 The relation \"~\" was not found within the namespace \n  \8226 Perhaps you meant: \8594, NotLocal.\8594"
 -}
 instance Checkable' (Grouper Relation) (Rule' a) where
 	check' relations rule

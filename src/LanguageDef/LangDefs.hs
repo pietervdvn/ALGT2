@@ -261,7 +261,7 @@ instance Checkable' [Name] LDScope where
 
 {- |
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty" ["TitleMismatch"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty" ["TitleMismatch"] & toCoParsable
 "| While validating \nError: \n  \8226 The module in file TitleMismatch is titled \"Some Other Title\". Retitle them to be the same (whitespace insensitive)"
 -}
 

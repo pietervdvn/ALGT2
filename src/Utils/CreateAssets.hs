@@ -1,7 +1,8 @@
 module Utils.CreateAssets (createAssets, createAssets', autoCreateAssets, name, dirConts, autoCreateDevAssets) where
 
 {-
-This module defines a small tool, creating asset files
+This module defines a small tool, creating Assets.hs files so that a lot of files can be linked in statically
+Use autoCreateDevAssets
 -}
 
 import System.Directory
@@ -86,7 +87,7 @@ fileLine dev origDir file
 	= do	let name'	=  name origDir file
 		let pragma	= if dev then "\n{-# NOINLINE "++name'++" #-}\n" else ""
 		let devAssgn'	= if isBinary file then "unsafePerformIO $ B.readFile "++show file
-					else "unsafePerformIO $ readFile' "++show ("src/"++file)
+					else "unsafePerformIO $ readFile' "++show file
 		let devAssgn	= "let str = "++devAssgn'++" in seq str str"
 		contents	<- if dev then return devAssgn else
 					if isBinary file then  

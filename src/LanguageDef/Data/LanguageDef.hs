@@ -88,9 +88,9 @@ type LanguageDef	= LanguageDef' ResolvedImport SyntFormIndex
 
 
 >>> import LanguageDef.API
->>> loadAssetLangDef "Faulty" ["FunctionDuplicateNameTest"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty" ["FunctionDuplicateNameTest"] & toCoParsable
 "| While validating the functions while validating \nError: \n  \8226 The function \"not\" is defined multiple times"
->>> loadAssetLangDef "Faulty" ["FunctionIncorrectNameTest"] & toCoParsable
+>>> loadAssetLangDef "TestInput/Faulty" ["FunctionIncorrectNameTest"] & toCoParsable
 "| While validating the functions while validating \n| While checking function \"not\" \nError: \n  \8226 Some clauses have a different name. The function name is \"not\", but a clause is named f"
 
 -}
