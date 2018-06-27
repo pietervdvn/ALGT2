@@ -12,6 +12,7 @@ import LanguageDef.Utils.LocationInfo
 
 import LanguageDef.Data.Expression
 import LanguageDef.Data.LanguageDef
+import LanguageDef.Data.ParseTree
 
 import qualified Utils.PureIO as PureIO
 import Utils.PureIO (runIO)
@@ -47,8 +48,13 @@ makeLenses ''ReplState
 type Action	= StateT ReplState IO
 
 trepl	= replAsset "" ["ALGT", "Sugared", "Syntax"]
+
+
+replSTFL
+	= replAsset "TestLanguages" ["STFL"]
+
 replAsset fp
-	= repl $ "/home/pietervdvn/git/ALGT2/src/Assets/" ++ fp
+	= repl $ "src/Assets/" ++ fp
 
 repl		:: FilePath -> [Name] -> IO ()
 repl fp path
@@ -98,6 +104,8 @@ actions continuation
 			"Give the type of an expression (needs an argument)")	
 		, ([":st"]			, continue $ noArg supertypeInfo,
 			"Gives the supertyping relationship")
+		, ([":pt"]			, continue parseTreeInfo,
+			"Gives the parsetree of an expression")
 		, (["help", ":h", ":help"]	, continue help,
 			"Print this help message")
 		]
@@ -123,6 +131,26 @@ printType str
 		typed & handleFailure (putStrLn' . toParsable) 
 			(\expr -> expr & get expAnnot & toParsable & putStrLn')
 
+
+parseTreeInfo	:: String -> Action ()
+parseTreeInfo str
+	= do	ld	<- getLd
+		let expr	= createExpression ld "interactive" str >>= extractPT	:: Failable String
+		let typesToTry = allKnowns ld syntaxCall |> fst3 |> fst	:: [FQName]
+		expr & handleFailure (putStrLn' . toParsable) (\str -> 
+			do	let results	= typesToTry |> (\fqn -> (fqn, createParseTree ld fqn "interactive-pt" str)) |> sndEffect & successess
+				putStrLn' $ if null results then "Could not parse "++str
+					else	results |> (\(typ, parseTree) ->"\n" ++ showFQ typ++"\n"++asTree parseTree) & unlines
+			)
+
+
+					
+
+extractPT		:: Expression' () -> Failable String
+extractPT (ParseTree (Literal ptToken _ _ _) _ _)
+					= return ptToken
+extractPT _		= fail "This is not a parsetree"
+
 clearScreenAct	:: Action ()
 clearScreenAct
 	= liftIO clearScreen 
@@ -140,6 +168,7 @@ infoAboutAll
 		let scoped	= inScope ld |> fst
 		scoped |> showInScope |+> putStrLn'
 		pass
+
 
 
 showInScope	:: (FQName, [FQName]) -> String
@@ -215,7 +244,9 @@ putStrLn'
 gets' lens
 	= gets (get lens)
 
+
 -- Gets the loaded module
+getLd	:: Action LDScope
 getLd	= do	mld	<- gets' currentModule
 		maybe (fail "Initial load of the language definition failed") return mld
 
