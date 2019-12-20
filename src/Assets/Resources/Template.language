@@ -4,7 +4,7 @@
 # Note that this tool is meant for programmers which have some experience, especially in the field of language design
 
 
-# First of all, we start with imports. An imports you'll need practically every time, are the builtin values
+# First of all, we start with imports. One import you'll have to make every time, are the builtin values
 # These contain some often used syntactic forms and functions to work with numbers (such as `plus`)
 # Once you have some basic understandig of ALGT, you can head over to the source of this file and take a look to it 
 # You'll find it at: https://github.com/pietervdvn/ALGT2/blob/master/src/Assets/ALGT/Builtins.language

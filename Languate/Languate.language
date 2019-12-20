@@ -1,0 +1,149 @@
+import ALGT.Builtins 
+
+ Languate
+**********
+ 
+ Syntax
+========
+
+
+ # ------------------- Types and type constructors -------------------------
+
+ # One or more constructor, comma seperated
+constructors    ::= identifierUpper "," constructors | identifierUpper
+
+ # A simple 'set' definition, the type has these constructors
+setDefinition ::= "{" constructors "}"
+
+ 
+ # Defines a new type
+typeDeclaration    ::= "type" identifierUpper "=" setDefinition
+
+type    ::= identifierUpper "->" type | identifierUpper
+
+ # ------------------- Expressions -----------------------
+ 
+ 
+expressionElement  ::= identifierUpper | identifier | "(" expression ")"
+
+expression  ::= expressionElement expression | expressionElement
+
+ # ------------------- Functions -------------------------
+
+commentLine ::= lineChar commentLine | "\n"
+ # Docstring comment. First character of the line must be a dash
+comment ::=  "-" $commentLine
+comments ::= comment comments | comment
+
+ # For now, it is the same as a comment
+property ::= ">" $commentLine
+properties ::= property properties | property
+ 
+ # The type declaration of a function
+declaration ::= identifier ":" type
+
+
+clause  ::= expression "->" expression
+clauses ::= clause "\n" clauses | clause
+
+function ::= comments properties declaration "\n" clauses
+
+ # ------------- meta ------------------
+ 
+stars ::= "*" stars | "*" "\n"
+ 
+title   ::= commentLine "\n" stars nls
+
+fileElements   ::= fileElement nls fileElements | fileElement
+
+fileElement ::= function | typeDeclaration
+
+file    ::= nls title fileElements | title fileElements
+
+ # ------------------- Utils, such as the typing environment
+ 
+
+knownTypes ::= identifier type "," knownTypes | "[]"
+knownConstructors ::= identifierUpper type "," knownConstructors | "[]"
+
+typingEnv ::= knownTypes knownConstructors
+
+nl  ::= "\n"
+nls ::= nl nls | nl
+
+ Functions
+===========
+
+
+fileToTypingEnv : file -> typingEnv
+fileToTypingEnv(_ els) = buildTypes(els)
+fileToTypingEnv(_ _ els) = buildTypes(els)
+
+            
+buildTypes  : fileElements -> typingEnv
+buildTypes(fe "\n" rest) =  addElement(fe, buildTypes(rest))
+buildTypes(fe : fileElement) = addElement(fe, "[]" "[]")
+
+
+addElement  : fileElement * typingEnv -> typingEnv
+addElement(f : function, env) = addFunction(f, env)
+addElement(td : typeDeclaration, env) = addType(td, env)
+
+addFunction : function * typingEnv -> typingEnv
+addFunction(_ _ (name ":" type) "\n" _, funcs constrs) = (name type "," funcs) constrs
+        
+addType   : typeDeclaration * typingEnv -> typingEnv
+addType("type" type "=" ("{" constructors "}"), env) = addConstrs(type, constructors, env)
+            
+addConstrs  : type * constructors * typingEnv -> typingEnv
+addConstrs(t, identifier "," rest, env)  =addConstr(identifier, t, addConstrs(t, rest, env))
+addConstrs(t, (identifier : identifierUpper), env)  = addConstr(identifier, t, env)
+
+
+addConstr   : identifierUpper * type * typingEnv -> typingEnv
+addConstr(c, t, types constr)    = types (c t "," constr)
+
+
+# Searches the typing environment
+searchVar	: identifier * knownTypes -> type
+searchVar(x, x t "," _) = t
+searchVar(x, _ _ "," rest) = searchVar(x, rest)
+	
+# Searches the typing environment for constructors
+searchCons: identifierUpper * knownConstructors -> type
+searchCons(x, x t "," _) = t
+searchCons(x, _ _ "," rest)	= searchCons(x, rest)
+	
+
+
+ Relations
+===========
+
+# Evaluate an expression
+(->)	: expression (in) * expression (out); Pronounced as "small step"
+
+# Type the expression
+(::)	: expression (in) * type (out); Pronounced as "type as"
+
+# Type the expression in this environment
+(!-) : typingEnv (in) * expression (in) * type (out); Pronounced as "type in environment"
+
+ Rules
+=======
+
+
+ ###### TYPING RULES #####
+ 
+ (!-) "[]" "[]", e, t
+----------------------- [Type in an empty environment]
+ (::) e, t
+
+
+ 
+ 
+------------------------------------------------ [Type variable]
+ (!-) vars constr, x, searchVar(x, vars)
+
+------------------------------------------------ [Type constructor]
+ (!-) vars constr, x, searchCons(x, constr)
+ 

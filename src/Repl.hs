@@ -104,8 +104,10 @@ actions continuation
 			"Give the type of an expression (needs an argument)")	
 		, ([":st"]			, continue $ noArg supertypeInfo,
 			"Gives the supertyping relationship")
-		, ([":pt"]			, continue parseTreeInfo,
+		, ([":pt"]			, continue (parseTreeInfo "interactive"),
 			"Gives the parsetree of an expression")
+        , ([":pf"]          , continue parseFile,
+            "Parses the given file")
 		, (["help", ":h", ":help"]	, continue help,
 			"Print this help message")
 		]
@@ -132,10 +134,10 @@ printType str
 			(\expr -> expr & get expAnnot & toParsable & putStrLn')
 
 
-parseTreeInfo	:: String -> Action ()
-parseTreeInfo str
+parseTreeInfo	:: String -> String -> Action ()
+parseTreeInfo filename str
 	= do	ld	<- getLd
-		let expr	= createExpression ld "interactive" str >>= extractPT	:: Failable String
+		let expr	= createExpression ld fileName str >>= extractPT	:: Failable String
 		let typesToTry = allKnowns ld syntaxCall |> fst3 |> fst	:: [FQName]
 		expr & handleFailure (putStrLn' . toParsable) (\str -> 
 			do	let results	= typesToTry |> (\fqn -> (fqn, createParseTree ld fqn "interactive-pt" str)) |> sndEffect & successess
@@ -143,7 +145,20 @@ parseTreeInfo str
 					else	results |> (\(typ, parseTree) ->"\n" ++ showFQ typ++"\n"++asTree parseTree) & unlines
 			)
 
-
+parseFile   :: String -> Action ()
+parseFile str
+    = do    let args = words str
+            if length args /= 2 then
+                putStrLn' "Not enough arguments"
+            else do
+                let function = head args
+                let path = head $ tail args
+                exists <- liftIO $ runIO $ PureIO.doesFileExist path
+                if not exists then
+                    putStrLn' $ "File does not exist: "++path
+                else do
+                    fileContents <- liftIO $ readFile path
+                    parseTreeInfo path fileContents
 					
 
 extractPT		:: Expression' () -> Failable String

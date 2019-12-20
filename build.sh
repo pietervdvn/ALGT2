@@ -29,15 +29,15 @@ fi
 
 
 
-cp .stack-work/install/x86_64-linux/lts-8.15/8.0.2/bin/ALGT2-exe ALGT
+cp .stack-work/install/x86_64-linux-tinfo6/lts-8.15/8.0.2/bin/ALGT2-exe ALGT
 
 VERSION=`./ALGT -v | sed "s/, .*$//"`
 cp ALGT "binaries/ALGT-$VERSION"
 cp ALGT "ALGT-$VERSION"
 echo "Moved new build to binaries"
 
-git add "binaries/ALGT-$VERSION"
-git add "ALGT-$VERSION"
+# git add "binaries/ALGT-$VERSION"
+# git add "ALGT-$VERSION"
 
-git commit -m "Build #$VERSION"
-git push
+# git commit -m "Build #$VERSION"
+# git push
