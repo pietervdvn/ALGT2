@@ -78,8 +78,16 @@ mod(x, y)	= x  # Substituted by real implementation at runtime
 # Given a string, parses it accoring to the syntax
 # The second argument is a string containing the typename (which is resolved using the scope you call it in): 
 # > parse("True & False", "string") : boolExpr = "True" "&" "False"
-parse		: ⊤ * ⊤ -> ⊤
+parse		: ⊤ * ⊤ -> ⊥
 parse(toParse, parseAs)	= x	# Substituted by real implementation at runtime
+
+# Given a path, reads the file and parses it accoring to the syntax. Note: this function possibly caches the read file.
+# The second argument is a string containing the typename (which is resolved using the scope you call it in): 
+# > parse("fileName", "string") : boolExpr = "True" "&" "False"
+loadFile		: ⊤ * ⊤ -> ⊥
+loadFile(fileName)	= x	# Substituted by real implementation at runtime
+
+
 
 # Given a complex structure, simplifies it to a string
 # > group("True" "&" "False) = "True&False"

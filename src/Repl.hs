@@ -13,6 +13,7 @@ import LanguageDef.Utils.LocationInfo
 import LanguageDef.Data.Expression
 import LanguageDef.Data.LanguageDef
 import LanguageDef.Data.ParseTree
+import LanguageDef.Data.SyntFormIndex
 
 import qualified Utils.PureIO as PureIO
 import Utils.PureIO (runIO)
@@ -40,7 +41,6 @@ data ReplState	= ReplState
 	, _currentPath		:: FilePath
 	, _currentModulePath	:: [FilePath]
 	, _currentPromptMsg	:: String -> String
-	, _cache		:: Map FilePath (UTCTime, LanguageDef' () ())
 	}
 makeLenses ''ReplState
 
@@ -58,7 +58,7 @@ replAsset fp
 
 repl		:: FilePath -> [Name] -> IO ()
 repl fp path
-	= do	let state	= ReplState Nothing fp path (show . onred . text) M.empty
+	= do	let state	= ReplState Nothing fp path (show . onred . text)
 		runStateT (reload >> _repl) state
 		pass
 
@@ -106,8 +106,6 @@ actions continuation
 			"Gives the supertyping relationship")
 		, ([":pt"]			, continue (parseTreeInfo "interactive"),
 			"Gives the parsetree of an expression")
-        , ([":pf"]          , continue parseFile,
-            "Parses the given file")
 		, (["help", ":h", ":help"]	, continue help,
 			"Print this help message")
 		]
@@ -137,29 +135,40 @@ printType str
 parseTreeInfo	:: String -> String -> Action ()
 parseTreeInfo filename str
 	= do	ld	<- getLd
-		let expr	= createExpression ld fileName str >>= extractPT	:: Failable String
-		let typesToTry = allKnowns ld syntaxCall |> fst3 |> fst	:: [FQName]
-		expr & handleFailure (putStrLn' . toParsable) (\str -> 
-			do	let results	= typesToTry |> (\fqn -> (fqn, createParseTree ld fqn "interactive-pt" str)) |> sndEffect & successess
-				putStrLn' $ if null results then "Could not parse "++str
-					else	results |> (\(typ, parseTree) ->"\n" ++ showFQ typ++"\n"++asTree parseTree) & unlines
+		let expr        = createExpression ld filename str >>= extractPT        :: Failable String
+		expr & handleFailure (putStrLn' . toParsable) (\str ->
+			do	
+				let typesToTry = allKnowns ld syntaxCall |> fst3 |> fst :: [FQName]
+				let parses = typesToTry |> (\fqn -> (fqn, createParseTree ld fqn "interactive-pt" str)) |> sndEffect
+				let results = successess parses
+				if null results then do
+					("Could not parse "++str) & putStrLn'
+					let failed = fails parses
+					failed |> toParsable & unlines & putStrLn'
+				else 
+					results |> (\(typ, parseTree) ->"\n" ++ showFQ typ++"\n"++asTree parseTree) & unlines & putStrLn'
 			)
 
 parseFile   :: String -> Action ()
 parseFile str
-    = do    let args = words str
-            if length args /= 2 then
-                putStrLn' "Not enough arguments"
-            else do
-                let function = head args
-                let path = head $ tail args
-                exists <- liftIO $ runIO $ PureIO.doesFileExist path
-                if not exists then
-                    putStrLn' $ "File does not exist: "++path
-                else do
-                    fileContents <- liftIO $ readFile path
-                    parseTreeInfo path fileContents
+	= do	let args = words str
+		if length args /= 2 then
+			putStrLn' "Not enough arguments"
+		else do
+			let rule = head args 
+			let path = args !! 1
+			exists <- liftIO $ runIO $ PureIO.doesFileExist path
+			if not exists then
+				putStrLn' $ "File does not exist: "++path
+			else do
+				fileContents <- liftIO $ readFile path
+				ld <- getLd
+				(do	fqn <- resolve ld syntaxCall ([], rule)
+					pt 	<- createParseTree ld fqn path fileContents
+					return (fqn, pt))
+					& handleFailure (putStrLn' . toParsable) (putStrLn' . asTree . snd)
 					
+				
 
 extractPT		:: Expression' () -> Failable String
 extractPT (ParseTree (Literal ptToken _ _ _) _ _)
@@ -194,7 +203,6 @@ showInScope (full, knownAs)
 		full' ++ " is known as:\n" ++ knownAs'
 				
 
-
 infoAboutAct	:: String -> Action ()
 infoAboutAct entry
 	= do	ld	<- getLd
@@ -220,7 +228,7 @@ reload
 	= do	fp	<- gets' currentPath
 		fq	<- gets' currentModulePath
 		putStrLn' ("Reloading " ++ fp ++ "/" ++ intercalate "/" fq)
-		mLd	<- liftIO $ runIO (loadLangDef fp fq)	-- TODO use cache
+		mLd	<- liftIO $ runIO (loadLangDef fp fq)
 		let recover e	= do	putStrLn' $ toParsable e
 					old	<- gets' currentModule
 					setColor $ if isNothing old then onred else red
@@ -260,10 +268,16 @@ gets' lens
 	= gets (get lens)
 
 
+puts' lens x
+	= modify (set lens x)
+	
+
+				
+
+
 -- Gets the loaded module
 getLd	:: Action LDScope
 getLd	= do	mld	<- gets' currentModule
 		maybe (fail "Initial load of the language definition failed") return mld
 
-puts' lens x
-	= modify (set lens x)
+

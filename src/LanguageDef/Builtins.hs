@@ -21,8 +21,11 @@ import LanguageDef.Data.LanguageDef
 import Data.Map as M
 
 import Data.List
+import Data.Maybe
 
 import Debug.Trace
+import System.IO.Unsafe
+import System.Directory
 
 syntaxExtras	= [ (typeTop, _topSF)
 		  , (typeBottom, _bottomSF)
@@ -48,7 +51,11 @@ isBuiltinFunction ld f
  	= "ALGT.Builtins" == get (langLocation . miFile) ld
 		
 
+{- | All the function names 
 
+>>> functions |> keys |> fst & all ((==) ["ALGT", "Builtins"])
+true
+-}
 functions	:: Map FQName ((String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree) 
 functions 	= M.fromList
 			[ ((["ALGT", "Builtins"], "plus"), _intOp (+))
@@ -58,6 +65,7 @@ functions 	= M.fromList
 			, ((["ALGT", "Builtins"], "mod"), _intOp mod)
 			
 			, ((["ALGT", "Builtins"], "parse"), _fParse)
+			, ((["ALGT", "Builtins"], "loadFile"), _fLoadFile)
 			, ((["ALGT", "Builtins"], "group"), _fGroup)
 			, ((["ALGT", "Builtins"], "error"), _fError)
 			, ((["ALGT", "Builtins"], "errorSugg"), _fError)
@@ -72,7 +80,23 @@ _fParse		:: (String -> String -> Failable ParseTree) -> [ParseTree] -> Failable 
 _fParse parseString [ptArg, ptParseAs]
 	= do	let toParse	= contents ptArg
 		let typeAs	= contents ptParseAs
-		parseString toParse typeAs |> removeHidden |> removeRuleEnters
+		parseString toParse typeAs |> removeHidden
+		
+_loadFile		:: String -> IO (Maybe String)
+_loadFile path
+	= do	exists	<- doesFileExist path
+		if not exists then return Nothing else readFile path |> Just
+	
+		
+_fLoadFile		:: (String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree
+_fLoadFile parseString [ptFileName, ptParseAs]
+	= do	
+		let fileName	= contents ptFileName
+		let toParse	= unsafePerformIO $ _loadFile fileName	-- Forgive, for I have sinned
+		let typeAs	= contents ptParseAs
+		if isNothing toParse then fail ("File "++fileName++" not found") else
+			parseString (fromJust toParse) typeAs |> removeHidden
+			
 
 
 _fError		:: a -> [ParseTree] -> Failable ParseTree

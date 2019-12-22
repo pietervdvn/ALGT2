@@ -173,7 +173,7 @@ ruleCall	:: Resolver' fr (Rule' fr)
 ruleCall	= ("the rule", get langRules, [])
 
 
-resolveGlobal	:: Eq x => LDScope  -> Resolver x-> FQName -> Failable (FQName, x)
+resolveGlobal	:: Eq x => LDScope  -> Resolver x -> FQName -> Failable (FQName, x)
 resolveGlobal lds entity fqname
 	= do	let path	= fst fqname
 		ld	<- checkExistsSuggDist' (dots, levenshtein `on` last) path (get environment lds) 

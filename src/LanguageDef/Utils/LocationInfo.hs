@@ -75,11 +75,11 @@ locationSpec (LocationInfo sl el sc ec file)
  | (-1) `elem` [sl, el, sc, ec]
 	= "unspecified location"
  | sl == el && sc == ec
-	= "line "++show sl++", "++show sc
+	= "line "++show (1+sl)++", "++show sc
  | sl == el
-	= "line "++show sl++", column "++show sc++" - "++show ec
+	= "line "++show (1+sl)++", column "++show sc++" - "++show ec
  | otherwise
-	= "lines "++show sl++" - "++show el
+	= "lines "++show (1+sl)++" - "++show (1+el)
 
 
 instance ToString LocationInfo where

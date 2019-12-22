@@ -50,11 +50,11 @@ function ::= comments properties declaration "\n" clauses
 
  # ------------- meta ------------------
  
-stars ::= "*" stars | "*" "\n"
+stars ::= "*" stars | "*"
  
-title   ::= commentLine "\n" stars nls
+title   ::= commentLine stars nls
 
-fileElements   ::= fileElement nls fileElements | fileElement
+fileElements   ::= fileElement nls fileElements | fileElement "\n"
 
 fileElement ::= function | typeDeclaration
 
@@ -81,8 +81,8 @@ fileToTypingEnv(_ _ els) = buildTypes(els)
 
             
 buildTypes  : fileElements -> typingEnv
-buildTypes(fe "\n" rest) =  addElement(fe, buildTypes(rest))
-buildTypes(fe : fileElement) = addElement(fe, "[]" "[]")
+buildTypes(fe _ rest) =  addElement(fe, buildTypes(rest))
+buildTypes(fe "\n") =addElement(fe, "[]" "[]")
 
 
 addElement  : fileElement * typingEnv -> typingEnv
@@ -114,7 +114,9 @@ searchCons: identifierUpper * knownConstructors -> type
 searchCons(x, x t "," _) = t
 searchCons(x, _ _ "," rest)	= searchCons(x, rest)
 	
-
+# All the stuff frequently needed
+t       : typingEnv
+t = fileToTypingEnv(loadFile("Languate/programs/Bool.lgt", "file") : file)
 
  Relations
 ===========
@@ -128,6 +130,9 @@ searchCons(x, _ _ "," rest)	= searchCons(x, rest)
 # Type the expression in this environment
 (!-) : typingEnv (in) * expression (in) * type (out); Pronounced as "type in environment"
 
+# Type the expression in this environment
+(!!) : expression (in) * type (out); Pronounced as "type in environment"
+
  Rules
 =======
 
@@ -138,12 +143,28 @@ searchCons(x, _ _ "," rest)	= searchCons(x, rest)
 ----------------------- [Type in an empty environment]
  (::) e, t
 
+ (!-) t(), e, t
+----------------------- [Type in the Bool environment]
+(!!) e, t
 
- 
  
 ------------------------------------------------ [Type variable]
  (!-) vars constr, x, searchVar(x, vars)
 
 ------------------------------------------------ [Type constructor]
  (!-) vars constr, x, searchCons(x, constr)
+ 
+ 
+ (!-) env, f, tIn "->" tOut		(!-) env, x, tIn    
+ ------------------------------------------------ [Function application]
+ (!-) env, f x, tOut
+ 
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
  

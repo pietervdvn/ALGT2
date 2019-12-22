@@ -17,7 +17,7 @@ echo "EXIT CODE: $STACKEXIT"
 
 cd src
 echo "Recreating dev assets" 
-echo "createAssets True \"Assets\" \"Assets.hs\"" | ghci -fno-warn-tabs Utils/CreateAssets.hs 
+# echo "createAssets True \"Assets\" \"Assets.hs\"" | ghci -fno-warn-tabs Utils/CreateAssets.hs 
 cd ..
 
 if [[ $STACKEXIT -ne 0 ]]
@@ -26,9 +26,9 @@ then
 	exit
 fi
 
+ls *.hs */*.hs */*/*.hs | sed /Assets.hs/d | xargs hlint
 
-
-
+rm ALGT
 cp .stack-work/install/x86_64-linux-tinfo6/lts-8.15/8.0.2/bin/ALGT2-exe ALGT
 
 VERSION=`./ALGT -v | sed "s/, .*$//"`

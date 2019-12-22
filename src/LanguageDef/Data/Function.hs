@@ -109,6 +109,9 @@ functionClause 	= choices' "funcClause"
 			[ (capture <+> lit "(" **> (arguments <+> lit ")" **> skip **> expression <+> nl))
 				& withLocation (,)
 				|> _funcClause
+			, (capture <+> skip **> expression <+> nl)
+				|> (\(funcName, expression) -> (funcName, ([{-arguments-}], expression)))
+				& withLocation (,) |>_funcClause
 			]
 
 _funcClause	:: (LocationInfo, (String, ([Expression' a], (Expression' a, Maybe String))))

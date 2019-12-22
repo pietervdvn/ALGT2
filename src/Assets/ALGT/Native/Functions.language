@@ -37,6 +37,7 @@ signature	::= Identifier ":" types lastTypeSep Syntax.typeIdent
 
 arguments	::= expression "," arguments | expression
 funcCall	~~= Syntax.ident "(" Whitespace arguments Whitespace ")"
+			| Syntax.ident "()"
 
 ascription	::= expressionTerm ":" Syntax.typeIdent
 splitExpression	::= expressionTerm "&" expression
@@ -62,7 +63,8 @@ expression	::=  ascription	# "a:type", "Ascription", "Check that the argument is
 
 # A single clause in a metafunction
 eqSign		~~= Syntax.nl "\t" Whitespace "=" | "="
-funcClause	::= Identifier "(" arguments ")" eqSign expression Syntax.nl
+funcClause	::= Identifier "(" arguments ")" eqSign expression Syntax.nl 
+			| Identifier eqSign expression Syntax.nl
 funcClauses	::= funcClause funcClauses | funcClause
 
 # A full function, including leading docstring

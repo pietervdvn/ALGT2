@@ -137,8 +137,9 @@ concatExpressions
 funcCall	:: Combiner (Expression' ())
 funcCall
 	= choices' "funcCall"
-		[(ident <+> (lit "(" **> skip {-WS-} **> arguments <** skip {- WS -} <** lit ")"))
+		[ (ident <+> (lit "(" **> skip {-WS-} **> arguments <** skip {- WS -} <** lit ")"))
 			& withLocation (\li (id, args) -> FuncCall id args () li)
+		, (ident <** lit "()") & withLocation (\li id -> FuncCall id [] () li)
 		]
 
 arguments	:: Combiner [Expression' ()]

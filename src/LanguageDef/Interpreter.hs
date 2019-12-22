@@ -19,6 +19,7 @@ import qualified LanguageDef.Builtins as Builtins
 
 import qualified Data.Map as M
 import Data.Map (Map)
+import Debug.Trace
 
 
 {- | The type representing a variable store
@@ -128,7 +129,7 @@ resolveAndRun lds fqn@(targetLD, name) args
 
 runFunction	:: LDScope -> LanguageDef -> Function -> [ParseTree] -> Failable ParseTree
 runFunction lds ld func args
-	= inMsg' ("While executing the function "++get funcName func) $ inLocation (get (funcDoc . miLoc) func) $ 
+	= inMsg' ("While executing the function "++get funcName func++" with arguments "++ argumentsToString args) $ inLocation (get (funcDoc . miLoc) func) $ 
 		do	let clauses	= func & get funcClauses
 			clauses & mapi |> flip (runClause lds ld) args & firstSuccess			
 
@@ -140,7 +141,9 @@ runClause lds ld (i, FunctionClause pats result doc nm) args
 		constructParseTree lds store result
 
 
-
+argumentsToString	:: [ParseTree] -> String
+argumentsToString pts
+	= pts |> toParsable |> take 20 & commas |> (\c -> if c == '\n' then '§' else c)
 
 ------------------------- ABOUT PARSETREE CONSTRUCTION/INTERPRETATION --------------------------------
 

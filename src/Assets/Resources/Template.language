@@ -98,6 +98,13 @@ eqInt(_, _)	= "False"
 
 
 
+# Note that there are builtin functions as well, namely
+# parse (which parses a string as a given type)
+# parseFile (which parses a file as a given type)
+# error, errorSugg (to give errors)
+# group (which converts a parsetree to a string, similar to $)
+# 
+
  Relations
 ============
 

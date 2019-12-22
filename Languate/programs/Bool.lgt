@@ -1,5 +1,6 @@
 Bool
 *****
+
 - Inverts a bool, logical not
 > !True = False
 > a : Bool ; ! !a = a
@@ -8,4 +9,3 @@ True    -> False
 False   -> True
 
 type Bool = {False, True}
-

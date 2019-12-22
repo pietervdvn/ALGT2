@@ -14,7 +14,7 @@ allAssets'
 	= let	noPrefix	= M.fromList allAssets
 		slashPrefix	= M.mapKeys ("/"++) $ M.fromList allAssets 
 		files		= M.union noPrefix slashPrefix
-					|> (flip (,) Assets.timeCreated)
+					|> flip (,) Assets.timeCreated
 		in
 		([], files, Assets.timeCreated)
 
