@@ -53,8 +53,8 @@ isBuiltinFunction ld f
 
 {- | All the function names 
 
->>> functions |> keys |> fst & all ((==) ["ALGT", "Builtins"])
-true
+>>> functions & keys |> fst & all ((==) ["ALGT", "Builtins"])
+True
 -}
 functions	:: Map FQName ((String -> String -> Failable ParseTree) -> [ParseTree] -> Failable ParseTree) 
 functions 	= M.fromList

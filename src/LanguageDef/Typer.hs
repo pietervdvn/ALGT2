@@ -437,7 +437,7 @@ typeExprBNF ldscope (form, choiceInd) (seqIndex, bnf) expr
 						" was expected; sequences can only match rulecalls"
 		fc@FuncCall{}		-> fail $ "Found a function call "++toParsable fc++" where a literal value of the form "++toParsable bnf++
 						" was expected; functions can only match rulecalls"
-		ft			-> error $ "BUG: Fallthrough!: " ++ debug  ft
+		ft			-> error $ "BUG in Typer.hs: Fallthrough in typeExprBNF!: " ++ debug  ft
 
 
 _compareBNFPT	:: BNF -> ParseTree' a -> Failable ()
@@ -449,6 +449,11 @@ _compareBNFPT (BNF.BuiltIn _ builtin) (Literal token li _ _)
 	= assertSugg' (token `BNF.isElementOf` builtin) ("Unexpected "++show token, "Expected a "++get BNF.biName builtin)
 _compareBNFPT (BNF.BuiltIn _ builtin) (Int token li _)
  	= assertSugg' (builtin `elem` [BNF.intBI, BNF.numberBI]) ("Unexpected int "++show token, "Expected a "++get BNF.biName builtin)
+_compareBNFPT bi@(BNF.BuiltIn _ builtin) ru@RuleEnter{}
+ 	= do	let embeddedPt = _pt ru
+ 		let ruleName	= get ptUsedRule ru
+		let nm			= (["ALGT", "Builtins"], get BNF.biName builtin)
+		unless (nm == ruleName) $ _compareBNFPT bi embeddedPt
 _compareBNFPT (BNF.RuleCall name) re@RuleEnter{}
 	= let	actRule = get ptUsedRule re in
 		assertSugg' (name == actRule)
@@ -457,7 +462,9 @@ _compareBNFPT (BNF.RuleCall name) re@RuleEnter{}
 _compareBNFPT (BNF.Group bnf) pt
 	= _compareBNFPT bnf pt
 _compareBNFPT (BNF.Seq bnf) pt
-	= fail "Bug: sequence should not be reachable here"
+	= fail "Bug in Typer.hs: sequence should not be reachable here"
+_compareBNFPT bnf pt
+	= fail $ "Bug in Typer.hs: fallthrough of compareBNFPT, got "++debug bnf++" and "++debug pt
 
 
 

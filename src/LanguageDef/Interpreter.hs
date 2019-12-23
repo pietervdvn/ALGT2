@@ -246,7 +246,7 @@ patternMatch lds vars expr (RuleEnter pt _ _ _ _)
 	= patternMatch lds vars expr pt
 
 patternMatch _ _ expr pt
-	= fail $ "Could not match "++toParsable expr++" with "++toParsable pt
+	= fail $ "Could not match pattern "++debug expr++" with expression "++debug pt
 
 
 mergeStores	:: [VariableStore' b] -> Failable (VariableStore' b)

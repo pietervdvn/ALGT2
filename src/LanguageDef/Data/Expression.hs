@@ -78,7 +78,20 @@ instance ToString' (a -> String) (Expression' a) where
 
 
 	toCoParsable'	= toParsable'
-	debug'		= toCoParsable'
+	
+	debug' showA (Var nm a _)	= nm ++ showA a
+	debug' showA (DontCare a _)
+				= "_" ++ showA a
+	debug' showA (ParseTree pt a _)
+				= debug pt ++ showA a
+	debug' showA (FuncCall ident args a _)	
+				= showFQ ident ++ inParens (args |> toParsable & commas) ++ showA a
+	debug' showA (Ascription exp as a _)	
+				= toParsable exp ++ ":" ++ showFQ as ++ showA a
+	debug' showA (SeqExp expr a _)	
+				= (expr |> debug' showA & unwords ++ showA a) & inParens
+
+	
 	show' _		= toParsable
 
 

@@ -18,6 +18,14 @@ import qualified Data.Map as M
 
 import Lens.Micro (Lens')
 
+{-| 
+
+A predicate represents something that can be calculated and either is successfull or not.
+
+If an expression is given (an applied function), then the function is evaluated. If evaluation is sucessfull, the expression is considered 'true'
+If a 'conclusion' is given, that predicate will be attempted to be calculated
+
+-}
 data Predicate' a
 	= PredConcl	{_predConcl	:: Conclusion' a, _predLocation	:: LocationInfo}
 	| PredExpr	{_predExpr	:: Expression' a, _predLocation	:: LocationInfo}
@@ -51,7 +59,11 @@ instance ToString (Predicate' a) where
 type Predicate	= Predicate' SyntFormIndex
 
 
+{-|
 
+ A conclusion is the part of a predicate, and contains an pattern for each parameter (either in or out)
+
+-}
 data Conclusion' a
 	= Conclusion
 		{ _conclRelName	:: FQName

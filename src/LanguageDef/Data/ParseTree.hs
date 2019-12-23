@@ -175,9 +175,10 @@ _parseBNF syntax (BNF.BuiltIn hidden builtin, sf)
 			parsed	<- get biParse builtin
 			skipChars (either id show parsed)
 			info	<- endToken start
-			return $ case parsed of
-				Left str -> Literal str info sf hidden
-				Right i  -> Int i info sf
+			let nm 	= (["ALGT","Builtins"], get BNF.biName builtin) :: FQName
+			parsed & either (\str -> Literal str info sf hidden) (\i -> Int i info sf)
+				& return
+			
 
 _parseBNF syntaxes (BNF.RuleCall (ns, nm), _)
 		= _parseRule (syntaxes, ns) nm
@@ -242,7 +243,7 @@ instance ToString (ParseTree' a) where
 		= toParsable pt
 
 	debug (Literal str _ _ _)
-		= show str
+		= "(Literal "++show str++")"
 	debug (Int i _ _)
 		= show i
 	debug (Seq pts _ _)

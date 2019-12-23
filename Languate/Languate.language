@@ -63,10 +63,11 @@ file    ::= nls title fileElements | title fileElements
  # ------------------- Utils, such as the typing environment
  
 
-knownTypes ::= identifier type "," knownTypes | "[]"
+knownVariables	::= identifier "<-" expression "," knownVariables | "[]"
+knownFunctions ::= identifier type clauses "," knownFunctions | "[]"
 knownConstructors ::= identifierUpper type "," knownConstructors | "[]"
 
-typingEnv ::= knownTypes knownConstructors
+typingEnv ::= knownFunctions knownConstructors
 
 nl  ::= "\n"
 nls ::= nl nls | nl
@@ -90,7 +91,7 @@ addElement(f : function, env) = addFunction(f, env)
 addElement(td : typeDeclaration, env) = addType(td, env)
 
 addFunction : function * typingEnv -> typingEnv
-addFunction(_ _ (name ":" type) "\n" _, funcs constrs) = (name type "," funcs) constrs
+addFunction(_ _ (name ":" type) "\n" clauses, funcs constrs) = (name type clauses "," funcs) constrs
         
 addType   : typeDeclaration * typingEnv -> typingEnv
 addType("type" type "=" ("{" constructors "}"), env) = addConstrs(type, constructors, env)
@@ -104,15 +105,33 @@ addConstr   : identifierUpper * type * typingEnv -> typingEnv
 addConstr(c, t, types constr)    = types (c t "," constr)
 
 
-# Searches the typing environment
-searchVar	: identifier * knownTypes -> type
-searchVar(x, x t "," _) = t
-searchVar(x, _ _ "," rest) = searchVar(x, rest)
+# Searches the typing environment for the type of a function
+searchFuncT	: identifier * knownFunctions -> type
+searchFuncT(x, x t _ "," _)		= t
+searchFuncT(x, _ _ _ "," rest) 	= searchFuncT(x, rest)
+
+# Searches the typing environment for the clauses of a function
+searchFunc	: identifier * knownFunctions -> clauses
+searchFunc(x, x _ cl "," _) 	= cl
+searchFunc(x, _ _ _ "," rest) 	= searchFunc(x, rest)
 	
 # Searches the typing environment for constructors
 searchCons: identifierUpper * knownConstructors -> type
-searchCons(x, x t "," _) = t
+searchCons(x, x t "," _) 	= t
 searchCons(x, _ _ "," rest)	= searchCons(x, rest)
+
+
+mergeVars	: knownVariables * knownVariables -> knownVariables
+mergeVars("[]", vars)		= vars
+mergeVars(vars, "[]")		= vars
+mergeVars(i "<-" e "," tail, vars)
+							= i "<-" e "," mergeVars(tail, vars)
+						
+						
+lookupVar	: knownVariables * identifier -> expression
+lookupVar(i "<-" e "," _, i) 	= e
+lookupVar(_ "<-" _ "," tail, i)	= lookupVar(tail, i)
+
 	
 # All the stuff frequently needed
 t       : typingEnv
@@ -122,7 +141,10 @@ t = fileToTypingEnv(loadFile("Languate/programs/Bool.lgt", "file") : file)
 ===========
 
 # Evaluate an expression
-(->)	: expression (in) * expression (out); Pronounced as "small step"
+(->)	: knownVariables (in) * typingEnv (in) * expression (in) * expression (out); Pronounced as "small step"
+
+# Pattern match an expression. First arg is the patter, second is the value
+(<-)	: expression (in) * expression (in) * knownVariables (out); Pronounced as "pattern match"
 
 # Type the expression
 (::)	: expression (in) * type (out); Pronounced as "type as"
@@ -131,7 +153,10 @@ t = fileToTypingEnv(loadFile("Languate/programs/Bool.lgt", "file") : file)
 (!-) : typingEnv (in) * expression (in) * type (out); Pronounced as "type in environment"
 
 # Type the expression in this environment
-(!!) : expression (in) * type (out); Pronounced as "type in environment"
+(!!) : expression (in) * type (out); Pronounced as "type in bool environment"
+
+# Type the expression in this environment
+(!->) : expression (in) * expression (out); Pronounced as "small step in bool environment"
 
  Rules
 =======
@@ -149,7 +174,7 @@ t = fileToTypingEnv(loadFile("Languate/programs/Bool.lgt", "file") : file)
 
  
 ------------------------------------------------ [Type variable]
- (!-) vars constr, x, searchVar(x, vars)
+ (!-) vars constr, x, searchFuncT(x, vars)
 
 ------------------------------------------------ [Type constructor]
  (!-) vars constr, x, searchCons(x, constr)
@@ -162,9 +187,61 @@ t = fileToTypingEnv(loadFile("Languate/programs/Bool.lgt", "file") : file)
  
  
  
+--------------------------------------------------- [Pattern match a variable]
+(<-) (i : identifier), v, i "<-" v "," "[]"
  
+ 
+ 
+ 
+------------------------------------- [Match a constructor]
+(<-) (i : identifierUpper), i, "[]" 
 
  
  
- 
- 
+(<-) pattern, value, var	(<-) patterns, values, vars
+----------------------------------------------------------- [Recursive pattern match]
+(<-) pattern patterns, value values, mergeVars(var, vars)
+
+
+
+
+(<-) pattern, v, vars
+-------------------------------- [Remove brackets in pattern]
+(<-) "(" pattern ")", v, vars
+
+
+(<-) pattern, v, vars
+-------------------------------- [Remove brackets in expression]
+(<-) pattern, "(" v ")", vars
+
+
+
+
+------------------------------------------------- [Lookup variable]
+(->) vars, _, v : identifier, lookupVar(vars, v)
+
+
+
+
+------------------------------ [Remove brackets]
+(->) _, _, "(" e ")", e
+
+
+(->) vars, ctx, e0, e1
+----------------------------- [Left recursion]
+(->) vars, ctx, e0 es, e1 es
+
+
+
+(->) vars, ctx, es0, es1
+------------------------- [Right recursion]
+(->) vars, ctx, e es0, e es1
+
+
+
+
+
+
+(->) "[]", t(), e0, e1
+------------------------------ [Test]
+(!->) e0, e1

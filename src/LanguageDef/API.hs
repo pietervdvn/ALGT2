@@ -35,7 +35,7 @@ import LanguageDef.Data.ParseTree
 import LanguageDef.Data.Function
 import LanguageDef.Data.SyntFormIndex
 import LanguageDef.Data.Rule
-import LanguageDef.Data.Relation (predicate)
+import LanguageDef.Data.Relation (predicate, relTypes)
 import LanguageDef.Data.Proof
 import LanguageDef.MetaSyntax (typeTop, typeBottom)
 
@@ -52,8 +52,9 @@ import Data.Maybe
 
 import Data.Map (Map, (!), empty)
 
-
 import Graphs.Lattice (Lattice)
+
+import Debug.Trace
 
 {- Loads a language definition from the filesystem; use with 'runIO'-}
 loadLangDef	:: FilePath -> [Name] -> PureIO (Failable LDScope)
@@ -219,7 +220,27 @@ createPredicate		:: LDScope -> FilePath -> String -> Failable Predicate
 createPredicate lds source str
 	= do	pt	<- parse source (metaSyntaxes, ["Relations"]) "predicate" str
 		pred	<- Combiner.interpret predicate pt
-		pred'	<- typePredicate lds pred	:: Failable (Predicate' ((), SyntFormIndex))
-		pred' |> snd & return
+		pred'	<- parsePredicateArgs lds pred
+		typePredicate lds pred' ||>> snd
+		
+
+	
+parsePredicateArgs	:: LDScope -> Predicate' () -> Failable (Predicate' ())
+parsePredicateArgs lds expr@PredExpr{}	= return expr
+parsePredicateArgs lds (PredConcl (Conclusion nm args) li)
+	= do	(relFQn, relation)	<- resolve' lds relationCall nm
+		let types	= relation & get relTypes |> fst
+		args' 	<- zipWith (parseArgument lds) types args & allGood
+		let argsDebug'	= zipWith (++) (types |> showFQ |> ("expected: "++)) (args' |> debug |> ("; got: "++)) & unlines
+		return $ trace argsDebug' $ PredConcl (Conclusion nm args') li
+
+
+
+parseArgument	:: LDScope -> FQName -> Expression' () -> Failable (Expression' ())
+parseArgument lds t (ParseTree (Literal str _ () _) () li)
+	= do	pt	<- createParseTree lds t (get miFile li) str
+		return $ ParseTree (pt |> const ())	() li
+parseArgument _ _ expr = return expr
+
 
 

@@ -42,7 +42,7 @@ parseSyntax syntaxName syntaxString
 
 
 
--- Little hack: everything is fully qualified, including syntacticForm calls. When they are just parsed, they are not yet fully qualified yet and the exact resolution should still be done. For the metasyntaxes, this ful qualification is done manually
+-- Little hack: everything is fully qualified, including syntacticForm calls. When they are just parsed, they are not yet fully qualified yet and the exact resolution should still be done. For the metasyntaxes, this full qualification is done manually
 patchNames	:: [Name] -> Syntax -> Syntax
 patchNames ns syntax
 	= syntax |> over (syntChoices . mapped) (BNF.overRuleCall $ _patchBNFName ns)

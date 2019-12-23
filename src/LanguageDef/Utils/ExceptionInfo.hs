@@ -80,7 +80,7 @@ instance ToString Phase where
 
 instance ToString ExceptionInfo where
 	toParsable e	= case normalize e of
-				(Aggregate errs)	-> errs |> _fancy |> show & intercalate "\n\n"
+				(Aggregate errs)	-> errs |> _fancy |> show & unlines
 				e'			-> _fancy e' & show
 	toCoParsable e	= e & normalize & _fancy & plain & show
 	
@@ -190,7 +190,7 @@ instance ToString a => ToString (Failable a) where
 
 
 _showLined s errs
-	= Aggregate errs & normalize & fromAggregate |> s & intercalate "\n"
+	= Aggregate errs & normalize & fromAggregate |> s & intercalate "\n\n"
 
 
 fromFailable	:: Failable a -> Maybe a
